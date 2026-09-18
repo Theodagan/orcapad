@@ -1,0 +1,8 @@
+{
+  // Why: FND-AC3. The product layer must compile with the Orca adapter gone, which is what a
+  // standalone app would ship. Excluding one directory is the whole proof — that is the
+  // property src/gamepad/ exists to give.
+  "extends": "./tsconfig.json",
+  "include": ["src/gamepad/**/*.ts", "src/gamepad/**/*.tsx"],
+  "exclude": ["src/gamepad/adapters/orca/**", "**/*.test.ts", "**/*.test.tsx"]
+}

@@ -57,7 +57,12 @@ describe('checkAgentRules', () => {
 
   it('reports every violation on one agent', () => {
     const violations = checkAgentRules(
-      agent({ staleFromRestore: true, activity: 'working', currentTool: 'Bash', parentId: agentId('a-1') })
+      agent({
+        staleFromRestore: true,
+        activity: 'working',
+        currentTool: 'Bash',
+        parentId: agentId('a-1')
+      })
     )
 
     expect(violations.map((violation) => violation.rule)).toEqual([

@@ -5,35 +5,58 @@ import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 
 /**
- * Dependency direction (FND-R3, FND-AC1, FND-AC2) and host-vocabulary containment (FND-AC6),
- * held by static analysis instead of documentation.
+ * The fork's one boundary. `src/gamepad/` is the whole controller product layer; everything
+ * else under `mobile/src/` is upstream Orca Mobile. One predicate holds the dependency
+ * direction (FND-R3) and one holds host-vocabulary containment (FND-AC6):
  *
- * Source text, not a module graph: `src/features/` and `src/adapters/` arrive over later
- * foundation tasks, and a type-only import still couples the layers even though it emits
- * nothing. A specifier is resolved through the `@/*` tsconfig alias as well as relatively,
- * so neither spelling is a way around a rule.
+ *   gamepad/** may not import outside gamepad/**, except gamepad/adapters/**, which reaches
+ *   a named list of upstream modules.
  *
- * Layering is checked in tests too — a core test that needs an adapter proves the coupling
- * as well as a core module would. Vocabulary is not: `*.test.ts(x)` prose names hosts on
+ * That single rule is what makes the fork a subtree: `git diff` shows it, a rebase skips it,
+ * and extraction is a move rather than a tsconfig excavation. It is strictly stronger than
+ * the per-folder rules it replaces, which said nothing about the ~30 upstream siblings the
+ * old `src/core/` sat next to.
+ *
+ * Source text, not a module graph: most of the tree arrives over later feature tasks, and a
+ * type-only import still couples the layers even though it emits nothing. A specifier is
+ * resolved through the `@/*` tsconfig alias as well as relatively, so neither spelling is a
+ * way around a rule.
+ *
+ * Layering is checked in tests too — a state test that needs an adapter proves the coupling
+ * as well as a state module would. Vocabulary is not: `*.test.ts(x)` prose names hosts on
  * purpose, and a test does not ship. Comments are never scanned, only identifiers and string
  * literals, so the doc comment that explains a domain concept stays free to mention the host
  * concept it replaced.
  *
  * What this does not catch, all accepted: a specifier assembled at runtime, vocabulary
- * reached through a re-exported alias, and a `src/shared` type laundered through a
- * structurally identical local declaration.
+ * reached through a re-exported alias, and an upstream type laundered through a structurally
+ * identical local declaration.
  */
 
 const mobileRoot = fileURLToPath(new URL('../..', import.meta.url))
 const srcRoot = join(mobileRoot, 'src')
-const coreRoot = join(srcRoot, 'core')
-const domainRoot = join(coreRoot, 'domain')
-const featuresRoot = join(srcRoot, 'features')
-const adaptersRoot = join(srcRoot, 'adapters')
+const gamepadRoot = join(srcRoot, 'gamepad')
+const domainRoot = join(gamepadRoot, 'domain')
+const applicationRoot = join(gamepadRoot, 'application')
+const portsRoot = join(applicationRoot, 'ports')
+const stateRoot = join(gamepadRoot, 'state')
+const featuresRoot = join(gamepadRoot, 'features')
+const adaptersRoot = join(gamepadRoot, 'adapters')
 const hostSharedRoot = resolve(mobileRoot, '..', 'src', 'shared')
 const rpcCatalogPath = join(hostSharedRoot, 'rpc-contract', 'rpc-params-catalog.generated.ts')
 
-const scannedRoots = [coreRoot, featuresRoot, adaptersRoot]
+/**
+ * The upstream modules `gamepad/adapters/**` may reach. A ratchet, not a door: adding a root
+ * is a deliberate edit, and every entry is a thing extraction has to replace.
+ */
+const ADAPTER_UPSTREAM_REACH = [
+  join(srcRoot, 'transport'),
+  join(srcRoot, 'storage'),
+  join(srcRoot, 'terminal'),
+  join(srcRoot, 'navigation'),
+  hostSharedRoot
+]
+
 const sourceExtensions = new Set(['.js', '.jsx', '.ts', '.tsx'])
 const testFile = /\.test\.[jt]sx?$/
 const aliasPrefix = '@/'
@@ -41,7 +64,11 @@ const aliasPrefix = '@/'
 const reactNativePackage = /^react-native(\/|$)/
 const expoPackage = /^expo(-|\/|$)/
 
-const DOMAIN_RULE = 'core/domain imports nothing outside itself'
+const DOMAIN_RULE = 'gamepad/domain imports nothing outside itself'
+const PORTS_RULE = 'gamepad/application/ports may only reference gamepad/domain'
+const ADAPTER_RULE = 'only gamepad/adapters may import gamepad/adapters — go through the registry'
+const DEVICE_RULE =
+  'gamepad/{domain,application,state} must not import react-native or an expo-* package'
 
 /** FND-AC6. Matched case-insensitively, so `worktreeId` and `WorktreePs` both land. */
 const FORBIDDEN_WORDS = ['worktree', 'panekey', 'snapshotid'] as const
@@ -116,39 +143,43 @@ export function moduleSpecifiers(path: string, source: string): string[] {
   return specifiers
 }
 
-/** The rule this import breaks, or null when the layer may reach for it. */
+/** The rule this import breaks, or null when the slice may reach for it. */
 function importRule(path: string, specifier: string): string | null {
-  const inDomain = within(domainRoot, path)
-  const inCore = within(coreRoot, path)
-  const inFeatures = within(featuresRoot, path)
-  if (!inCore && !inFeatures) {
+  if (!within(gamepadRoot, path)) {
     return null
   }
-  const layer = inCore ? 'core' : 'features'
+  const inDomain = within(domainRoot, path)
+  const inPorts = within(portsRoot, path)
+  const inAdapters = within(adaptersRoot, path)
+  const inFeatures = within(featuresRoot, path)
   const resolved = resolveSpecifier(path, specifier)
+
   if (resolved === null) {
     if (inDomain) {
       // The suite itself is the only package a domain test may name.
       return testFile.test(path) && specifier === 'vitest' ? null : DOMAIN_RULE
     }
-    if (inCore && (reactNativePackage.test(specifier) || expoPackage.test(specifier))) {
-      return 'core/** must not import react-native or an expo-* package'
+    if (inAdapters || inFeatures) {
+      return null
     }
-    return null
+    return reactNativePackage.test(specifier) || expoPackage.test(specifier) ? DEVICE_RULE : null
   }
-  if (inDomain && !within(domainRoot, resolved)) {
-    return DOMAIN_RULE
+
+  if (inDomain) {
+    return within(domainRoot, resolved) ? null : DOMAIN_RULE
   }
-  if (within(adaptersRoot, resolved)) {
-    return `${layer}/** must not import adapters/**`
+  if (inPorts && !within(domainRoot, resolved) && !within(portsRoot, resolved)) {
+    return PORTS_RULE
   }
-  if (inCore && within(featuresRoot, resolved)) {
-    return 'core/** must not import features/**'
+  if (!within(gamepadRoot, resolved)) {
+    if (!inAdapters) {
+      return 'gamepad must not import outside src/gamepad — only gamepad/adapters may'
+    }
+    return ADAPTER_UPSTREAM_REACH.some((root) => within(root, resolved))
+      ? null
+      : 'gamepad/adapters may not reach this module — extend ADAPTER_UPSTREAM_REACH if deliberate'
   }
-  if (within(hostSharedRoot, resolved)) {
-    return `${layer}/** must not import the Orca host contracts under src/shared/**`
-  }
-  return null
+  return within(adaptersRoot, resolved) && !inAdapters ? ADAPTER_RULE : null
 }
 
 export function layeringViolations(path: string, source: string): string[] {
@@ -198,7 +229,8 @@ export function vocabularyViolations(
   source: string,
   rpcMethods: ReadonlySet<string>
 ): string[] {
-  if (testFile.test(path)) {
+  // The adapter is the one place that may name Orca; a test does not ship.
+  if (testFile.test(path) || within(adaptersRoot, path)) {
     return []
   }
   const found: string[] = []
@@ -232,25 +264,35 @@ export function vocabularyViolations(
 
 const domainProbe = join(domainRoot, 'probe.ts')
 const domainTestProbe = join(domainRoot, 'probe.test.ts')
-const coreProbe = join(coreRoot, 'application', 'probe.ts')
-const coreTestProbe = join(coreRoot, 'application', 'probe.test.ts')
+const portProbe = join(portsRoot, 'probe.ts')
+const useCaseProbe = join(applicationRoot, 'use-cases', 'probe.ts')
+const stateProbe = join(stateRoot, 'remote', 'probe.ts')
+const stateTestProbe = join(stateRoot, 'remote', 'probe.test.ts')
 const featureProbe = join(featuresRoot, 'sessions', 'probe.ts')
 const adapterProbe = join(adaptersRoot, 'orca', 'probe.ts')
+const upstreamProbe = join(srcRoot, 'transport', 'probe.ts')
 
-describe('Layering boundary', () => {
+describe('Gamepad boundary', () => {
   it('reads every specifier that couples a module, whatever its shape', () => {
-    expect(moduleSpecifiers(coreProbe, "import { a } from './a'")).toEqual(['./a'])
-    expect(moduleSpecifiers(coreProbe, "import type { A } from './a'")).toEqual(['./a'])
-    expect(moduleSpecifiers(coreProbe, "import './a'")).toEqual(['./a'])
-    expect(moduleSpecifiers(coreProbe, "export { a } from './a'")).toEqual(['./a'])
-    expect(moduleSpecifiers(coreProbe, "export * from './a'")).toEqual(['./a'])
-    expect(moduleSpecifiers(coreProbe, "const a = require('./a')")).toEqual(['./a'])
-    expect(moduleSpecifiers(coreProbe, "const a = await import('./a')")).toEqual(['./a'])
-    expect(moduleSpecifiers(coreProbe, "type A = import('./a').A")).toEqual(['./a'])
-    expect(moduleSpecifiers(coreProbe, "const a = 'not an import'")).toEqual([])
+    expect(moduleSpecifiers(useCaseProbe, "import { a } from './a'")).toEqual(['./a'])
+    expect(moduleSpecifiers(useCaseProbe, "import type { A } from './a'")).toEqual(['./a'])
+    expect(moduleSpecifiers(useCaseProbe, "import './a'")).toEqual(['./a'])
+    expect(moduleSpecifiers(useCaseProbe, "export { a } from './a'")).toEqual(['./a'])
+    expect(moduleSpecifiers(useCaseProbe, "export * from './a'")).toEqual(['./a'])
+    expect(moduleSpecifiers(useCaseProbe, "const a = require('./a')")).toEqual(['./a'])
+    expect(moduleSpecifiers(useCaseProbe, "const a = await import('./a')")).toEqual(['./a'])
+    expect(moduleSpecifiers(useCaseProbe, "type A = import('./a').A")).toEqual(['./a'])
+    expect(moduleSpecifiers(useCaseProbe, "const a = 'not an import'")).toEqual([])
   })
 
-  it('keeps core/domain closed over itself', () => {
+  it('leaves upstream Orca Mobile alone', () => {
+    expect(layeringViolations(upstreamProbe, "import { View } from 'react-native'")).toEqual([])
+    expect(
+      layeringViolations(upstreamProbe, "import { x } from '../../../src/shared/rpc-contract/x'")
+    ).toEqual([])
+  })
+
+  it('keeps gamepad/domain closed over itself', () => {
     expect(layeringViolations(domainProbe, "import { brandId } from './branded-id'")).toEqual([])
     expect(
       layeringViolations(
@@ -264,80 +306,106 @@ describe('Layering boundary', () => {
     expect(layeringViolations(domainProbe, "import { join } from 'node:path'")).toEqual([
       `node:path — ${DOMAIN_RULE}`
     ])
-    expect(layeringViolations(domainProbe, "import type { X } from '@/adapters/orca'")).toEqual([
-      `@/adapters/orca — ${DOMAIN_RULE}`
-    ])
+    expect(
+      layeringViolations(domainProbe, "import type { X } from '@/gamepad/adapters/orca'")
+    ).toEqual([`@/gamepad/adapters/orca — ${DOMAIN_RULE}`])
     expect(layeringViolations(domainTestProbe, "import { describe } from 'vitest'")).toEqual([])
     expect(layeringViolations(domainProbe, "import { describe } from 'vitest'")).toEqual([
       `vitest — ${DOMAIN_RULE}`
     ])
   })
 
-  it('points core away from adapters, features, the host contracts, and the device', () => {
+  it('keeps port signatures on domain types (FND-AC2)', () => {
     expect(
-      layeringViolations(coreProbe, "import { createOrcaAdapter } from '../../adapters/orca'")
-    ).toEqual(['../../adapters/orca — core/** must not import adapters/**'])
-    expect(layeringViolations(coreProbe, "const a = require('@/adapters/stub')")).toEqual([
-      '@/adapters/stub — core/** must not import adapters/**'
-    ])
-    expect(
-      layeringViolations(coreProbe, "import { useSessions } from '../../features/sessions/state'")
-    ).toEqual(['../../features/sessions/state — core/** must not import features/**'])
-    expect(
-      layeringViolations(
-        coreProbe,
-        "import type { RpcMethodName } from '../../../../src/shared/rpc-contract/rpc-params-catalog.generated'"
-      )
-    ).toEqual([
-      '../../../../src/shared/rpc-contract/rpc-params-catalog.generated — core/** must not import the Orca host contracts under src/shared/**'
-    ])
-    expect(layeringViolations(coreProbe, "import { View } from 'react-native'")).toEqual([
-      'react-native — core/** must not import react-native or an expo-* package'
-    ])
-    expect(layeringViolations(coreProbe, "import * as Store from 'expo-secure-store'")).toEqual([
-      'expo-secure-store — core/** must not import react-native or an expo-* package'
-    ])
-    expect(layeringViolations(coreProbe, "import { readFileSync } from 'node:fs'")).toEqual([])
-    expect(
-      layeringViolations(coreProbe, "import type { Session } from '../domain/session'")
+      layeringViolations(portProbe, "import type { Session } from '../../domain/session'")
     ).toEqual([])
-    expect(layeringViolations(coreTestProbe, "import { View } from 'react-native'")).toEqual([
-      'react-native — core/** must not import react-native or an expo-* package'
-    ])
+    expect(
+      layeringViolations(portProbe, "import type { PortResult } from './port-result'")
+    ).toEqual([])
+    expect(
+      layeringViolations(portProbe, "import type { Queue } from '../../state/remote/queue'")
+    ).toEqual([`../../state/remote/queue — ${PORTS_RULE}`])
   })
 
-  it('points features away from adapters while leaving the device and core open', () => {
+  it('stops the product layer at the edge of src/gamepad', () => {
+    const outside = 'gamepad must not import outside src/gamepad — only gamepad/adapters may'
+    expect(
+      layeringViolations(stateProbe, "import { loadHosts } from '../../../transport/host-store'")
+    ).toEqual([`../../../transport/host-store — ${outside}`])
+    expect(
+      layeringViolations(useCaseProbe, "const p = require('../../../storage/preferences')")
+    ).toEqual([`../../../storage/preferences — ${outside}`])
+    expect(
+      layeringViolations(featureProbe, "import { fileTree } from '@/files/file-tree'")
+    ).toEqual([`@/files/file-tree — ${outside}`])
+    expect(
+      layeringViolations(
+        useCaseProbe,
+        "import type { X } from '../../../../../src/shared/rpc-contract/rpc-params-catalog.generated'"
+      )
+    ).toEqual([`../../../../../src/shared/rpc-contract/rpc-params-catalog.generated — ${outside}`])
+  })
+
+  it('routes every slice to the adapter through the registry', () => {
+    expect(
+      layeringViolations(useCaseProbe, "import { createOrcaAdapter } from '../../adapters/orca'")
+    ).toEqual([`../../adapters/orca — ${ADAPTER_RULE}`])
     expect(
       layeringViolations(featureProbe, "const a = await import('../../adapters/orca')")
-    ).toEqual(['../../adapters/orca — features/** must not import adapters/**'])
-    expect(
-      layeringViolations(
-        featureProbe,
-        "import { listSessions } from '../../core/application/use-cases/list-sessions'"
-      )
-    ).toEqual([])
-    expect(layeringViolations(featureProbe, "import { View } from 'react-native'")).toEqual([])
-    expect(
-      layeringViolations(
-        featureProbe,
-        "import type { X } from '../../../../src/shared/rpc-contract/rpc-params-catalog.generated'"
-      )
-    ).toEqual([
-      '../../../../src/shared/rpc-contract/rpc-params-catalog.generated — features/** must not import the Orca host contracts under src/shared/**'
+    ).toEqual([`../../adapters/orca — ${ADAPTER_RULE}`])
+    expect(layeringViolations(stateProbe, "const a = require('@/gamepad/adapters/stub')")).toEqual([
+      `@/gamepad/adapters/stub — ${ADAPTER_RULE}`
     ])
+    expect(
+      layeringViolations(useCaseProbe, "import { registry } from '../adapter-registry'")
+    ).toEqual([])
   })
 
-  it('leaves the adapter free to hold Orca knowledge', () => {
+  it('keeps the device out of everything but features', () => {
+    expect(layeringViolations(useCaseProbe, "import { View } from 'react-native'")).toEqual([
+      `react-native — ${DEVICE_RULE}`
+    ])
+    expect(layeringViolations(stateProbe, "import * as Store from 'expo-secure-store'")).toEqual([
+      `expo-secure-store — ${DEVICE_RULE}`
+    ])
+    expect(layeringViolations(stateTestProbe, "import { View } from 'react-native'")).toEqual([
+      `react-native — ${DEVICE_RULE}`
+    ])
+    expect(layeringViolations(featureProbe, "import { View } from 'react-native'")).toEqual([])
     expect(layeringViolations(adapterProbe, "import { View } from 'react-native'")).toEqual([])
+    expect(layeringViolations(useCaseProbe, "import { readFileSync } from 'node:fs'")).toEqual([])
+  })
+
+  it('lets the adapter reach the listed upstream modules and nothing else', () => {
     expect(
       layeringViolations(
         adapterProbe,
-        "import type { X } from '../../../../src/shared/rpc-contract/rpc-params-catalog.generated'"
+        "import { openHostLogicalClient } from '../../../transport/host-logical-client'"
       )
     ).toEqual([])
     expect(
-      layeringViolations(adapterProbe, "import type { Session } from '../../core/domain/session'")
+      layeringViolations(
+        adapterProbe,
+        "import { loadPinnedIds } from '../../../storage/preferences'"
+      )
     ).toEqual([])
+    expect(
+      layeringViolations(
+        adapterProbe,
+        "import type { RpcMethodName } from '../../../../../src/shared/rpc-contract/rpc-params-catalog.generated'"
+      )
+    ).toEqual([])
+    expect(
+      layeringViolations(adapterProbe, "import type { Session } from '../../domain/session'")
+    ).toEqual([])
+    expect(
+      layeringViolations(
+        adapterProbe,
+        "import { MobileHomeScreen } from '../../../home/MobileHomeScreen'"
+      )
+    ).toEqual([
+      '../../../home/MobileHomeScreen — gamepad/adapters may not reach this module — extend ADAPTER_UPSTREAM_REACH if deliberate'
+    ])
   })
 
   it('recovers the RPC method catalog from source without importing it', () => {
@@ -353,44 +421,42 @@ describe('Layering boundary', () => {
   it('flags host vocabulary in identifiers and literals only', () => {
     const methods = new Set(['status.get', 'worktree.ps'])
 
-    expect(vocabularyViolations(coreProbe, 'const id = worktreeId', methods)).toHaveLength(1)
-    expect(vocabularyViolations(coreProbe, 'const key = paneKey', methods)).toHaveLength(1)
+    expect(vocabularyViolations(useCaseProbe, 'const id = worktreeId', methods)).toHaveLength(1)
+    expect(vocabularyViolations(useCaseProbe, 'const key = paneKey', methods)).toHaveLength(1)
     expect(
-      vocabularyViolations(coreProbe, 'type Snap = { snapshotId: string }', methods)
+      vocabularyViolations(useCaseProbe, 'type Snap = { snapshotId: string }', methods)
     ).toHaveLength(1)
-    expect(vocabularyViolations(coreProbe, "const m = 'status.get'", methods)).toEqual([
+    expect(vocabularyViolations(useCaseProbe, "const m = 'status.get'", methods)).toEqual([
       "'status.get' — an Orca RPC method name belongs to the adapter"
     ])
-    expect(vocabularyViolations(coreProbe, 'const m = `status.get`', methods)).toHaveLength(1)
+    expect(vocabularyViolations(useCaseProbe, 'const m = `status.get`', methods)).toHaveLength(1)
     expect(
       vocabularyViolations(
-        coreProbe,
+        domainProbe,
         "export const WORKSPACE_KINDS = ['git-worktree', 'folder'] as const",
         methods
       )
     ).toEqual([])
     expect(
       vocabularyViolations(
-        coreProbe,
+        domainProbe,
         '/** A git worktree or a folder workspace. */\nexport const kinds = 2',
         methods
       )
     ).toEqual([])
     expect(
       vocabularyViolations(
-        coreTestProbe,
+        stateTestProbe,
         "it('accepts a git worktree with a branch', () => {})",
         methods
       )
     ).toEqual([])
-    expect(vocabularyViolations(adapterProbe, "const m = 'worktree.ps'", methods)).toEqual([
-      "'worktree.ps' — an Orca RPC method name belongs to the adapter"
-    ])
+    // The adapter is where Orca vocabulary belongs.
+    expect(vocabularyViolations(adapterProbe, "const m = 'worktree.ps'", methods)).toEqual([])
   })
 
-  it('holds the dependency direction across core, features, and adapters', () => {
-    const offenders = scannedRoots
-      .flatMap(sourceFiles)
+  it('holds the boundary across the whole gamepad tree', () => {
+    const offenders = sourceFiles(gamepadRoot)
       .filter((path) => sourceExtensions.has(extname(path)))
       .flatMap((path) =>
         layeringViolations(path, readFileSync(path, 'utf8')).map(
@@ -401,10 +467,9 @@ describe('Layering boundary', () => {
     expect(offenders).toEqual([])
   })
 
-  it('keeps Orca vocabulary out of core and features', () => {
+  it('keeps Orca vocabulary out of every slice but the adapter', () => {
     const methods = rpcMethodNames(readFileSync(rpcCatalogPath, 'utf8'))
-    const offenders = [coreRoot, featuresRoot]
-      .flatMap(sourceFiles)
+    const offenders = sourceFiles(gamepadRoot)
       .filter((path) => sourceExtensions.has(extname(path)))
       .flatMap((path) =>
         vocabularyViolations(path, readFileSync(path, 'utf8'), methods).map(
