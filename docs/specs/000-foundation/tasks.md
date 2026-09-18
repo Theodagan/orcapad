@@ -28,7 +28,7 @@ and `oxlint` green in `mobile/`.
 
   **Verify:** `pnpm test src/core/layering-boundary.test.ts`
 
-- [ ] **FND-T3 — Port result and subscription primitives**
+- [x] **FND-T3 — Port result and subscription primitives**
 
   Create `mobile/src/core/application/ports/`:
   - `port-result.ts`, `subscription.ts`, `capability.ts` per `tech.md` §3.
