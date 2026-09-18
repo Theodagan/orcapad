@@ -5,7 +5,7 @@
 The dashboard is mostly a **use case** over ports other features own. It adds
 one port of its own.
 
-`mobile/src/core/application/ports/notification-port.ts`:
+`mobile/src/gamepad/application/ports/notification-port.ts`:
 
 ```ts
 export type PushFilter = {
@@ -48,7 +48,7 @@ export type NotificationPort = {
 The dashboard's own use case:
 
 ```ts
-// src/core/application/use-cases/build-attention-queue.ts
+// src/gamepad/application/use-cases/build-attention-queue.ts
 export type AttentionItem = {
   readonly key: string
   readonly connectionId: ConnectionId
@@ -177,7 +177,7 @@ projections from `002` and `003`, which come from the one reconciliation in
 ## 4. Feature structure
 
 ```text
-mobile/src/features/dashboard/
+mobile/src/gamepad/features/dashboard/
 ├── screens/
 │   └── DashboardScreen.tsx
 ├── components/
@@ -195,9 +195,13 @@ mobile/src/features/dashboard/
 ```
 
 Reuse: `mobile/src/home/*` already implements a home screen with host lists and
-resume cards; migrate its list mechanics rather than writing new ones.
-`mobile/src/notifications/` already owns the Expo notification plumbing and the
-`orca-notification-dismissal` native module — reuse both.
+resume cards; migrate its list mechanics into
+`src/gamepad/features/dashboard/` rather than writing new ones.
+`mobile/src/notifications/` owns the Expo notification plumbing and the
+`orca-notification-dismissal` native module — that stays upstream and is reached
+through `src/gamepad/adapters/device/`, which is also where `NotificationPort`'s
+device half is implemented. Add `mobile/src/notifications` to
+`ADAPTER_UPSTREAM_REACH` when this lands.
 
 ## 5. Deep links
 
@@ -210,7 +214,8 @@ warm start  → push session onto the existing stack if the workspace matches,
               else rebuild
 ```
 
-Reuse `mobile/src/navigation/host-stack-navigation.ts`. Deep-link handling must
+Reuse `mobile/src/navigation/host-stack-navigation.ts` through the same
+`src/gamepad/adapters/device/` wrapper `003-sessions` introduces. Deep-link handling must
 be resilient to a workspace that no longer exists: land on the workspace list
 with a "that session is gone" notice, never a blank screen.
 

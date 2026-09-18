@@ -8,29 +8,29 @@
 
 - [ ] **FILE-T2 — Read operations**
 
-  `src/adapters/orca/rpc/file-read-operations.ts` covering `files.readDir`,
+  `src/gamepad/adapters/orca/rpc/file-read-operations.ts` covering `files.readDir`,
   `files.readPreview`, `files.readChunk`, `files.readDocPreview`, `files.stat`,
   `files.search`, `files.searchPaths`.
 
-  **Verify:** `pnpm test src/adapters/orca/rpc/file-read-operations.test.ts`
+  **Verify:** `pnpm test src/gamepad/adapters/orca/rpc/file-read-operations.test.ts`
 
 - [ ] **FILE-T3 — Mutation-absence guard**
 
-  `src/adapters/orca/file-mutation-absence.test.ts` asserting the adapter's
+  `src/gamepad/adapters/orca/file-mutation-absence.test.ts` asserting the adapter's
   mapped method set contains no mutating `files.*` method.
 
   **Verify:** `pnpm test …/file-mutation-absence.test.ts` (FILE-AC10)
 
 - [ ] **FILE-T4 — Directory listing with limits**
 
-  `src/adapters/orca/mapping/directory-listing-mapping.ts` mapping the host's
+  `src/gamepad/adapters/orca/mapping/directory-listing-mapping.ts` mapping the host's
   limit failure to `too-large` using the shared constant.
 
   **Verify:** `pnpm test …/directory-listing-limit.test.ts` (FILE-AC2)
 
 - [ ] **FILE-T5 — Chunked file content**
 
-  `src/adapters/orca/mapping/file-content-mapping.ts` with the 128 KiB chunk
+  `src/gamepad/adapters/orca/mapping/file-content-mapping.ts` with the 128 KiB chunk
   policy and host-supplied offsets.
 
   **Verify:** `pnpm test …/file-chunked-read.test.ts` (FILE-AC3)
@@ -44,7 +44,7 @@
 - [ ] **FILE-T7 — Path passthrough guard**
 
   `host-path-passthrough.test.ts` plus a layering-test rule rejecting `path`
-  imports and separator literals in `src/features/files/`.
+  imports and separator literals in `src/gamepad/features/files/`.
 
   **Verify:** `pnpm test …/host-path-passthrough.test.ts` (FILE-AC8)
 
@@ -54,14 +54,14 @@
   `mobile/src/files/file-tree.ts` and `mobile-file-explorer-row.tsx`.
 
   **Verify:** `pnpm run check:code-quality:changed`;
-  `pnpm test src/features/files` (FILE-AC1)
+  `pnpm test src/gamepad/features/files` (FILE-AC1)
 
 - [ ] **FILE-T9 — Preview screen**
 
   `FilePreviewScreen`, `FileSourceView`, `MarkdownPreview`, `BinaryFileNotice`,
   migrating the existing preview modules and dropping the editable-source path.
 
-  **Verify:** `pnpm test src/features/files/screens` (FILE-AC5)
+  **Verify:** `pnpm test src/gamepad/features/files/screens` (FILE-AC5)
 
 - [ ] **FILE-T10 — Search screen**
 

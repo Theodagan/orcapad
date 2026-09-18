@@ -3,47 +3,47 @@
 - [ ] **PAIR-T1 — Ports**
 
   Add `connection-port.ts` and `pairing-port.ts` under
-  `mobile/src/core/application/ports/` per `tech.md` §1.
+  `mobile/src/gamepad/application/ports/` per `tech.md` §1.
 
   **Verify:** `pnpm typecheck`; layering test stays green.
 
 - [ ] **PAIR-T2 — Offer parsing**
 
-  `src/adapters/orca/pairing/parse-pairing-offer.ts` — pure decode of a scanned
+  `src/gamepad/adapters/orca/pairing/parse-pairing-offer.ts` — pure decode of a scanned
   payload into `PairingOffer | PairingRejection`, reusing the existing QR payload
   decode and `src/shared/mobile-pairing-connection-mode.ts`.
 
-  **Verify:** `pnpm test src/adapters/orca/pairing/parse-pairing-offer.test.ts`
+  **Verify:** `pnpm test src/gamepad/adapters/orca/pairing/parse-pairing-offer.test.ts`
 
 - [ ] **PAIR-T3 — Pairing adapter**
 
-  `src/adapters/orca/pairing/pairing-adapter.ts` implementing `PairingPort` over
+  `src/gamepad/adapters/orca/pairing/pairing-adapter.ts` implementing `PairingPort` over
   `pairing.getEndpoints` and `pairing.provisionRelay`, with descriptors in
-  `src/adapters/orca/rpc/pairing-operations.ts`.
+  `src/gamepad/adapters/orca/rpc/pairing-operations.ts`.
 
   Covers: relay-null degradation, `e2eeFraming` check, install-status and
   resume-confirmation passthrough.
 
-  **Verify:** `pnpm test src/adapters/orca/pairing`
+  **Verify:** `pnpm test src/gamepad/adapters/orca/pairing`
 
 - [ ] **PAIR-T4 — Connection adapter**
 
-  `src/adapters/orca/transport/connection-adapter.ts` implementing
+  `src/gamepad/adapters/orca/transport/connection-adapter.ts` implementing
   `ConnectionPort` over the existing logical client registry and reconnect
   schedule. No new socket, scheduler, or watchdog.
 
-  **Verify:** `pnpm test src/adapters/orca/transport/connection-adapter.test.ts`
+  **Verify:** `pnpm test src/gamepad/adapters/orca/transport/connection-adapter.test.ts`
 
 - [ ] **PAIR-T5 — Version gate**
 
-  `src/adapters/orca/protocol/connection-version-gate.ts` implementing
+  `src/gamepad/adapters/orca/protocol/connection-version-gate.ts` implementing
   `tech.md` §2.2 on top of the `000-foundation` protocol gate.
 
-  **Verify:** `pnpm test src/adapters/orca/protocol/connection-version-gate.test.ts`
+  **Verify:** `pnpm test src/gamepad/adapters/orca/protocol/connection-version-gate.test.ts`
 
 - [ ] **PAIR-T6 — Event redaction**
 
-  `src/adapters/orca/transport/connection-event-redaction.ts` wrapping the
+  `src/gamepad/adapters/orca/transport/connection-event-redaction.ts` wrapping the
   existing connection log, with the redaction list from `tech.md` §6.
 
   **Verify:** `pnpm test …/connection-event-redaction.test.ts` (PAIR-AC9)
@@ -54,11 +54,11 @@
   store, and add `connection-loss-verdict.test.ts` asserting no code path yields
   `exited` from a transport signal.
 
-  **Verify:** `pnpm test src/core/state/remote`
+  **Verify:** `pnpm test src/gamepad/state/remote`
 
 - [ ] **PAIR-T8 — Host catalog screen**
 
-  `src/features/pairing/screens/HostCatalogScreen.tsx` plus
+  `src/gamepad/features/pairing/screens/HostCatalogScreen.tsx` plus
   `HostCatalogRow`, `ConnectionStatusChip`. Repoint `mobile/app/pair.tsx` at it.
 
   Design-system gate applies: no raw palette colors, no computed `className`,
@@ -74,14 +74,14 @@
 
   Mode must be shown before confirmation (PAIR-AC2).
 
-  **Verify:** `pnpm test src/features/pairing`
+  **Verify:** `pnpm test src/gamepad/features/pairing`
 
 - [ ] **PAIR-T10 — Connection log screen**
 
   `ConnectionLogScreen` over `observeEvents`, with copy-to-clipboard running
   through the redacting serializer. Repoint `mobile/app/connection-log.tsx`.
 
-  **Verify:** `pnpm test src/features/pairing/screens`
+  **Verify:** `pnpm test src/gamepad/features/pairing/screens`
 
 - [ ] **PAIR-T11 — Unpair**
 
@@ -95,7 +95,7 @@
   A test asserting the forbidden connection-state strings ("offline", "lost",
   "dead", "stopped") do not appear in pairing feature copy.
 
-  **Verify:** `pnpm test src/features/pairing/pairing-copy-rules.test.ts`
+  **Verify:** `pnpm test src/gamepad/features/pairing/pairing-copy-rules.test.ts`
 
 - [ ] **PAIR-T13 — Manual device checks**
 

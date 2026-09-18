@@ -6,42 +6,52 @@ Target layout inside `mobile/`, per architecture.md §1:
 
 ```text
 mobile/
-├── app/                              # Expo Router shell — routes only
+├── app/                              # upstream Expo Router shell — routes only
 │
-├── src/
-│   ├── features/
-│   │   ├── dashboard/ projects/ sessions/ agents/ terminal/ files/ pairing/
-│   │   │   ├── components/
-│   │   │   ├── screens/
-│   │   │   ├── hooks/
-│   │   │   └── state/
-│   │
-│   ├── core/
-│   │   ├── domain/                   # types + invariants, zero dependencies
-│   │   ├── application/
-│   │   │   ├── ports/                # capability interfaces
-│   │   │   └── use-cases/            # orchestration over ports
-│   │   └── state/
-│   │       ├── remote/ local/ connection/
-│   │
-│   └── adapters/
-│       ├── orca/
-│       │   ├── rpc/                  # defineRpcOperation descriptors
-│       │   ├── transport/            # client acquisition, lifecycle
-│       │   ├── pairing/
-│       │   ├── protocol/             # capability negotiation, version gates
-│       │   └── mapping/              # Orca payload → domain
-│       └── stub/                     # no-op adapter, extraction proof only
-│
-└── (existing folders stay until their feature migrates)
+└── src/
+    ├── gamepad/                      # the fork: one tree, one boundary
+    │   ├── domain/                   # types + invariants, zero dependencies
+    │   ├── application/
+    │   │   ├── ports/                # capability interfaces
+    │   │   ├── use-cases/            # orchestration over ports
+    │   │   └── adapter-registry.ts   # composition root
+    │   ├── state/
+    │   │   └── remote/ local/ connection/
+    │   ├── features/
+    │   │   ├── dashboard/ projects/ sessions/ agents/ terminal/ files/ pairing/
+    │   │   │   ├── components/
+    │   │   │   ├── screens/
+    │   │   │   ├── hooks/
+    │   │   │   └── state/
+    │   ├── adapters/
+    │   │   ├── orca/
+    │   │   │   ├── rpc/              # defineRpcOperation descriptors
+    │   │   │   ├── transport/        # client acquisition, lifecycle
+    │   │   │   ├── pairing/
+    │   │   │   ├── protocol/         # capability negotiation, version gates
+    │   │   │   └── mapping/          # Orca payload → domain
+    │   │   ├── device/               # preferences, notifications, terminal WebView host
+    │   │   └── stub/                 # no-op adapter, extraction proof only
+    │   └── gamepad-boundary.test.ts
+    │
+    └── accounts/ components/ files/ home/ session/ storage/ terminal/
+        transport/ worktree/ …        # upstream, untouched
 ```
 
+There is no `core/` level: once the root is `gamepad/`, it names nothing.
+
+`adapters/device/` is separate from `adapters/orca/` on purpose. Preferences,
+push and the terminal WebView are *platform* concerns, not *Orca protocol*
+concerns, and FND-AC3 deletes only `adapters/orca/` — a standalone app still
+needs to persist a filter.
+
 The Expo shell stays thin: a route file resolves params, renders one feature
-screen, and does nothing else (architecture.md §9).
+screen, and does nothing else (architecture.md §9). Routes stay in `mobile/app/`
+because Expo Router requires them there; they re-export a gamepad screen.
 
 ## 2. Domain model
 
-`src/core/domain/`. One file per aggregate; no barrel file that re-exports
+`src/gamepad/domain/`. One file per aggregate; no barrel file that re-exports
 everything (it defeats the layering test's per-file import checks).
 
 ```ts
@@ -234,7 +244,7 @@ The domain is *not* a rename of Orca's model. The relationships that differ:
 
 ## 3. Application ports
 
-`src/core/application/ports/`. Ports are types, not classes. Each lives in a
+`src/gamepad/application/ports/`. Ports are types, not classes. Each lives in a
 file named for the capability.
 
 ```ts
@@ -296,11 +306,11 @@ does **not** reimplement any of:
 
 ### 4.2 RPC descriptors
 
-Every call is a descriptor in `src/adapters/orca/rpc/`, one file per method
+Every call is a descriptor in `src/gamepad/adapters/orca/rpc/`, one file per method
 family:
 
 ```ts
-// src/adapters/orca/rpc/worktree-ps-operation.ts
+// src/gamepad/adapters/orca/rpc/worktree-ps-operation.ts
 export const worktreePsOperation = defineRpcOperation({
   method: 'worktree.ps',
   acceptance: 'require-result-or-throw',
@@ -363,7 +373,7 @@ PRD-driven requirement asks for them.
 
 ### 4.4 Capability negotiation
 
-`src/adapters/orca/protocol/` holds:
+`src/gamepad/adapters/orca/protocol/` holds:
 
 - `host-protocol-gate.ts` — reads `status.get` (`protocolVersion`,
   `minCompatibleMobileVersion`, `appVersion`) and produces a
@@ -416,7 +426,7 @@ Two producers describe the same agent:
 - `agentSession.subscribeStatus` → `AgentSessionStatusSummary`, keyed by
   `sessionId`, states `working | attention | idle`.
 
-`src/adapters/orca/mapping/agent-reconciliation.ts` owns the single join and
+`src/gamepad/adapters/orca/mapping/agent-reconciliation.ts` owns the single join and
 the single projection to `AgentActivity`:
 
 | Source state                                       | `AgentActivity` |
@@ -433,7 +443,7 @@ adapter. Features never re-adjudicate
 
 ## 5. State
 
-`src/core/state/`.
+`src/gamepad/state/`.
 
 ### Remote state
 
@@ -449,18 +459,25 @@ rules:
 
 ### Local UI state
 
-Persisted with the app's existing `@react-native-async-storage/async-storage`
-preferences (`mobile/src/storage/preferences.ts` and
-`session-view-preferences.ts` already exist — extend, do not duplicate).
 Holds: selected connection, selected workspace, expanded tree nodes, filters,
 sort order, per-session composer drafts.
 
+Persistence is a port, not a direct reach. `PreferencesStorePort` lives in
+`src/gamepad/application/ports/preferences-store.ts`;
+`src/gamepad/adapters/device/preferences-store.ts` implements it over the
+existing `mobile/src/storage/preferences.ts` and `session-view-preferences.ts`
+— extend those, do not add a second persistence path. The port is what keeps
+FND-R9 true: a standalone app swaps the device adapter and the state layer does
+not notice.
+
 ### Connection state
 
-Reuses the existing host catalog and credential stores
+The paired-host catalog and its credentials stay in the existing stores
 (`mobile/src/transport/host-store.ts`, `host-metadata-store.ts`,
-`host-device-token-store.ts`). Connection state exposes `Connection` domain
-values to core; it does not re-persist anything.
+`host-device-token-store.ts`). `src/gamepad/adapters/orca/connection/host-catalog.ts`
+wraps them and publishes `Connection` domain values through `ConnectionPort`.
+Connection state re-persists nothing, and no module outside
+`src/gamepad/adapters/` names a host store.
 
 ## 6. Failure modes
 
@@ -478,7 +495,7 @@ host replays the recorded outcome instead of applying a second effect.
 
 ## 7. Cross-platform and remote constraints
 
-- No `path` module in core or features. A remote host may be Windows while the
+- No `path` module outside `src/gamepad/adapters/`. A remote host may be Windows while the
   phone is Android; path separators arrive from the host and are rendered
   verbatim. Path joining belongs to the host, never the controller.
 - `RuntimeWorktreePsSummary.terminalPlatform` tells the controller which
@@ -492,14 +509,25 @@ host replays the recorded outcome instead of applying a second effect.
 
 | Level | Location | What it proves |
 | ----- | -------- | -------------- |
-| Layering | `mobile/src/core/layering-boundary.test.ts` | FND-R3, FND-AC1, AC2, AC6 — by static import analysis over the source tree |
+| Boundary | `mobile/src/gamepad/gamepad-boundary.test.ts` | FND-R3, FND-AC1, AC2, AC6 — by static import analysis over `src/gamepad/` |
 | Domain | colocated `*.test.ts` | invariants (e.g. a `Workspace` of kind `folder` has `branch === null`) |
-| Mapping | `src/adapters/orca/mapping/*.test.ts` | each Orca payload → domain value, with fixtures from `src/shared/__fixtures__` where they exist |
-| Compatibility | `src/adapters/orca/protocol/host-compatibility.test.ts` | every port method against: current host, a host at `MIN_COMPATIBLE_RUNTIME_CLIENT_VERSION`, and a host that refuses with `method not found` |
+| Mapping | `src/gamepad/adapters/orca/mapping/*.test.ts` | each Orca payload → domain value, with fixtures from `src/shared/__fixtures__` where they exist |
+| Compatibility | `src/gamepad/adapters/orca/protocol/host-compatibility.test.ts` | every port method against: current host, a host at `MIN_COMPATIBLE_RUNTIME_CLIENT_VERSION`, and a host that refuses with `method not found` |
 | Recording | reuse `mobile/src/test-support/rpc-recording/` | replays a scripted transport through the real operation layer |
-| Extraction | `mobile/src/extraction-readiness.test.ts` (typecheck job) | FND-AC3 |
+| Extraction | `mobile/tsconfig.extraction.json` via `pnpm typecheck:extraction` | FND-AC3 |
 
-Run with `pnpm test` from `mobile/`; typecheck with `pnpm typecheck`.
+Run with `pnpm test` from `mobile/`; typecheck with `pnpm typecheck` and
+`pnpm typecheck:extraction`.
+
+Three upstream ratchets already scan `mobile/{app,src}` and so cover the
+adapter for free: `rpc-params-contract-type-only-boundary.test.ts` (host
+contracts stay type-only), `unvalidated-rpc-request-port-boundary.test.ts`
+(FND-AC4), and `rpc-operation-cast-fence.test.ts`.
+
+Import depth is worth stating once: from `src/gamepad/adapters/orca/x.ts` the
+desktop repo's shared tree is five levels up (`../../../../../src/shared/…`).
+A wrong depth fails *open* in the type-only ratchet — it silently stops
+covering the file — so get it right rather than relying on that test.
 
 ## 9. Open questions
 

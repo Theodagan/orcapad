@@ -2,7 +2,7 @@
 
 ## 1. Port
 
-`mobile/src/core/application/ports/file-inspection-port.ts`:
+`mobile/src/gamepad/application/ports/file-inspection-port.ts`:
 
 ```ts
 export type FileEntryKind = 'file' | 'directory' | 'symlink' | 'other'
@@ -84,7 +84,7 @@ The host enforces `MOBILE_FILE_DIRECTORY_MAX_ENTRIES = 10_000` and
 `DirectoryListing{kind:'too-large'}` carrying the host's message verbatim
 (FILE-AC2) — it is not an error to the user, it is a state.
 
-Reuse the existing constant; do not restate the numbers in the feature.
+The adapter imports that constant from `src/shared/` — it is the one layer allowed to. The feature never restates the numbers; it renders the host's message.
 
 ### 2.2 Chunked reads
 
@@ -124,7 +124,7 @@ no path module and contains no separator literal in path handling.
 ## 3. Feature structure
 
 ```text
-mobile/src/features/files/
+mobile/src/gamepad/features/files/
 ├── screens/
 │   ├── FileTreeScreen.tsx
 │   ├── FilePreviewScreen.tsx

@@ -136,6 +136,9 @@ docs/**
 !docs/reference/xterm-patch-regeneration.md
 !docs/specs/
 !docs/specs/**
+# The fork's product definition and architecture decision, cited by every spec above.
+!docs/PRD.md
+!docs/architecture.md
 
 # Stably CLI (only docs/ are tracked)
 .stably/*

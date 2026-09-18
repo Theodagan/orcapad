@@ -2,7 +2,7 @@
 
 ## 1. Ports
 
-`mobile/src/core/application/ports/connection-port.ts`:
+`mobile/src/gamepad/application/ports/connection-port.ts`:
 
 ```ts
 export type PairingOffer = {
@@ -99,7 +99,7 @@ version 1 for the gate and mark every optional capability `unknown`.
 ## 3. Feature structure
 
 ```text
-mobile/src/features/pairing/
+mobile/src/gamepad/features/pairing/
 ├── screens/
 │   ├── HostCatalogScreen.tsx
 │   ├── PairScanScreen.tsx

@@ -8,14 +8,14 @@
 
 - [ ] **TERM-T2 — Capability handshake**
 
-  `src/adapters/orca/rpc/terminal-subscribe-operation.ts` building the
+  `src/gamepad/adapters/orca/rpc/terminal-subscribe-operation.ts` building the
   `TerminalSubscribe` params per §2.1 and reading the echoed capabilities.
 
   **Verify:** `pnpm test …/terminal-capability-handshake.test.ts`
 
 - [ ] **TERM-T3 — Frame decoding to domain**
 
-  `src/adapters/orca/mapping/activity-frame-mapping.ts` over the existing
+  `src/gamepad/adapters/orca/mapping/activity-frame-mapping.ts` over the existing
   `terminal-stream-protocol.ts` decoder; opcode → `ActivityFrame`, unknown opcode
   counted and logged once.
 
@@ -23,20 +23,20 @@
 
 - [ ] **TERM-T4 — Snapshot assembly**
 
-  `src/adapters/orca/transport/terminal-snapshot-assembly.ts` per §2.3.
+  `src/gamepad/adapters/orca/transport/terminal-snapshot-assembly.ts` per §2.3.
 
   **Verify:** `pnpm test …/snapshot-assembly.test.ts` (TERM-AC1)
 
 - [ ] **TERM-T5 — Backpressure**
 
-  `src/adapters/orca/transport/terminal-output-backpressure.ts` per §2.4, with
+  `src/gamepad/adapters/orca/transport/terminal-output-backpressure.ts` per §2.4, with
   the elision notice.
 
   **Verify:** `pnpm test …/terminal-backpressure.test.ts` (TERM-AC2)
 
 - [ ] **TERM-T6 — Read-only fallback**
 
-  `src/adapters/orca/transport/terminal-polled-fallback.ts` per §2.5.
+  `src/gamepad/adapters/orca/transport/terminal-polled-fallback.ts` per §2.5.
 
   **Verify:** `pnpm test …/terminal-read-only-fallback.test.ts` (TERM-AC5)
 
@@ -53,7 +53,7 @@
   `ActivityFrame`s. No protocol knowledge crosses the bridge.
 
   **Verify:** `pnpm run check:code-quality:changed`;
-  `pnpm test src/features/terminal`
+  `pnpm test src/gamepad/features/terminal`
 
 - [ ] **TERM-T9 — Accessory keys with host-platform labels**
 
@@ -73,7 +73,7 @@
   Migrate `quick-commands.ts`; sending a quick command goes through the same
   input path as typing.
 
-  **Verify:** `pnpm test src/features/terminal/components`
+  **Verify:** `pnpm test src/gamepad/features/terminal/components`
 
 - [ ] **TERM-T12 — Path tap**
 

@@ -80,25 +80,42 @@ Ports for MVP:
 A port method never exposes an Orca method name, an RPC envelope, a zod schema,
 a `paneKey`, a `worktree` selector string, or a subscription id.
 
-### FND-R3 — Dependency direction is enforced, not documented
+### FND-R3 — The fork is one subtree with one boundary
+
+`mobile/src/gamepad/` is the whole controller product layer. Everything else
+under `mobile/src/` is upstream Orca Mobile. One rule holds the line:
+
+> `src/gamepad/**` may not import anything outside `src/gamepad/**`, **except**
+> `src/gamepad/adapters/**`, which may reach a named list of upstream modules.
+
+That list is data, not prose: `ADAPTER_UPSTREAM_REACH` in the boundary test.
+Today it is `mobile/src/{transport,storage,terminal,navigation}/` and the
+desktop repo's `src/shared/`. Extending it is a deliberate, reviewable edit, and
+every entry is something extraction has to replace.
+
+Being one subtree is the point. The fork's delta is `git diff -- mobile/src/gamepad`,
+a rebase does not touch it, and extraction is a move rather than a tsconfig
+excavation. A layout that spread the layer across siblings of ~30 upstream
+folders could state none of that, and left the rule blind to those siblings.
+
+Inside the subtree the layering still holds:
 
 ```text
-app/ (Expo shell)  →  src/features/  →  src/core/application/  →  src/core/domain/
+app/ (Expo shell)  →  gamepad/features/  →  gamepad/application/  →  gamepad/domain/
                                                     ↑
-                                          src/adapters/orca/
+                                          gamepad/adapters/orca/
 ```
 
-A lint rule fails the build on:
-
-- `src/core/**` importing `src/adapters/**` or `src/features/**`;
-- `src/features/**` importing `src/adapters/**`;
-- `src/core/**` or `src/features/**` importing `../../src/shared/**`, the Orca
-  host contracts;
-- `src/core/**` importing `react-native` or any `expo-*` package.
+- `gamepad/domain/**` imports nothing outside itself;
+- `gamepad/application/ports/**` references only `gamepad/domain/**`;
+- `gamepad/{application,state,features}/**` never import `gamepad/adapters/**` —
+  they reach the adapter through `gamepad/application/adapter-registry.ts`;
+- `gamepad/{domain,application,state}/**` never import `react-native` or any
+  `expo-*` package. `gamepad/features/**` may: it is the UI.
 
 ### FND-R4 — The adapter is the only holder of Orca knowledge
 
-`src/adapters/orca/` is the sole place in the controller layer that may:
+`src/gamepad/adapters/orca/` is the sole place in the controller layer that may:
 
 - name an Orca RPC method;
 - import from the desktop repo's `src/shared/`;
@@ -146,27 +163,31 @@ dropped connection maps to `unverifiable`, never `exited`
 
 ### FND-R9 — Extraction readiness
 
-`src/core/` and `src/features/` must compile with `src/adapters/orca/` removed
-and replaced by a stub implementing the same ports. A CI job proves it by
-type-checking against a generated no-op adapter.
+`src/gamepad/` must compile with `src/gamepad/adapters/orca/` removed and
+replaced by a stub implementing the same ports. `mobile/tsconfig.extraction.json`
+proves it — one `include`, one `exclude` — and `pnpm typecheck:extraction` runs
+it in CI.
 
 ## Acceptance criteria
 
-- **FND-AC1** — `src/core/domain/` has zero imports outside itself and the
-  TypeScript standard library. Verified by the layering test.
+- **FND-AC1** — `src/gamepad/domain/` has zero imports outside itself and the
+  TypeScript standard library. Verified by the boundary test.
 - **FND-AC2** — Every port method's parameter and return types resolve to
-  domain types or primitives. Verified by the layering test, which rejects a
-  port signature referencing a module outside `src/core/`.
-- **FND-AC3** — Deleting `src/adapters/orca/` and pointing the composition root
-  at `src/adapters/stub/` leaves `pnpm typecheck` green in `mobile/`.
+  domain types or primitives. Verified by the boundary test, which rejects any
+  import in `src/gamepad/application/ports/` that leaves `src/gamepad/domain/`.
+- **FND-AC3** — Deleting `src/gamepad/adapters/orca/` and pointing the
+  composition root at `src/gamepad/adapters/stub/` leaves
+  `pnpm typecheck:extraction` green in `mobile/`.
 - **FND-AC4** — The adapter contributes zero new entries to
   `UNVALIDATED_RPC_REQUEST_PORT_PENDING`.
 - **FND-AC5** — A recorded-fixture suite replays a captured host session
   against the adapter and asserts every port method returns the expected
   domain value, including for a host that answers `method not found`.
-- **FND-AC6** — Searching `src/core/` and `src/features/` for the string
-  `worktree`, `paneKey`, `snapshotId`, or any `RpcMethodName` literal returns
-  no hits.
+- **FND-AC6** — No identifier or string literal outside
+  `src/gamepad/adapters/` contains `worktree`, `paneKey` or `snapshotId`, or
+  equals an `RpcMethodName`. Comments and `*.test.ts(x)` prose are not scanned —
+  they describe the host on purpose — and `'git-worktree'` is exempt as the
+  `WorkspaceKind` value tech.md §2 fixes.
 - **FND-AC7** — Disconnecting mid-session leaves every affected
   `executionState` at `unverifiable` and no entity at `exited`.
 

@@ -60,6 +60,11 @@ types and port interfaces every other spec references.
 
 From [`../../AGENTS.md`](../../AGENTS.md) and [`../STYLEGUIDE.md`](../STYLEGUIDE.md):
 
+- **One subtree.** The fork lives entirely under `mobile/src/gamepad/`.
+  `src/gamepad/**` imports nothing outside itself except through
+  `src/gamepad/adapters/**`, which reaches the upstream roots named in
+  `ADAPTER_UPSTREAM_REACH` (`mobile/src/gamepad/gamepad-boundary.test.ts`).
+  Everything else under `mobile/src/` is upstream Orca Mobile.
 - **Reuse before reimplementing.** The Orca adapter wraps the existing
   `mobile/src/transport/` stack. It does not reimplement the RPC client,
   the relay client, pairing crypto, or the terminal binary stream.

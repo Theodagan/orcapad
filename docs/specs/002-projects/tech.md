@@ -2,7 +2,7 @@
 
 ## 1. Ports
 
-`mobile/src/core/application/ports/project-catalog-port.ts`:
+`mobile/src/gamepad/application/ports/project-catalog-port.ts`:
 
 ```ts
 export type ProjectCatalogPort = {
@@ -116,7 +116,7 @@ A row whose only evidence is `restoredUnconfirmed` contributes nothing to the
 projection — it cannot raise a workspace to `working`.
 
 This projection lives in
-`src/adapters/orca/mapping/workspace-attention-projection.ts` and is the only
+`src/gamepad/adapters/orca/mapping/workspace-attention-projection.ts` and is the only
 place it exists. Features must not re-derive attention from agent rows
 ([`../../reference/agent-status-store.md`](../../reference/agent-status-store.md)).
 
@@ -157,7 +157,7 @@ Rules:
 ## 4. Feature structure
 
 ```text
-mobile/src/features/projects/
+mobile/src/gamepad/features/projects/
 ├── screens/
 │   ├── WorkspaceListScreen.tsx
 │   └── WorkspaceDetailScreen.tsx
@@ -191,7 +191,7 @@ they are migrated; do not fork them.
 | Connection  | drives staleness labelling |
 
 Cross-host list assembly happens in a use case
-(`core/application/use-cases/list-controller-workspaces.ts`) that merges per-
+(`gamepad/application/use-cases/list-controller-workspaces.ts`) that merges per-
 connection pages and stamps each row with its connection. Merging never
 deduplicates across connections (PROJ-AC7).
 

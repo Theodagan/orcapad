@@ -2,7 +2,7 @@
 
 ## 1. Port
 
-`mobile/src/core/application/ports/agent-control-port.ts`:
+`mobile/src/gamepad/application/ports/agent-control-port.ts`:
 
 ```ts
 export type TranscriptPage = {
@@ -265,7 +265,7 @@ number the UI got from the same read that produced the `Task`, via a
 ## 3. Feature structure
 
 ```text
-mobile/src/features/agents/
+mobile/src/gamepad/features/agents/
 ├── screens/
 │   └── AgentSessionScreen.tsx
 ├── components/

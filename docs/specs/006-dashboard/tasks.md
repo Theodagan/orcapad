@@ -8,8 +8,8 @@
 
 - [ ] **DASH-T2 — Registration adapter**
 
-  `src/adapters/orca/rpc/notification-operations.ts` and
-  `src/adapters/orca/notification-adapter.ts`, with the iOS-environment
+  `src/gamepad/adapters/orca/rpc/notification-operations.ts` and
+  `src/gamepad/adapters/orca/notification-adapter.ts`, with the iOS-environment
   precondition and the refusal-reason mapping.
 
   **Verify:** `pnpm test …/push-registration-params.test.ts`,
@@ -17,7 +17,7 @@
 
 - [ ] **DASH-T3 — Watermark store**
 
-  `src/features/dashboard/state/notification-watermark.ts` — `{ seq, epoch }` per
+  `src/gamepad/features/dashboard/state/notification-watermark.ts` — `{ seq, epoch }` per
   connection, persisted, with the epoch-mismatch reset.
 
   **Verify:** `pnpm test …/notification-catch-up.test.ts` (DASH-AC5, AC6)
@@ -27,11 +27,11 @@
   Wire `catchUp` into the connection-restored transition from `001`, including
   `deliveredPushes` (most recent 256).
 
-  **Verify:** `pnpm test src/core/application/use-cases/catch-up-notifications.test.ts`
+  **Verify:** `pnpm test src/gamepad/application/use-cases/catch-up-notifications.test.ts`
 
 - [ ] **DASH-T5 — Attention queue use case**
 
-  `src/core/application/use-cases/build-attention-queue.ts` per §3.
+  `src/gamepad/application/use-cases/build-attention-queue.ts` per §3.
 
   **Verify:** `pnpm test …/attention-queue-ordering.test.ts`,
   `…/attention-queue-dedup.test.ts`, `…/attention-queue-unknown.test.ts`
@@ -43,7 +43,7 @@
   from `mobile/src/home/`.
 
   **Verify:** `pnpm run check:code-quality:changed`; `pnpm lint`;
-  `pnpm test src/features/dashboard`
+  `pnpm test src/gamepad/features/dashboard`
 
 - [ ] **DASH-T7 — Inline intervention**
 

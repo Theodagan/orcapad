@@ -2,7 +2,7 @@
 
 ## 1. Port
 
-`mobile/src/core/application/ports/activity-stream-port.ts`:
+`mobile/src/gamepad/application/ports/activity-stream-port.ts`:
 
 ```ts
 export type ActivityHandle = string & { readonly __brand: 'ActivityHandle' }
@@ -164,15 +164,18 @@ The existing terminal renderer is an xterm engine inside a WebView
 `mobile/scripts/build-terminal-webview-engine.mjs`). **Reuse it.** This feature
 changes what feeds the engine, not the engine.
 
-Boundary: `src/features/terminal/components/TerminalSurface.tsx` accepts
-`ActivityFrame`s and forwards bytes to the WebView through the existing
-`terminal-webview-contract.ts`. No protocol knowledge lives in the WebView
-bridge.
+Boundary: `src/gamepad/features/terminal/components/TerminalSurface.tsx` accepts
+`ActivityFrame`s and forwards bytes to the WebView through
+`src/gamepad/adapters/device/terminal-webview-host.tsx`, a thin pass-through
+over the existing `terminal-webview-contract.ts`. The engine is a build
+artifact of the upstream tree (`postinstall`), so the feature must not import
+it directly — keep the wrapper thin or the boundary starts fighting the
+renderer. No protocol knowledge lives in the WebView bridge.
 
 ## 4. Feature structure
 
 ```text
-mobile/src/features/terminal/
+mobile/src/gamepad/features/terminal/
 ├── screens/
 │   └── TerminalSessionScreen.tsx
 ├── components/

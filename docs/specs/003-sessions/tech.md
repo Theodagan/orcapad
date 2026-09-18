@@ -2,7 +2,7 @@
 
 ## 1. Port
 
-`mobile/src/core/application/ports/session-port.ts`:
+`mobile/src/gamepad/application/ports/session-port.ts`:
 
 ```ts
 export type SessionMembershipEvent =
@@ -145,14 +145,14 @@ evidence.
 
 `002-projects` reads agent rows from `worktree.ps`; this feature reads status
 summaries. Both funnel through
-`src/adapters/orca/mapping/agent-reconciliation.ts` from `000-foundation` §4.6.
+`src/gamepad/adapters/orca/mapping/agent-reconciliation.ts` from `000-foundation` §4.6.
 There is exactly one `Agent` per `(connectionId, agentId)` in the remote store,
 regardless of how many producers described it.
 
 ## 3. Feature structure
 
 ```text
-mobile/src/features/sessions/
+mobile/src/gamepad/features/sessions/
 ├── screens/
 │   ├── WorkspaceSessionsScreen.tsx
 │   └── AllSessionsScreen.tsx
@@ -169,9 +169,11 @@ mobile/src/features/sessions/
     └── session-ordering.ts
 ```
 
-Reuse `mobile/src/session/active-session-tab.ts` and
-`mobile/src/navigation/host-stack-navigation.ts` rather than adding a second
-navigation helper.
+Reuse `mobile/src/session/active-session-tab.ts` by moving it into
+`src/gamepad/features/sessions/state/` — it is pure logic with one caller.
+`mobile/src/navigation/host-stack-navigation.ts` stays upstream and is reached
+through `src/gamepad/adapters/device/host-stack-navigation.ts`; no second
+navigation helper either way.
 
 ## 4. Subscription lifecycle
 
