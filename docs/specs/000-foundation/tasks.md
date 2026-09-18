@@ -15,7 +15,7 @@ and `oxlint` green in `mobile/`.
 
   **Verify:** `pnpm test src/core/domain`
 
-- [ ] **FND-T2 — Layering test**
+- [x] **FND-T2 — Layering test**
 
   Create `mobile/src/core/layering-boundary.test.ts`:
   - Walk `src/core/`, `src/features/`, `src/adapters/` with the repo's existing
