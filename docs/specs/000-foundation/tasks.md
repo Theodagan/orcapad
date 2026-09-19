@@ -55,7 +55,7 @@ and `oxlint` green in `mobile/`.
 
   **Verify:** `pnpm typecheck`; `pnpm test src/gamepad/gamepad-boundary.test.ts`
 
-- [ ] **FND-T5 — Protocol gate and capability map**
+- [x] **FND-T5 — Protocol gate and capability map**
   - `src/gamepad/adapters/orca/protocol/host-protocol-gate.ts` — `status.get` descriptor
     and `HostCapabilities` projection.
   - `src/gamepad/adapters/orca/protocol/port-capability-map.ts` — per-method
