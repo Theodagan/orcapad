@@ -45,7 +45,7 @@ and `oxlint` green in `mobile/`.
 
   **Verify:** `pnpm typecheck`
 
-- [ ] **FND-T4 — Adapter skeleton and composition root**
+- [x] **FND-T4 — Adapter skeleton and composition root**
   - `mobile/src/gamepad/adapters/orca/index.ts` exporting `createOrcaAdapter(deps)`
     returning the full port bundle, with every method initially returning
     `PortFailure{kind:'unsupported'}`.
