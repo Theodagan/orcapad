@@ -66,7 +66,7 @@ and `oxlint` green in `mobile/`.
 
   **Verify:** `pnpm test src/gamepad/adapters/orca/protocol`
 
-- [ ] **FND-T6 — Transport binding**
+- [x] **FND-T6 — Transport binding**
   - `src/gamepad/adapters/orca/transport/adapter-client-binding.ts` — acquire the logical
     client for a connection id from the existing host client registry
     (`mobile/src/transport/host-logical-client.ts`,
