@@ -1,81 +1,119 @@
 # Orca Controller — MVP PRD
 
-## 1. Purpose
+## 1. Product
 
-Create a **controller-first fork of Orca Mobile** optimized around controlling and monitoring Orca/AI coding environments remotely.
+A controller-first fork of Orca Mobile that redesigns the mobile Orca experience around gamepad interaction.
 
-The MVP should preserve compatibility with the existing Orca ecosystem while allowing the UX to diverge substantially from the stock mobile experience.
+The product is intended for:
 
-The fork is an **experimental UX/product layer first**, with the option to extract the mature experience into a standalone application later.
+- Android handhelds with integrated controls, initially the Retroid Pocket Flip.
+- iPhone/iPad paired with a Bluetooth controller.
 
-## 2. Goals
+Orca is the initial backend/integration target, but the UX and product layer should remain sufficiently backend-agnostic to support extraction into a standalone application later.
 
-* Fork and remain compatible with the upstream Orca Mobile application/protocol.
-* Redesign the mobile experience around **controller workflows**, rather than reproducing a mobile IDE.
-* Provide visibility and control over:
+## 2. Objective
 
-  * projects
-  * sessions
-  * agents
-  * messages/tasks
-  * terminal/activity
-  * connection/pairing
-* Keep the actual project files and file tree accessible where useful.
-* Make UX experimentation cheap and reversible.
-* Keep the core product logic independent enough to extract into a standalone application later.
+Explore and validate a fundamentally controller-native interaction model for an AI coding environment, rather than adapting a conventional mobile/desktop IDE to a gamepad.
 
-## 3. Non-goals for MVP
+The MVP prioritizes experimentation with the interaction model, especially the Context Wheel, while retaining the information needed to understand and operate an active coding environment.
 
-* Rebuild Orca Desktop.
-* Build a full mobile IDE.
-* Replace Orca's underlying agent/runtime.
-* Introduce a new backend or persistence architecture unnecessarily.
-* Design the final standalone product before the controller UX has been validated.
-* Maintain pixel/UX parity with upstream Orca Mobile.
+## 3. Core UX
 
-## 4. Product principles
+### Controller-first
 
-**Controller first.**
-The primary job is observing, steering and managing remote work.
+The gamepad is the primary interaction model.
 
-**Information over simulation.**
-Expose the useful state of the development environment without pretending the phone is a desktop.
+Touch remains useful where appropriate, but the principal navigation, selection and action model must work through the controller.
 
-**UX is experimental.**
-Navigation, information hierarchy and interaction patterns must remain easy to change.
+### Context Wheel
 
-**Orca-compatible, not Orca-dependent.**
-Use Orca as the initial runtime adapter while keeping product capabilities behind application ports.
+The Context Wheel is the central UX pattern to explore.
 
-**No premature abstraction.**
-Only abstract boundaries that enable compatibility, testing or eventual extraction.
+Two contextual wheels are opened through stick motion:
 
-## 5. MVP surface
+- Left stick → Wheel 1 — assignment TBD
+- Right stick → Wheel 2 — assignment TBD
 
-Initial surface should cover:
+Wheel behavior:
 
-* connection / pairing
-* projects and workspaces
-* active sessions
-* session status and activity
-* conversation / agent interaction
-* task steering and intervention
-* terminal/output where useful
-* file tree / file inspection
-* basic session/project navigation
+1. Opens immediately when the stick leaves the dead zone.
+2. Locks onto the segment indicated by the stick.
+3. Stick movement alone never executes an action.
+4. A commits the currently selected segment.
+5. Returning to center or leaving the valid segment before A cancels with zero side effect.
+6. No hold-to-summon delay.
 
-Exact UX and information architecture remain intentionally open for iteration.
+Wheel assignments and segment contents remain deliberately open for UX iteration.
 
-## 6. Compatibility constraint
+## 4. Controller mapping
 
-The fork must remain compatible with the relevant upstream Orca Mobile interfaces and protocol.
+| Input | Function |
+| ----- | -------- |
+| L2 (analog) | Scroll up — current pane |
+| R2 (analog) | Scroll down — current pane |
+| LB / RB | Previous / next tab — current project |
+| Y + LB/RB (hold) | Previous / next worktree or project |
+| Left stick (motion) | Open Wheel 1 — assignment TBD |
+| Right stick (motion) | Open Wheel 2 — assignment TBD |
+| A | Confirm — commits held wheel direction, or general confirm |
+| B | Reject / back |
+| X | Stop / interrupt — kills in-flight agent turn or tool call, any pane |
+| R3 | Toggle dictation |
+| L3 | Unassigned |
 
-Orca-specific implementation must therefore be isolated behind an explicit adapter boundary.
+This mapping is the initial controller contract. The wheel contents are the primary area of UX experimentation.
 
-Upstream changes should be incorporable without requiring a rewrite of the controller product layer.
+## 5. Information surface
 
-## 7. Extraction criterion
+The experience must preserve direct visibility into the underlying coding environment, including:
 
-The controller experience becomes a candidate standalone application once its UX and capability model have stabilized.
+- project/worktree context
+- tabs/sessions
+- actual file tree
+- actual files/code
+- agent transcript
+- prompts and responses
+- agent/tool activity and state
+- terminal/output where relevant
+- diffs where relevant
+- voice/dictation input
 
-Extraction should primarily consist of replacing/removing the Orca adapter and application shell—not rewriting the features themselves.
+This is not intended to become a full mobile IDE. The goal is to expose the right information and controls through a controller-oriented experience.
+
+## 6. Orca relationship
+
+The implementation should reuse Orca Mobile's existing capabilities and connectivity wherever practical.
+
+The fork owns the presentation and interaction layer.
+
+Orca-specific integration must remain isolated so that the controller UX does not become structurally dependent on Orca's implementation.
+
+## 7. MVP constraints
+
+- Start from Orca Mobile rather than building an unrelated application.
+- Preserve compatibility with upstream Orca Mobile as far as practical.
+- Controller interaction is a first-class design constraint, not an input accessory.
+- Context Wheel behavior must remain easy to iterate.
+- Preserve actual files/file tree and agent interaction visibility.
+- Avoid unnecessary backend/runtime reimplementation.
+- Keep the reusable product layer separable from Orca-specific integration.
+
+## 8. Non-goals
+
+- Building a conventional mobile IDE.
+- Reproducing the desktop Orca UI on mobile.
+- Replacing Orca's backend/runtime.
+- Finalizing the Context Wheel before experimentation.
+- Building a separate standalone application before the UX has matured.
+
+## 9. Extraction target
+
+Once the controller UX has matured, the maximum practical portion of the application should be extractable into a standalone product.
+
+The intended evolution is:
+
+```text
+Orca Mobile fork → controller UX experimentation → validated product layer → standalone application
+```
+
+The architecture must therefore keep the Orca integration replaceable without requiring the controller UX to be rewritten.
