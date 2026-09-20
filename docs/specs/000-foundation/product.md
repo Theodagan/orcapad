@@ -21,7 +21,7 @@ Two consequences:
 1. **UX experiments are expensive.** Redesigning the session surface means
    touching modules that also own protocol decoding, so a UX revert is a
    protocol revert.
-2. **Extraction is blocked.** PRD §7 wants the controller layer lifted out by
+2. **Extraction is blocked.** PRD §9 wants the controller layer lifted out by
    replacing the Orca adapter. Today there is no adapter to replace.
 
 ## Scope
@@ -42,7 +42,7 @@ Two consequences:
 - Rewriting `mobile/src/transport/`. The adapter consumes it.
 - Migrating every existing screen. Features `004`–`010` migrate their own
   surface; legacy screens keep working from the raw port until then.
-- A second runtime adapter. PRD §3 explicitly defers this.
+- A second runtime adapter. PRD §8 explicitly defers this.
 - Any generic `IBackend` / `IConnection` / `IAgent` abstraction
   (architecture.md §4 forbids these until proven necessary).
 
@@ -53,9 +53,16 @@ Two consequences:
 The domain layer defines the controller's own concepts as plain data with no
 imports from `mobile/src/transport/`, `src/shared/`, React, or Expo.
 
-The MVP domain is exactly these eight aggregates. Each carries only fields a
-controller screen or use case actually reads; PRD-driven, not a mirror of
-Orca's data model (architecture.md §3).
+The MVP domain is these eleven aggregates. Eight describe the remote
+environment — `Project`, `Workspace`, `Session`, `Agent`, `Message`, `Task`,
+`Activity`, `Connection`. Three describe how it is operated, and are owned by
+`001`–`003`: `InputBinding`, `Pane`, `Wheel`.
+
+Each carries only fields a pane or use case actually reads; PRD-driven, not a
+mirror of Orca's data model (architecture.md §3). The interaction aggregates are
+domain rather than feature state for the same reason the rest are: PRD §9
+extracts the controller UX, and an interaction model that lived in a feature
+would not come with it.
 
 ### FND-R2 — Capability ports
 

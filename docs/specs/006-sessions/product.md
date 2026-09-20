@@ -3,8 +3,8 @@
 ## Purpose
 
 Show what is *running* inside a workspace and let the user move between those
-running things. PRD §5: "active sessions", "session status and activity",
-"basic session/project navigation".
+running things. PRD §5: "tabs/sessions" and "agent/tool activity and state".
+§4 gives sessions their own input: `LB`/`RB` cycle tabs within a workspace.
 
 ## Domain framing
 
@@ -44,6 +44,26 @@ own the content of any surface.
 - Browser tabs.
 - Session handoff between TUI and native chat (`agentSession.requestHandoff`),
   deferred until the controller UX for it is designed.
+
+## Controller surface
+
+Operated entirely through `001`'s intents; this feature owns no input of its own
+and never reads the controller port. Wheel segments are contributed to `002`'s
+registry with an `availability`, so the ring's shape stays stable.
+
+| Pane | Accepts | Notes |
+| ---- | ------- | ----- |
+| Session list | `move-selection`, `confirm`, `scroll` | |
+| Any session pane | `cycle-tab` | `LB`/`RB`, the one input that is always a session's |
+
+`cycle-tab` wraps at the ends rather than stopping: on a controller a dead
+button reads as a broken one, and there is no scrollbar to show you are at the
+edge.
+
+Wheel segments: new terminal, close tab, switch terminal/chat view.
+
+Every pane this feature mounts declares its `sessionId`, which is what makes
+`X` resolvable from anywhere inside a session (`001` CTRL-R3).
 
 ## Requirements
 

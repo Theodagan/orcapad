@@ -3,12 +3,13 @@
 ## Purpose
 
 Let the user see what the agent actually changed, and read the file it is
-talking about. PRD §5: "file tree / file inspection", and §2: "Keep the actual
-project files and file tree accessible where useful".
+talking about. PRD §5: "actual file tree", "actual files/code", and "diffs
+where relevant" — three of the ten items on the information surface, and the
+three a controller has the hardest time reaching without a selection model.
 
-## Product principle applied
+## PRD constraint applied
 
-*Information over simulation.* This is inspection, not editing. A phone is a
+*Not a full mobile IDE (PRD §5).* This is inspection, not editing. A handheld is a
 good place to read a 40-line diff and a bad place to refactor. The MVP is
 read-only by design, and says so rather than offering an edit affordance that
 disappoints.
@@ -38,6 +39,24 @@ disappoints.
 Read-only is a deliberate MVP boundary, not an oversight: a mistaken write from
 a phone into an agent's working tree is expensive to notice and expensive to
 undo.
+
+## Controller surface
+
+Operated entirely through `001`'s intents; this feature owns no input of its own
+and never reads the controller port. Wheel segments are contributed to `002`'s
+registry with an `availability`, so the ring's shape stays stable.
+
+| Pane | Accepts | Notes |
+| ---- | ------- | ----- |
+| File tree | `move-selection`, `confirm`, `back`, `scroll` | `confirm` opens a file or expands a directory; `back` collapses or goes up |
+| File preview | `scroll` | |
+| Search | text target | dictation is the intended entry path |
+
+This feature is why the d-pad exists in `001`'s mapping. A tree of two hundred
+entries has no wheel representation, so linear selection is not a convenience
+here — nothing else can reach the 137th file.
+
+Wheel segments: search, jump to diff, collapse all.
 
 ## Requirements
 

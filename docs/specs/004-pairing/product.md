@@ -3,7 +3,8 @@
 ## Purpose
 
 Get a phone talking to one or more Orca hosts, keep it talking, and make the
-state of that link legible. PRD §5: "connection / pairing".
+state of that link legible. PRD §6 makes Orca the backend the fork reuses;
+nothing in §5 is reachable until this link exists.
 
 For a controller, the connection *is* a first-class object. A mobile IDE can
 treat the network as plumbing; a controller cannot — when the link is down, the
@@ -28,6 +29,23 @@ honest answer about remote work is "unknown", and the user needs to see why.
   feature consumes `mobile/src/transport/` as-is.
 - Desktop-side pairing UI.
 - Account sign-in (relay requires a signed-in desktop; the phone does not sign in).
+
+## Controller surface
+
+Operated entirely through `001`'s intents; this feature owns no input of its own
+and never reads the controller port. Wheel segments are contributed to `002`'s
+registry with an `availability`, so the ring's shape stays stable.
+
+| Pane | Accepts | Notes |
+| ---- | ------- | ----- |
+| Host catalog | `move-selection`, `confirm`, `scroll` | `confirm` connects to the selected host |
+| Manual endpoint | text target | the one place a controller user must type; `R3` dictation is the intended path |
+| Connection log | `scroll` | read-only |
+
+Wheel segments: reconnect now, forget host, open connection log.
+
+`confirm` on an already-connected host opens it rather than reconnecting —
+reconnecting a healthy link is a wheel action, not the default.
 
 ## Requirements
 

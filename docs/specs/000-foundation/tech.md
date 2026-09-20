@@ -30,7 +30,8 @@ mobile/
     │   │   │   ├── pairing/
     │   │   │   ├── protocol/         # capability negotiation, version gates
     │   │   │   └── mapping/          # Orca payload → domain
-    │   │   ├── device/               # preferences, notifications, terminal WebView host
+    │   │   ├── device/               # controller input, dictation audio, preferences,
+    │   │   │                         # notifications, terminal WebView host
     │   │   └── stub/                 # no-op adapter, extraction proof only
     │   └── gamepad-boundary.test.ts
     │
@@ -46,7 +47,7 @@ concerns, and FND-AC3 deletes only `adapters/orca/` — a standalone app still
 needs to persist a filter.
 
 The Expo shell stays thin: a route file resolves params, renders one feature
-screen, and does nothing else (architecture.md §9). Routes stay in `mobile/app/`
+screen, and does nothing else (architecture.md §10). Routes stay in `mobile/app/`
 because Expo Router requires them there; they re-export a gamepad screen.
 
 ## 2. Domain model
@@ -193,7 +194,7 @@ export type Message = {
 
 ```ts
 // task.ts
-/** Something the agent needs the user to decide. PRD §5 "task steering and
+/** Something the agent needs the user to decide. PRD §5 "agent/tool activity and
  *  intervention" — this is the intervention surface. */
 export type TaskId = string & { readonly __brand: 'TaskId' }
 

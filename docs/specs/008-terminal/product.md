@@ -3,11 +3,11 @@
 ## Purpose
 
 Show what a process is actually printing, and let the user type into it when
-that is the fastest way to intervene. PRD §5: "terminal/output where useful".
+that is the fastest way to intervene. PRD §5: "terminal/output where relevant".
 
-## Product principle applied
+## PRD constraint applied
 
-*Information over simulation.* "Where useful" is the operative phrase. The
+*Not a full mobile IDE (PRD §5).* "Where relevant" is the operative phrase. The
 controller does not try to be a terminal emulator you would choose to work in.
 It is the place you read what went wrong and send `y`, `Ctrl-C`, or a short
 command.
@@ -38,6 +38,27 @@ reliable control keys outrank fidelity of a full TUI experience.
 - Orphan adoption and process inspection (`terminal.adoptOrphans`,
   `terminal.inspectProcess`).
 - Dictation into the terminal (exists today; not a controller requirement).
+
+## Controller surface
+
+Operated entirely through `001`'s intents; this feature owns no input of its own
+and never reads the controller port. Wheel segments are contributed to `002`'s
+registry with an `availability`, so the ring's shape stays stable.
+
+| Pane | Accepts | Notes |
+| ---- | ------- | ----- |
+| Terminal surface | `scroll`, text target | `L2`/`R2` scroll scrollback; dictation writes to live input |
+
+The terminal is the one pane where `001`'s input capture and the surface
+compete: the xterm WebView may consume key events before the decor-view listener
+sees them (`001` `tech.md` open question 2). This feature owns the resolution —
+an explicit pass-through from the WebView — not a workaround inside `001`.
+
+Wheel segments: accessory keys (Esc, Tab, Ctrl), quick commands, restore host
+viewport.
+
+The existing on-screen accessory key row stays for touch. On a controller it is
+a wheel, not a toolbar.
 
 ## Requirements
 

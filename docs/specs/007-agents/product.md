@@ -3,16 +3,17 @@
 ## Purpose
 
 The controller's core job: watch what an agent is doing and intervene when it
-needs you. PRD §5: "conversation / agent interaction", "task steering and
-intervention".
+needs you. PRD §5: "agent transcript", "prompts and responses", and
+"agent/tool activity and state". §4 gives interruption its own button: `X`
+stops the focused session's in-flight turn or tool call.
 
 This is where "controller first" earns its keep. The phone is not a good place
 to write a 300-line prompt; it is an excellent place to answer "may I run
 this?" while away from the desk.
 
-## Product principle applied
+## PRD constraint applied
 
-*Information over simulation.* The agent surface shows what happened and what
+*Not a full mobile IDE (PRD §5).* The agent surface shows what happened and what
 is being asked, at a density a phone can carry. It does not reproduce the
 desktop chat pane.
 
@@ -48,6 +49,27 @@ default with full detail on demand.
 - Image attachments in outbound messages. The wire supports `image-ref`; the
   controller MVP sends text only.
 - Editing a previously sent message.
+
+## Controller surface
+
+Operated entirely through `001`'s intents; this feature owns no input of its own
+and never reads the controller port. Wheel segments are contributed to `002`'s
+registry with an `availability`, so the ring's shape stays stable.
+
+| Pane | Accepts | Notes |
+| ---- | ------- | ----- |
+| Transcript | `scroll`, `move-selection` | selection moves between turns, not lines |
+| Composer | text target | the primary dictation destination |
+| Intervention card | `confirm`, `back` | `A` approves, `B` rejects — no wheel needed for the common case |
+
+`X` maps to this feature's `cancelTurn`. It is the only destructive action on a
+plain button, which is deliberate: interrupting a runaway agent must not require
+a wheel, a chord, or navigating to the right pane first.
+
+Wheel segments: retry, rewind, cancel background task, session options.
+
+An intervention answered with `A`/`B` never also runs a wheel segment — the
+buttons are the fast path and the wheel is the long one.
 
 ## Requirements
 

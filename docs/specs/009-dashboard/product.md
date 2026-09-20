@@ -4,11 +4,12 @@
 
 The controller's front door: one screen that answers "does anything need me
 right now?" across every paired host, and one notification path that brings the
-user back when something does. PRD §5: "basic session/project navigation".
+user back when something does. PRD §5: "project/worktree context".
 
-## Product principle applied
+## PRD constraint applied
 
-*Controller first.* The dashboard is not a home screen with shortcuts. It is an
+*Controller interaction is a first-class design constraint (PRD §7).* The
+dashboard is not a home screen with shortcuts. It is an
 attention queue. Its ordering question is "what is blocked on a human?", and
 everything else — recents, projects, stats — is secondary to that.
 
@@ -31,6 +32,24 @@ everything else — recents, projects, stats — is secondary to that.
 - A customisable widget system.
 - In-app notification preferences beyond the two the host filter supports
   (desktop-away-only, sound).
+
+## Controller surface
+
+Operated entirely through `001`'s intents; this feature owns no input of its own
+and never reads the controller port. Wheel segments are contributed to `002`'s
+registry with an `availability`, so the ring's shape stays stable.
+
+| Pane | Accepts | Notes |
+| ---- | ------- | ----- |
+| Attention queue | `move-selection`, `confirm`, `scroll` | `confirm` jumps to the session that needs attention |
+
+This feature contributes no wheel segments. It is a destination, not a set of
+actions — and a wheel opened here should still offer the navigation segments
+that work everywhere.
+
+Whether the attention queue survives as a screen at all is worth revisiting once
+the wheel exists: a wheel segment that jumps to "the thing that needs you" may
+make a list of such things redundant on a handheld.
 
 ## Requirements
 

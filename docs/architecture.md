@@ -128,35 +128,65 @@ Responsibilities:
 
 No controller UX logic belongs here.
 
-## 6. Features
+## 6. Interaction layer
 
-Features own the controller UX.
+The gamepad is the primary interaction model (PRD §3), so the input model is
+architecture, not a feature's business.
+
+```text
+domain/input-binding.ts   the §4 mapping, as data
+domain/pane.ts            panes and focus
+domain/wheel.ts           wheel geometry and selection
+application/ports/controller-input-port.ts
+adapters/device/          the platform reader
+```
+
+Three consequences:
+
+* A feature never reads a button. It declares the intents its panes accept, and
+  the intents it can act on are resolved against focus.
+* The Context Wheel is a mechanism with a registry. Features contribute
+  segments; the wheel knows nothing about what a segment does.
+* Capture sits behind a port, so the interaction model survives both extraction
+  (PRD §9) and a change of platform reader.
+
+Specs `001`–`003` own this layer.
+
+## 7. Features
+
+Features own what the panes show.
 
 Each feature should contain only what it needs:
 
 ```text
 sessions/
 ├── components/
-├── screens/
+├── panes/
 ├── hooks/
 └── state/
 ```
+
+Panes, not screens: PRD §4 scrolls "the current pane" and cycles tabs within a
+project, and the existing Orca shell already composes a workspace sidebar and a
+detail stack. A feature supplies pane content and declares what that pane
+accepts; it does not own navigation.
 
 Features consume application use cases rather than Orca APIs directly.
 
 This allows the UX to be redesigned without touching protocol compatibility.
 
-## 7. State
+## 8. State
 
 Separate:
 
 * **remote state** — sessions, projects, agents, activity
 * **local UI state** — navigation, selections, expanded nodes, filters
+* **interaction state** — focus, current wheel, dictation
 * **connection state** — pairing/transport lifecycle
 
 Avoid coupling global state directly to the Orca protocol.
 
-## 8. Upstream compatibility strategy
+## 9. Upstream compatibility strategy
 
 Treat Orca as an external implementation contract.
 
@@ -186,7 +216,7 @@ gamepad/ remains stable
 
 Protocol compatibility tests should live around the adapter boundary.
 
-## 9. Standalone extraction
+## 10. Standalone extraction
 
 The architecture deliberately permits:
 
@@ -218,7 +248,7 @@ New runtime/backend
 
 The Expo application shell should remain thin so that a future standalone app can reuse the same modules rather than requiring a second implementation.
 
-## 10. MVP architectural rule
+## 11. MVP architectural rule
 
 **Do not build the future standalone architecture twice.**
 

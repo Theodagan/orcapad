@@ -3,7 +3,8 @@
 ## Purpose
 
 Answer "what work exists on this host, and what is it doing?" — the controller's
-primary inventory. PRD §5: "projects and workspaces".
+primary inventory. PRD §5: "project/worktree context". §4 reaches it with a
+chord — `Y` held over `LB`/`RB` cycles worktree or project.
 
 ## Domain framing
 
@@ -35,9 +36,28 @@ terminals (`008`), and files (`010`).
 - Repo management (add, clone, reorder). `repo.add` / `repo.clone` unmapped.
 - Review and PR workflows — a workspace shows its review *link*, not a review UI.
 
-Creation is deliberately deferred: PRD §4 says "observing, steering and
-managing remote work", and creation is the one operation where a mistake on a
-phone is expensive and hard to undo.
+Creation is deliberately deferred: PRD §5 is an information and control
+surface, not an authoring one, and creation is the operation where a mistake
+made with a thumbstick is expensive and hard to undo.
+
+## Controller surface
+
+Operated entirely through `001`'s intents; this feature owns no input of its own
+and never reads the controller port. Wheel segments are contributed to `002`'s
+registry with an `availability`, so the ring's shape stays stable.
+
+| Pane | Accepts | Notes |
+| ---- | ------- | ----- |
+| Workspace sidebar | `move-selection`, `confirm`, `scroll` | wide layouts only; on a handheld it is not mounted |
+| Workspace detail | `scroll` | |
+
+`cycle-workspace` — `Y` held over `LB`/`RB` — is this feature's signature input.
+It moves through the same ordering the sidebar shows, so the chord and the list
+never disagree.
+
+Wheel segments: pin, archive, filter, change sort.
+
+No text target except the filter field.
 
 ## Requirements
 
