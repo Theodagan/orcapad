@@ -24,7 +24,7 @@
 
 - [ ] **DASH-T4 — Catch-up on reconnect**
 
-  Wire `catchUp` into the connection-restored transition from `001`, including
+  Wire `catchUp` into the connection-restored transition from `004`, including
   `deliveredPushes` (most recent 256).
 
   **Verify:** `pnpm test src/gamepad/application/use-cases/catch-up-notifications.test.ts`

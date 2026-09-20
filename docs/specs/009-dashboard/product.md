@@ -38,7 +38,7 @@ everything else — recents, projects, stats — is secondary to that.
 
 One list, across all connections, of items waiting on the user:
 
-1. pending approvals and questions (`004`);
+1. pending approvals and questions (`007`);
 2. agents in `needs-input`;
 3. finished turns not yet acknowledged.
 
@@ -62,7 +62,7 @@ capped. Tapping one returns to exactly where the user was.
 
 ### DASH-R5 — Connection strip
 
-Each paired host with its state from `001`, tappable to the host's detail.
+Each paired host with its state from `004`, tappable to the host's detail.
 A host that needs attention (auth failed, version incompatible) is visually
 distinct from one that is merely disconnected.
 

@@ -171,7 +171,7 @@ Ordering (DASH-R2):
 their contribution as unknown rather than omitting them (DASH-AC3).
 
 The queue never derives attention from raw agent rows — it consumes the
-projections from `002` and `003`, which come from the one reconciliation in
+projections from `005` and `006`, which come from the one reconciliation in
 `000-foundation` §4.6.
 
 ## 4. Feature structure
@@ -215,7 +215,7 @@ warm start  → push session onto the existing stack if the workspace matches,
 ```
 
 Reuse `mobile/src/navigation/host-stack-navigation.ts` through the same
-`src/gamepad/adapters/device/` wrapper `003-sessions` introduces. Deep-link handling must
+`src/gamepad/adapters/device/` wrapper `006-sessions` introduces. Deep-link handling must
 be resilient to a workspace that no longer exists: land on the workspace list
 with a "that session is gone" notice, never a blank screen.
 

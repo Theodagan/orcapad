@@ -72,8 +72,8 @@
 
 - [ ] **FILE-T11 — Entry points and back behaviour**
 
-  `file-navigation-history.ts`, origin carried in route params, wired from `004`,
-  `005`, tree, and search.
+  `file-navigation-history.ts`, origin carried in route params, wired from `007`,
+  `008`, tree, and search.
 
   **Verify:** `pnpm test …/file-navigation-origin.test.ts` (FILE-AC7)
 

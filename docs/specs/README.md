@@ -19,42 +19,56 @@ and PRs.
 
 ## Features
 
-| #   | Feature                              | Depends on         | PRD surface                                  |
-| --- | ------------------------------------ | ------------------ | -------------------------------------------- |
-| 000 | [Foundation](./000-foundation/)      | —                  | §6 compatibility, §7 extraction              |
-| 001 | [Pairing & connection](./001-pairing/) | 000              | connection / pairing                          |
-| 002 | [Projects & workspaces](./002-projects/) | 000, 001       | projects and workspaces                       |
-| 003 | [Sessions](./003-sessions/)          | 000, 001, 002      | active sessions, session status and activity  |
-| 004 | [Agents](./004-agents/)              | 000, 001, 003      | conversation / agent interaction, task steering and intervention |
-| 005 | [Terminal](./005-terminal/)          | 000, 001, 003      | terminal/output where useful                  |
-| 006 | [Dashboard](./006-dashboard/)        | 002, 003, 004, 005 | basic session/project navigation              |
-| 007 | [Files](./007-files/)                | 000, 001, 002      | file tree / file inspection                   |
+| #   | Feature                                    | Depends on              | PRD surface                                  |
+| --- | ------------------------------------------ | ----------------------- | -------------------------------------------- |
+| 000 | [Foundation](./000-foundation/)            | —                       | §6 Orca relationship, §9 extraction          |
+| 001 | [Controller input](./001-controller-input/) | 000                    | §3 controller-first, §4 controller mapping    |
+| 002 | [Context wheel](./002-context-wheel/)      | 000, 001                | §3 Context Wheel                              |
+| 003 | [Dictation](./003-dictation/)              | 000, 001                | §4 R3, §5 voice/dictation input               |
+| 004 | [Pairing & connection](./004-pairing/)     | 000                     | §6 Orca relationship                          |
+| 005 | [Projects & workspaces](./005-projects/)   | 000, 004                | §5 project/worktree context                   |
+| 006 | [Sessions](./006-sessions/)                | 000, 004, 005           | §4 LB/RB tabs, §5 tabs/sessions               |
+| 007 | [Agents](./007-agents/)                    | 000, 004, 006           | §4 X stop, §5 transcript, prompts, activity   |
+| 008 | [Terminal](./008-terminal/)                | 000, 004, 006           | §5 terminal/output                            |
+| 009 | [Dashboard](./009-dashboard/)              | 005, 006, 007, 008      | §5 project/worktree context                   |
+| 010 | [Files](./010-files/)                      | 000, 004, 005           | §5 file tree, files/code, diffs               |
 
-`007-files` is not in the `architecture.md` feature list but is required by
-PRD §5 ("file tree / file inspection"). It is specified as its own feature
-rather than folded into `002-projects` because it owns a distinct port
-(`FileInspectionPort`) and a distinct failure surface (large files, binary
-content, remote-host latency).
+`001`–`003` own the interaction model. They come before every product feature
+because §7 makes controller interaction "a first-class design constraint, not an
+input accessory" — a feature surface cannot be specified before the model that
+navigates it exists.
+
+`010-files` is not in the `architecture.md` feature list but is required by
+PRD §5 ("actual file tree", "actual files/code", "diffs where relevant"). It is
+specified as its own feature rather than folded into `005-projects` because it
+owns a distinct port (`FileInspectionPort`) and a distinct failure surface
+(large files, binary content, remote-host latency).
 
 ## Build order
 
 ```text
 000-foundation
      ↓
-001-pairing ──────────────┐
+001-controller-input
+     ↓
+002-context-wheel ── 003-dictation
+     ↓
+004-pairing ──────────────┐
      ↓                    │
-002-projects ─────────┬───┤
+005-projects ─────────┬───┤
      ↓                │   │
-003-sessions ──┬──────┤   │
+006-sessions ──┬──────┤   │
      ↓         │      │   │
-004-agents  005-terminal  007-files
+007-agents  008-terminal  010-files
      └─────────┴──────┴───┘
                 ↓
-          006-dashboard
+          009-dashboard
 ```
 
 `000-foundation` must land before any other feature: it defines the domain
-types and port interfaces every other spec references.
+types and port interfaces every other spec references. `001-controller-input`
+must land before every product feature: it defines the focus model and the §4
+mapping those features are operated through.
 
 ## Conventions these specs inherit
 

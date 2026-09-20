@@ -100,7 +100,7 @@ concern.
 | ----------------------- | --------------------------------- |
 | `readTranscript`        | `agentSession.history`            |
 | `observeTranscript`     | `agentSession.subscribe` / `agentSession.unsubscribe` |
-| `observeTurn`           | derived from subscribe `activity` + status feed (`003`) |
+| `observeTurn`           | derived from subscribe `activity` + status feed (`006`) |
 | `sendMessage`           | `agentSession.send`               |
 | `cancelTurn`            | `agentSession.cancel`             |
 | `cancelBackgroundTask`  | `agentSession.cancel` with `scope: 'background-tasks'`, `taskId` |
@@ -251,7 +251,7 @@ the two.
 | `approval`    | `Task{prompt:{kind:'approval'}}` |
 | `question`    | `Task{prompt:{kind:'question'}}` |
 | `turn`        | not a message — feeds `TurnActivity` |
-| `status`      | not a message — feeds `Agent` (`003`) |
+| `status`      | not a message — feeds `Agent` (`006`) |
 
 `AgentJournalResolution` (`pending` / `resolved` / `cancelled`) maps directly to
 `Task.resolution`. A resolved task stays in the transcript; it is not removed.

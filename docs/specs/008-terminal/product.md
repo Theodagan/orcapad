@@ -27,13 +27,13 @@ reliable control keys outrank fidelity of a full TUI experience.
   terminal.
 - Quick commands: a small set of one-tap commands.
 - Read-only mode when the host does not grant write.
-- Tapping a file path in output to open it in `007-files`.
+- Tapping a file path in output to open it in `010-files`.
 
 **Out of scope for MVP**
 
 - Pane splits, layout editing, or multiplexing (`terminal.split`,
   `terminal.multiplex`).
-- Creating terminals — that is `003-sessions`.
+- Creating terminals — that is `006-sessions`.
 - Terminal themes and appearance settings beyond honouring the host's theme.
 - Orphan adoption and process inspection (`terminal.adoptOrphans`,
   `terminal.inspectProcess`).
@@ -96,7 +96,7 @@ and the top of the buffer says so.
 
 ### TERM-R10 — File paths are actionable
 
-A path in output can be tapped to open the file in `007-files`. Resolution is
+A path in output can be tapped to open the file in `010-files`. Resolution is
 done by the host (`files.resolveTerminalPath`), not by client-side guessing.
 
 ### TERM-R11 — Quick commands

@@ -22,7 +22,7 @@ disappoints.
 - Preview markdown.
 - Read a large file in bounded chunks.
 - Search files by content and by path.
-- Open a file from: a diff in `004`, a path tapped in `005`, or the tree.
+- Open a file from: a diff in `007`, a path tapped in `008`, or the tree.
 - Binary and oversized files are refused gracefully with a reason.
 
 **Out of scope for MVP**
@@ -78,8 +78,8 @@ an explicit indication when results were capped.
 
 ### FILE-R8 — Entry points
 
-A file opens with the right context from: a diff row in `004`, a tapped path in
-`005`, a search result, and the tree. Returning goes back to where the user came
+A file opens with the right context from: a diff row in `007`, a tapped path in
+`008`, a search result, and the tree. Returning goes back to where the user came
 from.
 
 ### FILE-R9 — Paths are host-shaped
@@ -112,7 +112,7 @@ presented as live.
   re-fetch.
 - **FILE-AC6** — Content search caps at the requested maximum and says the
   results were capped.
-- **FILE-AC7** — Opening a file from a `004` diff row lands on the right file
+- **FILE-AC7** — Opening a file from a `007` diff row lands on the right file
   and returns to the conversation.
 - **FILE-AC8** — A path from a Windows host renders with backslashes and opens
   correctly.

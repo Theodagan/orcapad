@@ -74,7 +74,7 @@
 - [ ] **PROJ-T10 — Workspace detail screen**
 
   `WorkspaceDetailScreen` with lineage trail, review chip, activation action, and
-  entry points to `003`, `005`, `007`.
+  entry points to `006`, `008`, `010`.
 
   **Verify:** `pnpm test src/gamepad/features/projects/screens`
 

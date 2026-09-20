@@ -11,8 +11,8 @@ Orca calls them repos and worktrees. The controller calls them **projects** and
 **workspaces**, because a workspace is not always a git worktree: a folder
 workspace has no branch and no lineage, and the controller must not imply one.
 
-A project holds workspaces. A workspace holds sessions (`003`), agents (`004`),
-terminals (`005`), and files (`007`).
+A project holds workspaces. A workspace holds sessions (`006`), agents (`007`),
+terminals (`008`), and files (`010`).
 
 ## Scope
 

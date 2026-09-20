@@ -89,8 +89,8 @@ Fields intentionally dropped from the domain: `path`, `hostId`,
 Of those, three are kept **adapter-side** (not in the domain) because other
 features need them and the adapter is their only legitimate holder:
 
-- `path` → `007-files` root resolution;
-- `terminalPlatform` → `005-terminal` key labelling;
+- `path` → `010-files` root resolution;
+- `terminalPlatform` → `008-terminal` key labelling;
 - `sortOrder` / `manualOrder` → `WorkspacePort` ordering metadata, exposed to
   core as an opaque `orderHint: number` rather than two Orca fields.
 

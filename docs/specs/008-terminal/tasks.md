@@ -77,7 +77,7 @@
 
 - [ ] **TERM-T12 — Path tap**
 
-  Wire `terminal-path-tap.ts` to `files.resolveTerminalPath` and the `007-files`
+  Wire `terminal-path-tap.ts` to `files.resolveTerminalPath` and the `010-files`
   preview route, with the unresolvable path message.
 
   **Verify:** `pnpm test …/terminal-path-tap.test.ts` (TERM-AC10)

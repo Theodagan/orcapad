@@ -57,7 +57,7 @@ or xterm.
 | `resolvePath`         | `files.resolveTerminalPath` |
 | `detach`              | `terminal.unsubscribe` |
 
-The terminal handle comes from `003-sessions`: a terminal tab in
+The terminal handle comes from `006-sessions`: a terminal tab in
 `RuntimeMobileSessionTerminalClientTab` carries `status` and `terminal`
 (the handle) — `pending-handle` means no handle yet.
 
@@ -201,7 +201,7 @@ Reuse from today's tree: `terminal-accessory-keys.ts`,
 ## 5. Host-platform key labelling
 
 `RuntimeWorktreePsSummary.terminalPlatform` (a `NodeJS.Platform`) is retained
-adapter-side by `002-projects` and supplied to this feature as
+adapter-side by `005-projects` and supplied to this feature as
 `hostPlatform: 'mac' | 'windows' | 'linux' | 'unknown'`.
 
 ```text

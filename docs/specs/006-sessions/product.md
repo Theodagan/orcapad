@@ -14,9 +14,9 @@ that to one concept — a **Session** — with a `surface` discriminator:
 
 | Controller surface | Orca tab type              | Owned by |
 | ------------------ | -------------------------- | -------- |
-| `agent`            | `agent-session`            | `004-agents` |
-| `terminal`         | `terminal`                 | `005-terminal` |
-| `document`         | `markdown`, `file`         | `007-files` |
+| `agent`            | `agent-session`            | `007-agents` |
+| `terminal`         | `terminal`                 | `008-terminal` |
+| `document`         | `markdown`, `file`         | `010-files` |
 | — (not surfaced)   | `browser`                  | out of scope |
 
 This feature owns the *list*, the *status*, and the *navigation*. It does not
@@ -38,8 +38,8 @@ own the content of any surface.
 
 **Out of scope**
 
-- Rendering agent conversations (`004`), terminal output (`005`), or file
-  content (`007`).
+- Rendering agent conversations (`007`), terminal output (`008`), or file
+  content (`010`).
 - Pane layout and splits. The controller shows leaves, not a split tree.
 - Browser tabs.
 - Session handoff between TUI and native chat (`agentSession.requestHandoff`),

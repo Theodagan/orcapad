@@ -7,7 +7,7 @@ a controller domain model, a set of capability ports, and one Orca adapter that
 implements those ports over the existing mobile transport.
 
 This feature ships no user-visible screen. Its deliverable is that
-`002`–`007` can be built, redesigned, and eventually extracted without touching
+`005`–`010` can be built, redesigned, and eventually extracted without touching
 protocol code.
 
 ## Problem
@@ -40,7 +40,7 @@ Two consequences:
 **Out of scope**
 
 - Rewriting `mobile/src/transport/`. The adapter consumes it.
-- Migrating every existing screen. Features `001`–`007` migrate their own
+- Migrating every existing screen. Features `004`–`010` migrate their own
   surface; legacy screens keep working from the raw port until then.
 - A second runtime adapter. PRD §3 explicitly defers this.
 - Any generic `IBackend` / `IConnection` / `IAgent` abstraction
@@ -67,15 +67,15 @@ Ports for MVP:
 
 | Port                    | Owning feature  |
 | ----------------------- | --------------- |
-| `ConnectionPort`        | 001-pairing     |
-| `PairingPort`           | 001-pairing     |
-| `ProjectCatalogPort`    | 002-projects    |
-| `WorkspacePort`         | 002-projects    |
-| `SessionPort`           | 003-sessions    |
-| `AgentControlPort`      | 004-agents      |
-| `ActivityStreamPort`    | 005-terminal    |
-| `FileInspectionPort`    | 007-files       |
-| `NotificationPort`      | 006-dashboard   |
+| `ConnectionPort`        | 004-pairing     |
+| `PairingPort`           | 004-pairing     |
+| `ProjectCatalogPort`    | 005-projects    |
+| `WorkspacePort`         | 005-projects    |
+| `SessionPort`           | 006-sessions    |
+| `AgentControlPort`      | 007-agents      |
+| `ActivityStreamPort`    | 008-terminal    |
+| `FileInspectionPort`    | 010-files       |
+| `NotificationPort`      | 009-dashboard   |
 
 A port method never exposes an Orca method name, an RPC envelope, a zod schema,
 a `paneKey`, a `worktree` selector string, or a subscription id.

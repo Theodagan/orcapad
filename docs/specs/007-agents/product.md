@@ -44,7 +44,7 @@ default with full detail on demand.
 - Handoff between TUI and native chat (`agentSession.requestHandoff`,
   `handoffStatus`, `hold`, `release`).
 - Creating an agent session from the phone (`agentSession.create`,
-  `ensure`) — `003` creates terminal sessions only.
+  `ensure`) — `006` creates terminal sessions only.
 - Image attachments in outbound messages. The wire supports `image-ref`; the
   controller MVP sends text only.
 - Editing a previously sent message.
@@ -79,9 +79,9 @@ brief, non-alarming notice; the transcript does not appear to break.
 A pending approval or question is surfaced:
 
 - at the top of the session view, above the transcript;
-- in the session list (`003`) as `needs-input`;
-- in the dashboard (`006`) as an attention item;
-- through a push notification (`006`).
+- in the session list (`006`) as `needs-input`;
+- in the dashboard (`009`) as an attention item;
+- through a push notification (`009`).
 
 Answering is one tap per option, with the default option visually distinct.
 

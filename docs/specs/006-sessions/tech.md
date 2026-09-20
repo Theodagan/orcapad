@@ -86,9 +86,9 @@ Adapter-side extras retained for other features, keyed by session id and not on
 the domain type:
 
 - terminal handle (`terminal`), `ptyId`, `incarnationId`, `terminalTheme`,
-  `viewMode`, `parentTabId`, `leafId` → `005-terminal`;
-- `sessionId`, `agent`, `replacesSessionId` → `004-agents`;
-- `filePath`, `relativePath`, `documentVersion` → `007-files`.
+  `viewMode`, `parentTabId`, `leafId` → `008-terminal`;
+- `sessionId`, `agent`, `replacesSessionId` → `007-agents`;
+- `filePath`, `relativePath`, `documentVersion` → `010-files`.
 
 ### 2.2 Execution state
 
@@ -134,16 +134,16 @@ applied locally.
 | `updatedAt`   | `updatedAt` |
 
 `backgroundTasks` (subagent children) is retained adapter-side and surfaced by
-`004-agents`; it does not belong in the session list.
+`007-agents`; it does not belong in the session list.
 
 A summary is never retracted by the host: an evicted idle session keeps its
 last projection. The controller must therefore not treat "summary still
 present" as evidence of liveness — `hostExecutionOwned` is the only such
 evidence.
 
-### 2.4 Reconciliation with `002`
+### 2.4 Reconciliation with `005`
 
-`002-projects` reads agent rows from `worktree.ps`; this feature reads status
+`005-projects` reads agent rows from `worktree.ps`; this feature reads status
 summaries. Both funnel through
 `src/gamepad/adapters/orca/mapping/agent-reconciliation.ts` from `000-foundation` §4.6.
 There is exactly one `Agent` per `(connectionId, agentId)` in the remote store,

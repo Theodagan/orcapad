@@ -73,7 +73,7 @@ export type FileInspectionPort = {
 FILE-AC10 is asserted by a test over the adapter's mapped method set, so a
 future mutation cannot be added without the test failing.
 
-`files.resolveTerminalPath` is mapped by `005-terminal`, not here.
+`files.resolveTerminalPath` is mapped by `008-terminal`, not here.
 
 ### 2.1 Directory limits
 
@@ -165,8 +165,8 @@ read-only MVP.
 
 | Source | Carries | Lands on |
 | ------ | ------- | -------- |
-| `004` diff row | workspace, path | `FilePreviewScreen`, back to the conversation |
-| `005` path tap | workspace, host-resolved path | `FilePreviewScreen`, back to the terminal |
+| `007` diff row | workspace, path | `FilePreviewScreen`, back to the conversation |
+| `008` path tap | workspace, host-resolved path | `FilePreviewScreen`, back to the terminal |
 | Tree | workspace, path | `FilePreviewScreen`, back to the tree at the same directory |
 | Search result | workspace, path, line | `FilePreviewScreen` scrolled to the line |
 

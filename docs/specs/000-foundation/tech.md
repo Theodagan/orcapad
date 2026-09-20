@@ -541,5 +541,5 @@ covering the file — so get it right rather than relying on that test.
    for detail. Confirm `ps` truncation limits are acceptable at large repo
    counts (`RuntimeWorktreePsResult.truncated`).
 3. **Push registration ownership.** Push is a host-level concern but is
-   specified under `006-dashboard`. If a second feature needs it, promote
+   specified under `009-dashboard`. If a second feature needs it, promote
    `NotificationPort` to the foundation.
