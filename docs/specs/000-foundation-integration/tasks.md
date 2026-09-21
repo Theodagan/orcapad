@@ -18,7 +18,7 @@
 
   **Verify:** `pnpm --dir mobile typecheck`
 
-- [ ] **FND-T3 - Replace the broad boundary ratchet**
+- [x] **FND-T3 - Replace the broad boundary ratchet**
 
   Rewrite `mobile/src/gamepad/gamepad-boundary.test.ts` to enforce the narrow
   rules in `tech.md` section 6 without banning composition with existing Orca

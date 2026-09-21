@@ -5,76 +5,84 @@ import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 
 /**
- * The fork's one boundary. `src/gamepad/` is the whole controller product layer; everything
- * else under `mobile/src/` is upstream Orca Mobile. One predicate holds the dependency
- * direction (FND-R3) and one holds host-vocabulary containment (FND-AC6):
+ * The controller layer's ratchets. Five narrow rules from `000/tech.md` §6, each protecting one
+ * thing that is cheap to get wrong and expensive to find later.
  *
- *   gamepad/** may not import outside gamepad/**, except gamepad/adapters/**, which reaches
- *   a named list of upstream modules.
+ * What this deliberately does not do is wall `src/gamepad/` off from the rest of Orca Mobile.
+ * The predecessor did, and that wall is what produced a second projects/workspaces/sessions
+ * model inside the fork: a binding could not call `use-mobile-session-controller` without
+ * failing the suite. FND-R1 inverts it — existing surfaces are authoritative, so importing an
+ * existing controller, hook or component is the intended shape, and only the low-level
+ * transport beneath them is out of bounds (FND-R3).
  *
- * That single rule is what makes the fork a subtree: `git diff` shows it, a rebase skips it,
- * and extraction is a move rather than a tsconfig excavation. It is strictly stronger than
- * the per-folder rules it replaces, which said nothing about the ~30 upstream siblings the
- * old `src/core/` sat next to.
+ * Source text, not a module graph: most of this tree arrives over `001`–`003`, and a rule that
+ * only fires once a directory exists is a rule nobody notices is missing. Each predicate is
+ * exported and unit-tested against probe sources, so it is live before the modules it guards.
  *
- * Source text, not a module graph: most of the tree arrives over later feature tasks, and a
- * type-only import still couples the layers even though it emits nothing. A specifier is
- * resolved through the `@/*` tsconfig alias as well as relatively, so neither spelling is a
- * way around a rule.
+ * Duplicate-infrastructure checks — socket, pairing, notification, speech, terminal protocol,
+ * file RPC — are FND-T4 and land here next.
  *
- * Layering is checked in tests too — a state test that needs an adapter proves the coupling
- * as well as a state module would. Vocabulary is not: `*.test.ts(x)` prose names hosts on
- * purpose, and a test does not ship. Comments are never scanned, only identifiers and string
- * literals, so the doc comment that explains a domain concept stays free to mention the host
- * concept it replaced.
- *
- * What this does not catch, all accepted: a specifier assembled at runtime, vocabulary
- * reached through a re-exported alias, and an upstream type laundered through a structurally
- * identical local declaration.
+ * Accepted gaps: a specifier assembled at runtime, a rule reached through a re-exported alias,
+ * and the single-letter face buttons, which no literal scan can tell from ordinary data.
  */
 
 const mobileRoot = fileURLToPath(new URL('../..', import.meta.url))
 const srcRoot = join(mobileRoot, 'src')
 const gamepadRoot = join(srcRoot, 'gamepad')
-const domainRoot = join(gamepadRoot, 'domain')
-const applicationRoot = join(gamepadRoot, 'application')
-const portsRoot = join(applicationRoot, 'ports')
-const stateRoot = join(gamepadRoot, 'state')
-const featuresRoot = join(gamepadRoot, 'features')
-const adaptersRoot = join(gamepadRoot, 'adapters')
+const controllerInputRoot = join(gamepadRoot, 'controller-input')
+const wheelRoot = join(gamepadRoot, 'wheel')
+const experimentsRoot = join(wheelRoot, 'experiments')
+const bindingsRoot = join(gamepadRoot, 'bindings')
 const hostSharedRoot = resolve(mobileRoot, '..', 'src', 'shared')
-const rpcCatalogPath = join(hostSharedRoot, 'rpc-contract', 'rpc-params-catalog.generated.ts')
 
-/**
- * The upstream modules `gamepad/adapters/**` may reach. A ratchet, not a door: adding a root
- * is a deliberate edit, and every entry is a thing extraction has to replace.
- */
-const ADAPTER_UPSTREAM_REACH = [
-  join(srcRoot, 'transport'),
-  join(srcRoot, 'storage'),
-  join(srcRoot, 'terminal'),
-  join(srcRoot, 'navigation'),
-  hostSharedRoot
-]
+/** This file is the rule table, so it names every vocabulary the rules forbid elsewhere. */
+const ratchetFile = join(gamepadRoot, 'gamepad-boundary.test.ts')
 
 const sourceExtensions = new Set(['.js', '.jsx', '.ts', '.tsx'])
 const testFile = /\.test\.[jt]sx?$/
 const aliasPrefix = '@/'
 
-const reactNativePackage = /^react-native(\/|$)/
-const expoPackage = /^expo(-|\/|$)/
+/**
+ * Raw controls the resolver translates into intents. Only `controller-input/` may name them:
+ * past that point the vocabulary is intents, so a remapped button changes one table (CTRL-R1).
+ */
+const RAW_CONTROL_NAMES: readonly string[] = [
+  'lb',
+  'rb',
+  'l2',
+  'r2',
+  'l3',
+  'r3',
+  'dpad-up',
+  'dpad-down',
+  'dpad-left',
+  'dpad-right',
+  'left-x',
+  'left-y',
+  'right-x',
+  'right-y'
+]
 
-const DOMAIN_RULE = 'gamepad/domain imports nothing outside itself'
-const PORTS_RULE = 'gamepad/application/ports may only reference gamepad/domain'
-const ADAPTER_RULE = 'only gamepad/adapters may import gamepad/adapters — go through the registry'
-const DEVICE_RULE =
-  'gamepad/{domain,application,state} must not import react-native or an expo-* package'
+const GEOMETRY_MATH = new Set(['atan2', 'cos', 'sin', 'hypot', 'PI'])
+const GEOMETRY_WORD = /angle|radian|degree/i
 
-/** FND-AC6. Matched case-insensitively, so `worktreeId` and `WorktreePs` both land. */
-const FORBIDDEN_WORDS = ['worktree', 'panekey', 'snapshotid'] as const
+const PRD_SET = 'PRD_CONTROLLER_BINDINGS'
+const PROVISIONAL_SET = 'EXPERIMENTAL_DPAD_BINDINGS'
 
-/** tech.md §2 fixes this as a `WorkspaceKind` value; it is the one literal allowed to carry the word. */
-const WORKSPACE_KIND_LITERAL = 'git-worktree'
+/** An object literal shaped like a wheel preset (`002/tech.md` §1, §5). */
+const PRESET_MARKERS = ['presetId', 'segments']
+
+/** Beneath every authoritative surface action. A binding reaches the action, never this. */
+const LOW_LEVEL_ROOTS = [join(srcRoot, 'transport'), join(hostSharedRoot, 'rpc-contract')]
+
+const RAW_CONTROL_RULE = 'a raw control name belongs in gamepad/controller-input'
+const GEOMETRY_RULE = 'wheel geometry belongs in gamepad/wheel'
+const PRESET_GEOMETRY_RULE =
+  'an experiment preset is layout data; geometry belongs in wheel mechanics'
+const MAPPING_SET_RULE = `${PRD_SET} and ${PROVISIONAL_SET} are separate data sets`
+const PRESET_CONTRACT_RULE = "an experiment preset must carry 'contractual: false'"
+const LOW_LEVEL_RULE =
+  'a binding delegates to an existing surface action; transport and RPC stay upstream'
 
 function sourceFiles(directory: string): string[] {
   if (!existsSync(directory)) {
@@ -143,336 +151,278 @@ export function moduleSpecifiers(path: string, source: string): string[] {
   return specifiers
 }
 
-/** The rule this import breaks, or null when the slice may reach for it. */
-function importRule(path: string, specifier: string): string | null {
-  if (!within(gamepadRoot, path)) {
-    return null
-  }
-  const inDomain = within(domainRoot, path)
-  const inPorts = within(portsRoot, path)
-  const inAdapters = within(adaptersRoot, path)
-  const inFeatures = within(featuresRoot, path)
-  const resolved = resolveSpecifier(path, specifier)
-
-  if (resolved === null) {
-    if (inDomain) {
-      // The suite itself is the only package a domain test may name.
-      return testFile.test(path) && specifier === 'vitest' ? null : DOMAIN_RULE
-    }
-    if (inAdapters || inFeatures) {
-      return null
-    }
-    return reactNativePackage.test(specifier) || expoPackage.test(specifier) ? DEVICE_RULE : null
-  }
-
-  if (inDomain) {
-    return within(domainRoot, resolved) ? null : DOMAIN_RULE
-  }
-  if (inPorts && !within(domainRoot, resolved) && !within(portsRoot, resolved)) {
-    return PORTS_RULE
-  }
-  if (!within(gamepadRoot, resolved)) {
-    if (!inAdapters) {
-      return 'gamepad must not import outside src/gamepad — only gamepad/adapters may'
-    }
-    return ADAPTER_UPSTREAM_REACH.some((root) => within(root, resolved))
-      ? null
-      : 'gamepad/adapters may not reach this module — extend ADAPTER_UPSTREAM_REACH if deliberate'
-  }
-  return within(adaptersRoot, resolved) && !inAdapters ? ADAPTER_RULE : null
-}
-
-export function layeringViolations(path: string, source: string): string[] {
-  return moduleSpecifiers(path, source).flatMap((specifier) => {
-    const rule = importRule(path, specifier)
-    return rule === null ? [] : [`${specifier} — ${rule}`]
-  })
-}
-
-/**
- * Read, never imported: a value import of the contract would break the type-only ratchet in
- * `src/rpc-params-contract-type-only-boundary.test.ts` and pull zod into this suite.
- */
-export function rpcMethodNames(source: string): Set<string> {
-  const names = new Set<string>()
+function walk(path: string, source: string, visitor: (node: ts.Node) => void): void {
   const visit = (node: ts.Node): void => {
-    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
-      const initializer = ts.isAsExpression(node.initializer)
-        ? node.initializer.expression
-        : node.initializer
-      if (node.name.text === 'RPC_PARAMS_BY_METHOD' && ts.isObjectLiteralExpression(initializer)) {
-        for (const property of initializer.properties) {
-          if (property.name !== undefined && ts.isStringLiteralLike(property.name)) {
-            names.add(property.name.text)
-          }
-        }
-      }
-      if (
-        node.name.text === 'RPC_METHODS_WITHOUT_SHARED_PARAMS' &&
-        ts.isArrayLiteralExpression(initializer)
-      ) {
-        for (const element of initializer.elements) {
-          if (ts.isStringLiteralLike(element)) {
-            names.add(element.text)
-          }
-        }
-      }
-    }
-    ts.forEachChild(node, visit)
-  }
-  visit(parse(rpcCatalogPath, source))
-  return names
-}
-
-export function vocabularyViolations(
-  path: string,
-  source: string,
-  rpcMethods: ReadonlySet<string>
-): string[] {
-  // The adapter is the one place that may name Orca; a test does not ship.
-  if (testFile.test(path) || within(adaptersRoot, path)) {
-    return []
-  }
-  const found: string[] = []
-  const inspect = (text: string, isLiteral: boolean): void => {
-    if (isLiteral && text === WORKSPACE_KIND_LITERAL) {
-      return
-    }
-    if (isLiteral && rpcMethods.has(text)) {
-      found.push(`'${text}' — an Orca RPC method name belongs to the adapter`)
-      return
-    }
-    const lowered = text.toLowerCase()
-    const word = FORBIDDEN_WORDS.find((candidate) => lowered.includes(candidate))
-    if (word !== undefined) {
-      found.push(`${text} — host vocabulary '${word}' belongs to the adapter`)
-    }
-  }
-  const visit = (node: ts.Node): void => {
-    if (ts.isIdentifier(node)) {
-      inspect(node.text, false)
-    } else if (ts.isStringLiteralLike(node)) {
-      inspect(node.text, true)
-    } else if (ts.isTemplateHead(node) || ts.isTemplateMiddle(node) || ts.isTemplateTail(node)) {
-      inspect(node.text, true)
-    }
+    visitor(node)
     ts.forEachChild(node, visit)
   }
   visit(parse(path, source))
+}
+
+/** Text of every string literal and template chunk, which is where a control name would hide. */
+function literalTexts(path: string, source: string): string[] {
+  const texts: string[] = []
+  walk(path, source, (node) => {
+    if (
+      ts.isStringLiteralLike(node) ||
+      ts.isTemplateHead(node) ||
+      ts.isTemplateMiddle(node) ||
+      ts.isTemplateTail(node)
+    ) {
+      texts.push(node.text)
+    }
+  })
+  return texts
+}
+
+export function rawControlViolations(path: string, source: string): string[] {
+  if (testFile.test(path) || within(controllerInputRoot, path)) {
+    return []
+  }
+  return literalTexts(path, source)
+    .filter((text) => RAW_CONTROL_NAMES.includes(text.toLowerCase()))
+    .map((text) => `'${text}' — ${RAW_CONTROL_RULE}`)
+}
+
+export function wheelGeometryViolations(path: string, source: string): string[] {
+  if (testFile.test(path)) {
+    return []
+  }
+  const inWheel = within(wheelRoot, path)
+  const inExperiments = within(experimentsRoot, path)
+  const found: string[] = []
+  walk(path, source, (node) => {
+    if (
+      ts.isPropertyAccessExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === 'Math' &&
+      GEOMETRY_MATH.has(node.name.text)
+    ) {
+      if (!inWheel) {
+        found.push(`Math.${node.name.text} — ${GEOMETRY_RULE}`)
+      } else if (inExperiments) {
+        found.push(`Math.${node.name.text} — ${PRESET_GEOMETRY_RULE}`)
+      }
+      return
+    }
+    // Angle *data* is legal anywhere under wheel/, presets included; angle vocabulary is not
+    // legal outside it, because that is a surface recomputing the geometry.
+    if (!inWheel && ts.isIdentifier(node) && GEOMETRY_WORD.test(node.text)) {
+      found.push(`${node.text} — ${GEOMETRY_RULE}`)
+    }
+  })
   return found
 }
 
-const domainProbe = join(domainRoot, 'probe.ts')
-const domainTestProbe = join(domainRoot, 'probe.test.ts')
-const portProbe = join(portsRoot, 'probe.ts')
-const useCaseProbe = join(applicationRoot, 'use-cases', 'probe.ts')
-const stateProbe = join(stateRoot, 'remote', 'probe.ts')
-const stateTestProbe = join(stateRoot, 'remote', 'probe.test.ts')
-const featureProbe = join(featuresRoot, 'sessions', 'probe.ts')
-const adapterProbe = join(adaptersRoot, 'orca', 'probe.ts')
-const upstreamProbe = join(srcRoot, 'transport', 'probe.ts')
+/**
+ * CTRL-R1 is the PRD contract and CTRL-R2 is an experiment. A test that reaches both proves
+ * neither, and a module that declares both makes the split a naming convention.
+ */
+export function mappingSetViolations(path: string, source: string): string[] {
+  const referenced = new Set<string>()
+  const declared = new Set<string>()
+  walk(path, source, (node) => {
+    if (ts.isIdentifier(node)) {
+      referenced.add(node.text)
+    }
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+      declared.add(node.name.text)
+    }
+  })
+  const found: string[] = []
+  if (testFile.test(path) && referenced.has(PRD_SET) && referenced.has(PROVISIONAL_SET)) {
+    found.push(`a test may reach one of them, not both — ${MAPPING_SET_RULE}`)
+  }
+  if (declared.has(PRD_SET) && declared.has(PROVISIONAL_SET)) {
+    found.push(`one module declares both — ${MAPPING_SET_RULE}`)
+  }
+  return found
+}
 
-describe('Gamepad boundary', () => {
+function propertyOf(
+  node: ts.ObjectLiteralExpression,
+  name: string
+): ts.PropertyAssignment | undefined {
+  return node.properties.find(
+    (property): property is ts.PropertyAssignment =>
+      ts.isPropertyAssignment(property) &&
+      (ts.isIdentifier(property.name) || ts.isStringLiteralLike(property.name)) &&
+      property.name.text === name
+  )
+}
+
+/** WHEEL-R6: a preset is an experiment until a product-decision record says otherwise. */
+export function presetContractViolations(path: string, source: string): string[] {
+  if (testFile.test(path)) {
+    return []
+  }
+  const found: string[] = []
+  walk(path, source, (node) => {
+    if (!ts.isObjectLiteralExpression(node)) {
+      return
+    }
+    const contractual = propertyOf(node, 'contractual')
+    if (contractual !== undefined) {
+      if (contractual.initializer.kind !== ts.SyntaxKind.FalseKeyword) {
+        found.push(`contractual is not the literal false — ${PRESET_CONTRACT_RULE}`)
+      }
+      return
+    }
+    const looksLikePreset = PRESET_MARKERS.some((marker) => propertyOf(node, marker) !== undefined)
+    if (within(experimentsRoot, path) && looksLikePreset) {
+      found.push(PRESET_CONTRACT_RULE)
+    }
+  })
+  return found
+}
+
+export function lowLevelReachViolations(path: string, source: string): string[] {
+  return moduleSpecifiers(path, source).flatMap((specifier) => {
+    const resolved = resolveSpecifier(path, specifier)
+    if (resolved === null) {
+      return []
+    }
+    return LOW_LEVEL_ROOTS.some((root) => within(root, resolved))
+      ? [`${specifier} — ${LOW_LEVEL_RULE}`]
+      : []
+  })
+}
+
+export function boundaryViolations(path: string, source: string): string[] {
+  return [
+    ...rawControlViolations(path, source),
+    ...wheelGeometryViolations(path, source),
+    ...mappingSetViolations(path, source),
+    ...presetContractViolations(path, source),
+    ...lowLevelReachViolations(path, source)
+  ]
+}
+
+const inputProbe = join(controllerInputRoot, 'probe.ts')
+const inputTestProbe = join(controllerInputRoot, 'probe.test.ts')
+const wheelProbe = join(wheelRoot, 'probe.ts')
+const presetProbe = join(experimentsRoot, 'probe.ts')
+const bindingProbe = join(bindingsRoot, 'probe.ts')
+const bindingTestProbe = join(bindingsRoot, 'probe.test.ts')
+const providerProbe = join(gamepadRoot, 'controller-provider.tsx')
+
+describe('Controller boundary', () => {
   it('reads every specifier that couples a module, whatever its shape', () => {
-    expect(moduleSpecifiers(useCaseProbe, "import { a } from './a'")).toEqual(['./a'])
-    expect(moduleSpecifiers(useCaseProbe, "import type { A } from './a'")).toEqual(['./a'])
-    expect(moduleSpecifiers(useCaseProbe, "import './a'")).toEqual(['./a'])
-    expect(moduleSpecifiers(useCaseProbe, "export { a } from './a'")).toEqual(['./a'])
-    expect(moduleSpecifiers(useCaseProbe, "export * from './a'")).toEqual(['./a'])
-    expect(moduleSpecifiers(useCaseProbe, "const a = require('./a')")).toEqual(['./a'])
-    expect(moduleSpecifiers(useCaseProbe, "const a = await import('./a')")).toEqual(['./a'])
-    expect(moduleSpecifiers(useCaseProbe, "type A = import('./a').A")).toEqual(['./a'])
-    expect(moduleSpecifiers(useCaseProbe, "const a = 'not an import'")).toEqual([])
+    expect(moduleSpecifiers(bindingProbe, "import { a } from './a'")).toEqual(['./a'])
+    expect(moduleSpecifiers(bindingProbe, "import type { A } from './a'")).toEqual(['./a'])
+    expect(moduleSpecifiers(bindingProbe, "export * from './a'")).toEqual(['./a'])
+    expect(moduleSpecifiers(bindingProbe, "const a = require('./a')")).toEqual(['./a'])
+    expect(moduleSpecifiers(bindingProbe, "const a = await import('./a')")).toEqual(['./a'])
+    expect(moduleSpecifiers(bindingProbe, "type A = import('./a').A")).toEqual(['./a'])
+    expect(moduleSpecifiers(bindingProbe, "const a = 'not an import'")).toEqual([])
   })
 
-  it('leaves upstream Orca Mobile alone', () => {
-    expect(layeringViolations(upstreamProbe, "import { View } from 'react-native'")).toEqual([])
-    expect(
-      layeringViolations(upstreamProbe, "import { x } from '../../../src/shared/rpc-contract/x'")
-    ).toEqual([])
+  it('lets the controller layer compose with existing Orca Mobile surfaces (FND-R1)', () => {
+    const composition = [
+      "import { useMobileSessionController } from '@/session/use-mobile-session-controller'",
+      "import { MobileHomeHostList } from '@/home/MobileHomeHostList'",
+      "import { useMobileDictation } from '@/hooks/use-mobile-dictation'",
+      "import { MobileFileExplorerPanel } from '@/files/MobileFileExplorerPanel'",
+      "import { TerminalPaneView } from '../../session/TerminalPaneView'"
+    ]
+    for (const source of composition) {
+      expect(boundaryViolations(bindingProbe, source)).toEqual([])
+      expect(boundaryViolations(providerProbe, source)).toEqual([])
+    }
   })
 
-  it('keeps gamepad/domain closed over itself', () => {
-    expect(layeringViolations(domainProbe, "import { brandId } from './branded-id'")).toEqual([])
+  it('keeps raw control names in controller-input', () => {
+    expect(rawControlViolations(inputProbe, "const axis = 'left-x'")).toEqual([])
+    expect(rawControlViolations(bindingProbe, "if (button === 'rb') scroll()")).toEqual([
+      `'rb' — ${RAW_CONTROL_RULE}`
+    ])
+    expect(rawControlViolations(wheelProbe, 'const held = `dpad-up`')).toEqual([
+      `'dpad-up' — ${RAW_CONTROL_RULE}`
+    ])
+    // Intent vocabulary is what a surface is meant to speak.
+    expect(rawControlViolations(bindingProbe, "dispatch({ kind: 'cycle-tab' })")).toEqual([])
+    // A test names controls on purpose, and a test does not ship.
+    expect(rawControlViolations(inputTestProbe, "it('maps l2', () => {})")).toEqual([])
+  })
+
+  it('keeps wheel geometry in wheel mechanics', () => {
+    expect(wheelGeometryViolations(wheelProbe, 'const a = Math.atan2(y, x)')).toEqual([])
+    expect(wheelGeometryViolations(wheelProbe, 'const centerAngle = 0')).toEqual([])
+    expect(wheelGeometryViolations(bindingProbe, 'const a = Math.atan2(y, x)')).toEqual([
+      `Math.atan2 — ${GEOMETRY_RULE}`
+    ])
+    expect(wheelGeometryViolations(providerProbe, 'const halfAngle = 1')).toEqual([
+      `halfAngle — ${GEOMETRY_RULE}`
+    ])
+    // A preset carries angles as data; recomputing them there forks the geometry.
+    expect(wheelGeometryViolations(presetProbe, 'const centerAngle = 0')).toEqual([])
+    expect(wheelGeometryViolations(presetProbe, 'const a = Math.cos(t)')).toEqual([
+      `Math.cos — ${PRESET_GEOMETRY_RULE}`
+    ])
+  })
+
+  it('keeps the PRD mapping and the provisional D-pad set apart', () => {
+    expect(mappingSetViolations(inputTestProbe, `import { ${PRD_SET} } from './bindings'`)).toEqual(
+      []
+    )
     expect(
-      layeringViolations(
-        domainProbe,
-        "import type { PortResult } from '../application/ports/port-result'"
+      mappingSetViolations(
+        inputTestProbe,
+        `import { ${PRD_SET} } from './a'\nimport { ${PROVISIONAL_SET} } from './b'`
       )
-    ).toEqual([`../application/ports/port-result — ${DOMAIN_RULE}`])
-    expect(layeringViolations(domainProbe, "import { useMemo } from 'react'")).toEqual([
-      `react — ${DOMAIN_RULE}`
-    ])
-    expect(layeringViolations(domainProbe, "import { join } from 'node:path'")).toEqual([
-      `node:path — ${DOMAIN_RULE}`
-    ])
+    ).toEqual([`a test may reach one of them, not both — ${MAPPING_SET_RULE}`])
     expect(
-      layeringViolations(domainProbe, "import type { X } from '@/gamepad/adapters/orca'")
-    ).toEqual([`@/gamepad/adapters/orca — ${DOMAIN_RULE}`])
-    expect(layeringViolations(domainTestProbe, "import { describe } from 'vitest'")).toEqual([])
-    expect(layeringViolations(domainProbe, "import { describe } from 'vitest'")).toEqual([
-      `vitest — ${DOMAIN_RULE}`
-    ])
+      mappingSetViolations(inputProbe, `const ${PRD_SET} = []\nconst ${PROVISIONAL_SET} = []`)
+    ).toEqual([`one module declares both — ${MAPPING_SET_RULE}`])
+    // The resolver may read both behind one experiment flag; it declares neither.
+    expect(
+      mappingSetViolations(inputProbe, `resolve(${PRD_SET}, enabled ? ${PROVISIONAL_SET} : [])`)
+    ).toEqual([])
   })
 
-  it('keeps port signatures on domain types (FND-AC2)', () => {
+  it('marks every experiment preset non-contractual', () => {
     expect(
-      layeringViolations(portProbe, "import type { Session } from '../../domain/session'")
+      presetContractViolations(presetProbe, "const p = { presetId: 'p1', contractual: false }")
     ).toEqual([])
     expect(
-      layeringViolations(portProbe, "import type { PortResult } from './port-result'")
-    ).toEqual([])
+      presetContractViolations(presetProbe, "const p = { presetId: 'p1', segments: [] }")
+    ).toEqual([PRESET_CONTRACT_RULE])
     expect(
-      layeringViolations(portProbe, "import type { Queue } from '../../state/remote/queue'")
-    ).toEqual([`../../state/remote/queue — ${PORTS_RULE}`])
+      presetContractViolations(presetProbe, "const p = { presetId: 'p1', contractual: true }")
+    ).toEqual([`contractual is not the literal false — ${PRESET_CONTRACT_RULE}`])
+    expect(
+      presetContractViolations(wheelProbe, 'const p = { segments: [], contractual: isApproved }')
+    ).toEqual([`contractual is not the literal false — ${PRESET_CONTRACT_RULE}`])
+    // Outside the experiment directory a segment list is ordinary wheel state.
+    expect(presetContractViolations(wheelProbe, 'const state = { segments: [] }')).toEqual([])
   })
 
-  it('stops the product layer at the edge of src/gamepad', () => {
-    const outside = 'gamepad must not import outside src/gamepad — only gamepad/adapters may'
+  it('stops the controller layer at the transport beneath a surface action (FND-R3)', () => {
     expect(
-      layeringViolations(stateProbe, "import { loadHosts } from '../../../transport/host-store'")
-    ).toEqual([`../../../transport/host-store — ${outside}`])
-    expect(
-      layeringViolations(useCaseProbe, "const p = require('../../../storage/preferences')")
-    ).toEqual([`../../../storage/preferences — ${outside}`])
-    expect(
-      layeringViolations(featureProbe, "import { fileTree } from '@/files/file-tree'")
-    ).toEqual([`@/files/file-tree — ${outside}`])
-    expect(
-      layeringViolations(
-        useCaseProbe,
-        "import type { X } from '../../../../../src/shared/rpc-contract/rpc-params-catalog.generated'"
+      lowLevelReachViolations(
+        bindingProbe,
+        "import { openHostLogicalClient } from '@/transport/host-logical-client'"
       )
-    ).toEqual([`../../../../../src/shared/rpc-contract/rpc-params-catalog.generated — ${outside}`])
-  })
-
-  it('routes every slice to the adapter through the registry', () => {
+    ).toEqual([`@/transport/host-logical-client — ${LOW_LEVEL_RULE}`])
     expect(
-      layeringViolations(useCaseProbe, "import { createOrcaAdapter } from '../../adapters/orca'")
-    ).toEqual([`../../adapters/orca — ${ADAPTER_RULE}`])
+      lowLevelReachViolations(providerProbe, "const c = require('../transport/rpc-client')")
+    ).toEqual([`../transport/rpc-client — ${LOW_LEVEL_RULE}`])
     expect(
-      layeringViolations(featureProbe, "const a = await import('../../adapters/orca')")
-    ).toEqual([`../../adapters/orca — ${ADAPTER_RULE}`])
-    expect(layeringViolations(stateProbe, "const a = require('@/gamepad/adapters/stub')")).toEqual([
-      `@/gamepad/adapters/stub — ${ADAPTER_RULE}`
-    ])
-    expect(
-      layeringViolations(useCaseProbe, "import { registry } from '../adapter-registry'")
-    ).toEqual([])
-  })
-
-  it('keeps the device out of everything but features', () => {
-    expect(layeringViolations(useCaseProbe, "import { View } from 'react-native'")).toEqual([
-      `react-native — ${DEVICE_RULE}`
-    ])
-    expect(layeringViolations(stateProbe, "import * as Store from 'expo-secure-store'")).toEqual([
-      `expo-secure-store — ${DEVICE_RULE}`
-    ])
-    expect(layeringViolations(stateTestProbe, "import { View } from 'react-native'")).toEqual([
-      `react-native — ${DEVICE_RULE}`
-    ])
-    expect(layeringViolations(featureProbe, "import { View } from 'react-native'")).toEqual([])
-    expect(layeringViolations(adapterProbe, "import { View } from 'react-native'")).toEqual([])
-    expect(layeringViolations(useCaseProbe, "import { readFileSync } from 'node:fs'")).toEqual([])
-  })
-
-  it('lets the adapter reach the listed upstream modules and nothing else', () => {
-    expect(
-      layeringViolations(
-        adapterProbe,
-        "import { openHostLogicalClient } from '../../../transport/host-logical-client'"
-      )
-    ).toEqual([])
-    expect(
-      layeringViolations(
-        adapterProbe,
-        "import { loadPinnedIds } from '../../../storage/preferences'"
-      )
-    ).toEqual([])
-    expect(
-      layeringViolations(
-        adapterProbe,
-        "import type { RpcMethodName } from '../../../../../src/shared/rpc-contract/rpc-params-catalog.generated'"
-      )
-    ).toEqual([])
-    expect(
-      layeringViolations(adapterProbe, "import type { Session } from '../../domain/session'")
-    ).toEqual([])
-    expect(
-      layeringViolations(
-        adapterProbe,
-        "import { MobileHomeScreen } from '../../../home/MobileHomeScreen'"
+      lowLevelReachViolations(
+        bindingTestProbe,
+        "import type { X } from '../../../../src/shared/rpc-contract/rpc-params-catalog.generated'"
       )
     ).toEqual([
-      '../../../home/MobileHomeScreen — gamepad/adapters may not reach this module — extend ADAPTER_UPSTREAM_REACH if deliberate'
+      `../../../../src/shared/rpc-contract/rpc-params-catalog.generated — ${LOW_LEVEL_RULE}`
     ])
+    expect(lowLevelReachViolations(bindingProbe, "import { View } from 'react-native'")).toEqual([])
   })
 
-  it('recovers the RPC method catalog from source without importing it', () => {
-    const methods = rpcMethodNames(readFileSync(rpcCatalogPath, 'utf8'))
-
-    expect(methods.size).toBeGreaterThan(100)
-    expect(methods.has('status.get')).toBe(true)
-    expect(methods.has('session.tabs.list')).toBe(true)
-    // Listed apart from the schema map because its params live in src/main; still a method name.
-    expect(methods.has('orchestration.send')).toBe(true)
-  })
-
-  it('flags host vocabulary in identifiers and literals only', () => {
-    const methods = new Set(['status.get', 'worktree.ps'])
-
-    expect(vocabularyViolations(useCaseProbe, 'const id = worktreeId', methods)).toHaveLength(1)
-    expect(vocabularyViolations(useCaseProbe, 'const key = paneKey', methods)).toHaveLength(1)
-    expect(
-      vocabularyViolations(useCaseProbe, 'type Snap = { snapshotId: string }', methods)
-    ).toHaveLength(1)
-    expect(vocabularyViolations(useCaseProbe, "const m = 'status.get'", methods)).toEqual([
-      "'status.get' — an Orca RPC method name belongs to the adapter"
-    ])
-    expect(vocabularyViolations(useCaseProbe, 'const m = `status.get`', methods)).toHaveLength(1)
-    expect(
-      vocabularyViolations(
-        domainProbe,
-        "export const WORKSPACE_KINDS = ['git-worktree', 'folder'] as const",
-        methods
-      )
-    ).toEqual([])
-    expect(
-      vocabularyViolations(
-        domainProbe,
-        '/** A git worktree or a folder workspace. */\nexport const kinds = 2',
-        methods
-      )
-    ).toEqual([])
-    expect(
-      vocabularyViolations(
-        stateTestProbe,
-        "it('accepts a git worktree with a branch', () => {})",
-        methods
-      )
-    ).toEqual([])
-    // The adapter is where Orca vocabulary belongs.
-    expect(vocabularyViolations(adapterProbe, "const m = 'worktree.ps'", methods)).toEqual([])
-  })
-
-  it('holds the boundary across the whole gamepad tree', () => {
+  it('holds every rule across the whole controller tree', () => {
     const offenders = sourceFiles(gamepadRoot)
-      .filter((path) => sourceExtensions.has(extname(path)))
+      .filter((path) => sourceExtensions.has(extname(path)) && path !== ratchetFile)
       .flatMap((path) =>
-        layeringViolations(path, readFileSync(path, 'utf8')).map(
-          (violation) => `${relative(mobileRoot, path)}: ${violation}`
-        )
-      )
-
-    expect(offenders).toEqual([])
-  })
-
-  it('keeps Orca vocabulary out of every slice but the adapter', () => {
-    const methods = rpcMethodNames(readFileSync(rpcCatalogPath, 'utf8'))
-    const offenders = sourceFiles(gamepadRoot)
-      .filter((path) => sourceExtensions.has(extname(path)))
-      .flatMap((path) =>
-        vocabularyViolations(path, readFileSync(path, 'utf8'), methods).map(
+        boundaryViolations(path, readFileSync(path, 'utf8')).map(
           (violation) => `${relative(mobileRoot, path)}: ${violation}`
         )
       )
