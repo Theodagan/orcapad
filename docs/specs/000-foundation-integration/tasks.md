@@ -48,7 +48,7 @@
 
   **Verify:** `pnpm --dir mobile typecheck`; `pnpm --dir mobile test src/gamepad`
 
-- [ ] **FND-T6 - Run changed-code gates**
+- [x] **FND-T6 - Run changed-code gates**
 
   Confirm the reconciled implementation follows repository quality and design
   constraints.

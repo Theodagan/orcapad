@@ -40,7 +40,7 @@ export function useController(): ControllerContextValue {
 }
 
 export type ControllerProviderProps = {
-  readonly children: ReactNode
+  readonly children?: ReactNode
   /** CTRL-T4 supplies the native module; without one the layer is inert, never broken. */
   readonly reader?: ControllerReader
   /** CTRL-T3 supplies the resolver. Until then no sample becomes an intent. */

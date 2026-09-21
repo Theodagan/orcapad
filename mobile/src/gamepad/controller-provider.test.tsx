@@ -45,6 +45,15 @@ function Surface({ target }: { readonly target: FocusTarget }): ReactNode {
   return null
 }
 
+/** Identity-only markers, so a tree assertion names a component instead of a host string. */
+function AppContent(): ReactNode {
+  return null
+}
+
+function WheelContent(): ReactNode {
+  return null
+}
+
 describe('ControllerProvider', () => {
   let renderer: ReactTestRenderer | null = null
 
@@ -62,7 +71,7 @@ describe('ControllerProvider', () => {
     }
 
     act(() => {
-      renderer = create(createElement(ControllerProvider, { children: createElement(Probe) }))
+      renderer = create(createElement(ControllerProvider, null, createElement(Probe)))
     })
 
     expect(seen).toEqual({ support: 'unavailable', connected: false })
@@ -89,11 +98,11 @@ describe('ControllerProvider', () => {
 
     act(() => {
       renderer = create(
-        createElement(ControllerProvider, {
-          reader,
-          resolve: () => [stop],
-          children: createElement(Surface, { target })
-        })
+        createElement(
+          ControllerProvider,
+          { reader, resolve: () => [stop] },
+          createElement(Surface, { target })
+        )
       )
     })
     act(() => {
@@ -112,9 +121,7 @@ describe('ControllerProvider', () => {
     }
 
     act(() => {
-      renderer = create(
-        createElement(ControllerProvider, { reader, children: createElement(Probe) })
-      )
+      renderer = create(createElement(ControllerProvider, { reader }, createElement(Probe)))
     })
     expect(connected).toBe(false)
 
@@ -128,7 +135,7 @@ describe('ControllerProvider', () => {
     const { reader, unsubscribed } = fakeReader()
 
     act(() => {
-      renderer = create(createElement(ControllerProvider, { reader, children: null }))
+      renderer = create(createElement(ControllerProvider, { reader }))
     })
     act(() => {
       renderer?.unmount()
@@ -141,23 +148,25 @@ describe('ControllerProvider', () => {
   it('mounts the wheel overlay above the app and out of its touch path', () => {
     act(() => {
       renderer = create(
-        createElement(ControllerProvider, {
-          children: createElement('Text' as never, { key: 'app' }, 'app'),
-          wheelOverlay: createElement('Text' as never, { key: 'wheel' }, 'wheel')
-        })
+        createElement(
+          ControllerProvider,
+          { wheelOverlay: createElement(WheelContent) },
+          createElement(AppContent)
+        )
       )
     })
 
-    const overlay = renderer?.root.findAll(
+    const layers = renderer?.root.findAll(
       (node) => node.type === 'View' && node.props.pointerEvents === 'none'
     )
-    expect(overlay).toHaveLength(1)
-    expect(overlay?.[0].findByType('Text' as never).children).toEqual(['wheel'])
+    expect(layers).toHaveLength(1)
+    expect(layers?.[0].findAllByType(WheelContent)).toHaveLength(1)
+    expect(layers?.[0].findAllByType(AppContent)).toHaveLength(0)
   })
 
   it('mounts no overlay layer until a wheel is supplied', () => {
     act(() => {
-      renderer = create(createElement(ControllerProvider, { children: null }))
+      renderer = create(createElement(ControllerProvider, null, createElement(AppContent)))
     })
 
     expect(renderer?.root.findAll((node) => node.props?.pointerEvents === 'none')).toHaveLength(0)
