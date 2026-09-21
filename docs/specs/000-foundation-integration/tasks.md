@@ -28,7 +28,7 @@
 
   **Verify:** `pnpm --dir mobile test src/gamepad/gamepad-boundary.test.ts`
 
-- [ ] **FND-T4 - Add duplicate-infrastructure ratchets**
+- [x] **FND-T4 - Add duplicate-infrastructure ratchets**
 
   Add source checks for new socket/reconnect, pairing, notification, speech,
   terminal-protocol, and file-RPC orchestration under `mobile/src/gamepad/`.

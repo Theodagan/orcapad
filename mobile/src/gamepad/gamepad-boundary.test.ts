@@ -75,6 +75,73 @@ const PRESET_MARKERS = ['presetId', 'segments']
 /** Beneath every authoritative surface action. A binding reaches the action, never this. */
 const LOW_LEVEL_ROOTS = [join(srcRoot, 'transport'), join(hostSharedRoot, 'rpc-contract')]
 
+/**
+ * Existing-action modules `003` names that happen to sit under a closed root. File-exact, so
+ * the directory around them stays shut — the allowance is the action, not its neighbourhood.
+ */
+const EXISTING_ACTION_IMPORTS = [join(srcRoot, 'transport', 'pre-profile-pairing-coordinator')]
+
+/**
+ * Infrastructure Orca Mobile already ships (`000/tech.md` §4, FND-AC2). Each row is matched by
+ * the packages a reimplementation cannot avoid and by the exact names `003` calls out, because
+ * both survive renaming better than a shape test would. Invoking the owner's action is the
+ * point; standing up a second one is the failure.
+ */
+type DuplicateShape = {
+  readonly shape: string
+  readonly owner: string
+  readonly packages?: RegExp
+  readonly names?: RegExp
+  readonly literals?: RegExp
+}
+
+const DUPLICATE_SHAPES: readonly DuplicateShape[] = [
+  {
+    shape: 'a socket or reconnect schedule',
+    owner: 'mobile/src/transport',
+    packages: /^ws$/,
+    // Invoking an existing reconnect action is the documented binding for the host list
+    // (`003` §2), so only scheduling vocabulary is out of bounds.
+    names: /^WebSocket$|backoff|schedulereconnect|reconnectschedule|reconnecttimer|retrydelay/i
+  },
+  {
+    shape: 'pairing decode or relay provisioning',
+    owner: 'mobile/app/pair-scan.tsx and pre-profile-pairing-coordinator.ts',
+    packages: /^(expo-camera|tweetnacl|@noble\/hashes)(\/|$)/,
+    literals: /^pairing\./
+  },
+  {
+    shape: 'a second host, session, or credential store',
+    owner: 'mobile/src/storage and mobile/src/transport',
+    packages: /^(expo-secure-store|@react-native-async-storage\/async-storage)(\/|$)/
+  },
+  {
+    shape: 'push registration or catch-up',
+    owner: 'mobile/src/notifications',
+    packages: /^(expo-notifications|expo-task-manager)(\/|$)/,
+    names: /pushtoken|registerfornotification|catchup|watermark/i
+  },
+  {
+    shape: 'a microphone or speech pipeline',
+    owner: 'mobile/src/hooks/use-mobile-dictation.ts',
+    packages: /^(@orca\/expo-two-way-audio|expo-av|expo-audio)(\/|$)/,
+    literals: /^speech\./
+  },
+  {
+    shape: 'terminal stream decoding or viewport protocol',
+    owner: 'mobile/src/terminal and mobile/src/session/TerminalPaneView.tsx',
+    packages: /^@xterm\//,
+    names: /^(TerminalStreamOpcode|outputPause)$/,
+    literals: /^terminal\./
+  },
+  {
+    shape: 'a file RPC layer',
+    owner: 'mobile/src/files',
+    packages: /^(expo-file-system|expo-document-picker)(\/|$)/,
+    literals: /^files\./
+  }
+]
+
 const RAW_CONTROL_RULE = 'a raw control name belongs in gamepad/controller-input'
 const GEOMETRY_RULE = 'wheel geometry belongs in gamepad/wheel'
 const PRESET_GEOMETRY_RULE =
@@ -282,10 +349,56 @@ export function lowLevelReachViolations(path: string, source: string): string[] 
     if (resolved === null) {
       return []
     }
+    if (EXISTING_ACTION_IMPORTS.includes(resolved.replace(/\.tsx?$/, ''))) {
+      return []
+    }
     return LOW_LEVEL_ROOTS.some((root) => within(root, resolved))
       ? [`${specifier} — ${LOW_LEVEL_RULE}`]
       : []
   })
+}
+
+/**
+ * A package import is checked in tests too: pulling `expo-notifications` into a controller test
+ * is already the pipeline being built. Names and literals are not, because a test naming the
+ * thing it forbids is the test doing its job.
+ */
+export function duplicateInfrastructureViolations(path: string, source: string): string[] {
+  const found: string[] = []
+  const report = (token: string, shape: DuplicateShape): void => {
+    found.push(`${token} — ${shape.shape} is owned by ${shape.owner}`)
+  }
+
+  for (const specifier of moduleSpecifiers(path, source)) {
+    if (resolveSpecifier(path, specifier) !== null) {
+      continue
+    }
+    for (const shape of DUPLICATE_SHAPES) {
+      if (shape.packages?.test(specifier) === true) {
+        report(specifier, shape)
+      }
+    }
+  }
+  if (testFile.test(path)) {
+    return found
+  }
+
+  walk(path, source, (node) => {
+    if (ts.isIdentifier(node)) {
+      for (const shape of DUPLICATE_SHAPES) {
+        if (shape.names?.test(node.text) === true) {
+          report(node.text, shape)
+        }
+      }
+    } else if (ts.isStringLiteralLike(node)) {
+      for (const shape of DUPLICATE_SHAPES) {
+        if (shape.literals?.test(node.text) === true) {
+          report(`'${node.text}'`, shape)
+        }
+      }
+    }
+  })
+  return found
 }
 
 export function boundaryViolations(path: string, source: string): string[] {
@@ -294,7 +407,8 @@ export function boundaryViolations(path: string, source: string): string[] {
     ...wheelGeometryViolations(path, source),
     ...mappingSetViolations(path, source),
     ...presetContractViolations(path, source),
-    ...lowLevelReachViolations(path, source)
+    ...lowLevelReachViolations(path, source),
+    ...duplicateInfrastructureViolations(path, source)
   ]
 }
 
@@ -416,6 +530,56 @@ describe('Controller boundary', () => {
       `../../../../src/shared/rpc-contract/rpc-params-catalog.generated — ${LOW_LEVEL_RULE}`
     ])
     expect(lowLevelReachViolations(bindingProbe, "import { View } from 'react-native'")).toEqual([])
+  })
+
+  it('refuses infrastructure Orca Mobile already ships (FND-AC2)', () => {
+    const duplicates: readonly [string, string][] = [
+      [`const s = new WebSocket(url)`, 'a socket or reconnect schedule'],
+      [`const t = scheduleReconnect(host)`, 'a socket or reconnect schedule'],
+      [`import { CameraView } from 'expo-camera'`, 'pairing decode or relay provisioning'],
+      [`const m = 'pairing.claim'`, 'pairing decode or relay provisioning'],
+      [`import * as Store from 'expo-secure-store'`, 'a second host, session, or credential store'],
+      [`import * as Push from 'expo-notifications'`, 'push registration or catch-up'],
+      [`const w = catchUpWatermark`, 'push registration or catch-up'],
+      [`import { start } from '@orca/expo-two-way-audio'`, 'a microphone or speech pipeline'],
+      [`const m = 'speech.dictation.start'`, 'a microphone or speech pipeline'],
+      [`import { Terminal } from '@xterm/xterm'`, 'terminal stream decoding or viewport protocol'],
+      [`decode(TerminalStreamOpcode.Output)`, 'terminal stream decoding or viewport protocol'],
+      [`import * as Fs from 'expo-file-system'`, 'a file RPC layer'],
+      [`const m = 'files.readDir'`, 'a file RPC layer']
+    ]
+
+    for (const [source, shape] of duplicates) {
+      const violations = duplicateInfrastructureViolations(bindingProbe, source)
+      expect(violations, source).toHaveLength(1)
+      expect(violations[0]).toContain(shape)
+    }
+  })
+
+  it('leaves the existing actions a binding is supposed to invoke alone', () => {
+    const delegation = [
+      // `003` §2 names reconnect as an existing host-list action, not a schedule to rebuild.
+      'onConfirm(() => reconnectHost(hostId))',
+      'onStop(() => stopAgentTurn(sessionId))',
+      'onToggle(() => dictation.toggle())',
+      'onScroll((velocity) => terminalPane.scrollBy(velocity))',
+      'onOpen((entry) => openFileRoute(entry))'
+    ]
+    for (const source of delegation) {
+      expect(duplicateInfrastructureViolations(bindingProbe, source), source).toEqual([])
+    }
+  })
+
+  it('allows the exact existing-action imports 003 documents, not their neighbours', () => {
+    expect(
+      boundaryViolations(
+        bindingProbe,
+        "import { startPreProfilePairing } from '@/transport/pre-profile-pairing-coordinator'"
+      )
+    ).toEqual([])
+    expect(
+      lowLevelReachViolations(bindingProbe, "import { x } from '@/transport/rpc-client'")
+    ).toHaveLength(1)
   })
 
   it('holds every rule across the whole controller tree', () => {
