@@ -1,77 +1,89 @@
-# 002 — Context Wheel — Tasks
+# 002 - Context Wheel - Tasks
 
-Each task is independently shippable and leaves `pnpm typecheck`, `pnpm test`,
-and `oxlint` green in `mobile/`.
+- [ ] **WHEEL-T1 - Geometry**
 
-- [ ] **WHEEL-T1 — Geometry** → needs: —
+  Implement total vector-to-segment selection under
+  `mobile/src/gamepad/wheel/`, covering dead arcs, wraparound, empty presets,
+  and null vectors.
 
-  `src/gamepad/domain/wheel.ts` per `tech.md` §2: `Wheel`, `WheelSegment`, and a
-  total `selectSegment`. Covers wrap across 0°, dead arcs between segments, an
-  empty wheel, and a null vector.
+  **Needs:** CTRL-T3
 
-  **Verify:** `pnpm test src/gamepad/domain/wheel.test.ts`
+  **Verify:** `pnpm --dir mobile test src/gamepad/wheel/wheel-geometry.test.ts`
 
-- [ ] **WHEEL-T2 — State machine** → needs: 1
+- [ ] **WHEEL-T2 - Pure state machine**
 
-  `src/gamepad/application/use-cases/drive-wheel.ts` — the pure reducer and the
-  full transition table from `tech.md` §3. One named test per PRD §3 rule, each
-  citing its rule number (WHEEL-AC1), plus the fake-timer proof that nothing
-  waits (WHEEL-AC7).
+  Implement the transition table in `tech.md` section 2 with one named test per
+  PRD wheel rule.
 
-  **Verify:** `pnpm test src/gamepad/application/use-cases/drive-wheel.test.ts`
+  **Needs:** WHEEL-T1
 
-- [ ] **WHEEL-T3 — Zero-side-effect proof** → needs: 2
+  **Verify:** `pnpm --dir mobile test src/gamepad/wheel/wheel-state.test.ts`
 
-  A test that registers segments whose `run` records invocations, drives every
-  cancel path — return to centre, dead arc, disconnect, unmount — and asserts
-  every record is empty (WHEEL-AC2).
+- [ ] **WHEEL-T3 - Zero-side-effect proof**
 
-  This is a task rather than a line in T2 because it is the requirement most
-  likely to rot: any future shortcut that runs an action on lock instead of
-  commit fails here and nowhere else.
+  Drive open, motion, invalid-direction, center, back, disconnect, unavailable,
+  and unmount paths against recording actions. Assert only a commit outcome can
+  produce an invocation.
 
-  **Verify:** `pnpm test src/gamepad/application/use-cases/drive-wheel.test.ts`
+  **Needs:** WHEEL-T2
 
-- [ ] **WHEEL-T4 — Registry** → needs: 1
+  **Verify:** `pnpm --dir mobile test src/gamepad/wheel/wheel-side-effects.test.ts`
 
-  `src/gamepad/application/wheel-registry.ts` per `tech.md` §4, including
-  unsubscribe on unmount, a throw on duplicate `WheelSegmentId`, and `run`
-  reachable from exactly one call site.
+- [ ] **WHEEL-T4 - Binding registry and preset schema**
 
-  **Verify:** `pnpm test src/gamepad/application/wheel-registry.test.ts`
+  Implement action registration, lifecycle-based unregistration, immutable
+  preset loading, and required non-contract/trial metadata.
 
-- [ ] **WHEEL-T5 — Overlay** → needs: 2, 4
+  **Needs:** WHEEL-T2, FND-T5
 
-  `features/wheel/components/WheelOverlay.tsx` and `WheelSegmentArc.tsx` with the
-  state split from `tech.md` §5 — needle on a Reanimated shared value, locked
-  segment in React state. `unavailable` renders disabled; `unknown` renders
-  normally.
+  **Verify:** `pnpm --dir mobile test src/gamepad/wheel/wheel-registry.test.ts`; `pnpm --dir mobile test src/gamepad/wheel/wheel-preset.test.ts`
 
-  **Verify:** `pnpm test src/gamepad/features/wheel`
+- [ ] **WHEEL-T5 - Overlay and input wiring**
 
-- [ ] **WHEEL-T6 — Wire to controller intents** → needs: 2, 5
+  Render the overlay above the existing focused surface, drive it from
+  `wheel-motion` and `confirm` intents, and ensure rendering never blocks commit.
 
-  `use-wheel.ts` subscribing to `001`'s `stick-motion` and `confirm` intents and
-  driving the machine. The wheel never reads the port directly.
+  **Needs:** CTRL-T5, WHEEL-T2, WHEEL-T4
 
-  **Verify:** `pnpm test src/gamepad/features/wheel`; `pnpm test src/gamepad/gamepad-boundary.test.ts`
+  **Verify:** `pnpm --dir mobile test src/gamepad/wheel/WheelOverlay.test.tsx`; `pnpm --dir mobile typecheck`
 
-- [ ] **WHEEL-T7 — Geometry containment rule** → needs: 5
+- [ ] **WHEEL-T6 - Harmless smoke presets**
 
-  Extend `gamepad-boundary.test.ts` so arc widths and segment angles may not
-  appear outside `domain/wheel.ts` (WHEEL-AC8), in the same shape as the existing
-  vocabulary rule.
+  Add replaceable presets using local no-op/diagnostic bindings only. Include
+  different segment counts without naming a product default.
 
-  **Verify:** `pnpm test src/gamepad/gamepad-boundary.test.ts`
+  **Needs:** WHEEL-T4, WHEEL-T5
 
-- [ ] **WHEEL-T8 — On-device feel pass** → needs: 6
+  **Verify:** `pnpm --dir mobile test src/gamepad/wheel/experiments`
 
-  Run both wheels on a Retroid Pocket Flip and on iPad with a Bluetooth pad.
-  Record the `001` `tech.md` §6 on-device latency measurement, and answer open
-  questions 1 and 2 — segment count, and whether the wheel re-opens while the
-  stick is still deflected.
+- [ ] **WHEEL-T7 - Existing-action experiment presets**
 
-  This task produces findings, not code. Its output is edits to `tech.md` §8 and,
-  if the feel demands it, one row of the §3 table.
+  After `003` bindings exist, add non-destructive real-action presets that
+  reference binding ids. Do not include stop, close, forget, delete, or other
+  destructive actions.
 
-  **Verify:** measurements recorded in `tech.md`; no CI gate.
+  **Needs:** WHEEL-T6, BIND-T7
+
+  **Verify:** `pnpm --dir mobile test src/gamepad/wheel/experiments`
+
+- [ ] **WHEEL-T8 - Device trials**
+
+  Run smoke and existing-action presets on Retroid Pocket Flip and iPad/iPhone
+  with Bluetooth controller. Record the complete `WheelTrialRecord` fields under
+  `docs/evidence/context-wheel/` and add a schema test for required devices and
+  fields.
+
+  **Needs:** WHEEL-T6, WHEEL-T7
+
+  **Verify:** `pnpm --dir mobile test src/gamepad/wheel/wheel-trial-records.test.ts`
+
+- [ ] **WHEEL-T9 - Human assignment gate**
+
+  Present trial records and preset diffs for a product decision. A later change
+  may promote a preset only after explicit approval; this MVP specification does
+  not perform that promotion. Add a ratchet test requiring the linked decision
+  record for any product-default preset.
+
+  **Needs:** WHEEL-T8
+
+  **Verify:** `pnpm --dir mobile test src/gamepad/wheel/wheel-product-default-gate.test.ts`

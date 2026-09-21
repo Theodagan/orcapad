@@ -1,167 +1,127 @@
-# 001 — Controller input
+# 001 - Controller Input
 
 ## Purpose
 
-Make a physical gamepad the way this app is operated.
+Make a physical controller the primary way to operate the existing Orca Mobile
+experience while touch remains available.
 
-This feature owns three things no other feature can: reading a controller,
-the [`../../PRD.md`](../../PRD.md) §4 mapping as an enforceable contract, and the
-focus model that gives "the current pane" a meaning. Every surface in `004`–`010`
-is steered through it.
-
-It ships no new screen. Its deliverable is that a Retroid Pocket Flip user can
-reach every part of the existing Orca display without touching the glass.
-
-## Problem
-
-Orca Mobile is touch-only. Nothing in `mobile/src/` reads a gamepad, and neither
-React Native nor Expo exposes one — iOS needs `GameController.framework`, Android
-needs `InputDevice` joystick axes and key events.
-
-PRD §7 makes controller interaction "a first-class design constraint, not an
-input accessory". That is the difference between this feature and a settings
-toggle: if the controller is added on top of a touch app, every surface built
-after it inherits touch assumptions — hit targets sized for fingers, scroll
-driven by momentum, no notion of what is focused. Those assumptions are cheap to
-adopt and expensive to remove, so the input model has to exist before the
-surfaces do.
+This specification owns physical input capture, the PRD mapping, intent
+resolution, and focus registration. It does not own any Orca screen or remote
+capability.
 
 ## Scope
 
-**In scope**
+In scope:
 
-- Controller discovery, connection and disconnection, for Android integrated
-  controls and for Bluetooth controllers on iOS and Android.
-- Button and analog-axis capture, including a dead zone and analog triggers.
-- Chord recognition — `Y` held as a modifier over `LB`/`RB`.
-- The §4 mapping expressed as data, plus the d-pad additions this spec records.
-- The focus model: which pane holds focus, which item is selected within it, and
-  which session that pane belongs to.
-- Resolving a raw input to an intent, given the current focus.
-- Making controller presence visible, so a disconnected pad is not mistaken for
-  a frozen app.
+- integrated Android controls and Bluetooth controllers on Android and iOS;
+- button, stick, and analog-trigger samples;
+- one dead-zone policy;
+- the accepted PRD mapping as inspectable data;
+- the `Y` modifier over `LB` and `RB`;
+- focus registration by existing Orca Mobile surfaces;
+- observable controller connection state;
+- separately identified D-pad experiments.
 
-**Out of scope**
+Out of scope:
 
-- The Context Wheel itself (`002`). This feature reports that a stick left the
-  dead zone, where it points, and whether `A` or a cancel followed. What a wheel
-  contains and what committing a segment does belongs to `002`.
-- Dictation (`003`). `R3` resolves to a toggle intent and stops there.
-- A remapping UI. §4 is "the initial controller contract"; it is data so it can
-  be changed in one line, but the MVP ships no settings surface for it.
-- Replacing touch. Touch keeps working everywhere it works today.
-- On-screen virtual controls.
+- replacement routes, panes, or navigation state;
+- final Context Wheel contents;
+- remapping settings;
+- on-screen virtual controls;
+- multiple simultaneous controllers;
+- replacing touch.
 
 ## Requirements
 
-### CTRL-R1 — The mapping is data, not scattered handlers
+### CTRL-R1 - The PRD mapping is the contract
 
-The §4 table exists once, as a value in `src/gamepad/domain/`. A feature never
-listens for a button; it declares the intents it accepts. This is what makes the
-contract inspectable, testable without a device, and changeable in one edit.
-
-The mapping, including the d-pad rows this spec adds:
+The accepted mapping exists once as data:
 
 | Input | Intent |
-| ----- | ------ |
-| L2 (analog) | scroll up — focused pane |
-| R2 (analog) | scroll down — focused pane |
-| LB / RB | previous / next session tab — current workspace |
-| Y + LB/RB (hold) | previous / next workspace or project |
-| D-pad ↑ / ↓ | move selection — focused pane |
-| D-pad ← / → | move focus between panes (wide layouts only) |
-| Left stick (motion) | open Wheel 1 |
-| Right stick (motion) | open Wheel 2 |
-| A | confirm — commits the held wheel segment, else the focused selection |
-| B | reject / back |
-| X | stop — cancel the focused session's in-flight turn or tool call |
-| R3 | toggle dictation |
-| L3 | unassigned |
+| --- | --- |
+| L2 analog | Scroll up in the focused surface |
+| R2 analog | Scroll down in the focused surface |
+| LB / RB | Previous / next tab in the current project or workspace |
+| Y + LB/RB held | Previous / next worktree or project |
+| Left stick motion | Drive Wheel 1 |
+| Right stick motion | Drive Wheel 2 |
+| A | Commit a locked wheel segment, otherwise confirm |
+| B | Reject or go back |
+| X | Stop the focused session's in-flight agent turn or tool call |
+| R3 | Toggle dictation for the focused text target |
+| L3 | Unassigned |
 
-D-pad rows are an addition to PRD §4, not a reinterpretation of it: §4 assigns
-no input to moving a selection, and a file tree cannot be operated without one.
+Existing surfaces receive intents, never raw button or axis names.
 
-### CTRL-R2 — Focus is explicit and always resolvable
+### CTRL-R2 - D-pad behavior is experimental
 
-At any moment exactly one pane holds focus, and asking "which pane is focused"
-never returns nothing. Focus survives navigation: pushing a route moves focus to
-the new content, popping returns it.
+The D-pad is not part of the PRD contract. A separate provisional mapping may be
+enabled for trials:
 
-The panes are the ones Orca already has — the workspace sidebar and the detail
-stack (`app/h/_layout.tsx`). On narrow layouts the sidebar is not mounted, so
-focus has one place to be and `D-pad ←/→` does nothing.
+| Input | Candidate behavior |
+| --- | --- |
+| D-pad up/down | Move selection in the focused surface |
+| D-pad left/right | Move focus, collapse/expand a tree node, or navigate hierarchy according to the focused surface |
 
-### CTRL-R3 — Every intent resolves against focus, never against a screen
+The provisional mapping has separate tests and configuration. It can be removed
+without changing `CTRL-R1` or the intent resolver's contract table.
 
-`X` means "stop the focused session's turn" whether the user is looking at the
-transcript, the file tree or the terminal. `L2`/`R2` scroll whatever is focused.
-A feature that is not focused receives nothing.
+### CTRL-R3 - Focus resolves existing surface actions
 
-When the focused pane belongs to no session, `X` is a no-op — silent, with no
-side effect. Guessing a target for a destructive action is worse than doing
-nothing.
+Exactly one mounted focus target is active when controller input is dispatched.
+The target is registered by the existing route or component and invokes actions
+already owned by its controller or callback props.
 
-### CTRL-R4 — A chord is modal, and never sticky
+If an intent has no valid target, it produces no destructive side effect. In
+particular, `X` never guesses a session.
 
-`Y` held changes what `LB`/`RB` mean. Releasing `Y` restores them within the
-same input frame. `Y` pressed and released without `LB`/`RB` does nothing — it
-is a modifier, not a button with its own action.
+### CTRL-R4 - Chords are non-sticky
 
-### CTRL-R5 — Analog inputs stay analog
+Holding `Y` changes `LB` and `RB` to workspace/project cycling. Releasing `Y`
+restores tab cycling on the same sample transition. `Y` alone does nothing.
 
-`L2`/`R2` deflection sets scroll velocity, not a fixed step: a light pull creeps,
-a full pull races. Stick position is reported as a continuous vector, because
-`002` needs the angle and not merely a direction.
+### CTRL-R5 - Analog inputs remain analog
 
-A dead zone is applied once, in this feature. No consumer re-derives it.
+Trigger deflection controls scroll velocity. Stick samples retain their vector
+after one normalized dead-zone policy so the wheel receives continuous angle
+and magnitude.
 
-### CTRL-R6 — The controller's presence is visible
+### CTRL-R6 - Wheel opening has no input-layer delay
 
-A disconnected controller is indistinguishable from a frozen app unless the app
-says so. Connection and disconnection are observable state, and the app surfaces
-disconnection rather than silently ignoring input.
+The reader and resolver add no hold timer, debounce, or summon delay between a
+stick crossing the dead zone and publishing wheel motion.
 
-### CTRL-R7 — Capture is replaceable
+### CTRL-R7 - Controller presence is visible
 
-The device is read behind a port. The mapping, the focus model and every intent
-are platform-free and survive the reader being swapped — which PRD §9 requires,
-since a standalone product will not carry this one.
+Disconnect and reconnect are observable. A non-blocking notice explains lost
+controller input while touch remains usable.
 
-### CTRL-R8 — Input has a latency budget
+### CTRL-R8 - Hardware-dependent behavior is gated by evidence
 
-PRD §3 requires the wheel to open "immediately" with "no hold-to-summon delay".
-Immediacy is therefore a measured property, not a feeling: from a sample
-crossing the dead zone to the intent being published is budgeted, and the budget
-is asserted in a test rather than eyeballed on a device.
+Retroid key mapping, trigger behavior, Android event delivery, terminal WebView
+interception, disconnect timing, and end-to-end latency are not complete until
+recorded on hardware.
 
 ## Acceptance criteria
 
-- **CTRL-AC1** — The §4 mapping resolves from a table in `src/gamepad/domain/`.
-  Searching `src/gamepad/features/` for a raw button or axis name returns no
-  hits.
-- **CTRL-AC2** — Every input in the CTRL-R1 table resolves to exactly one intent
-  under the default focus, proven by a table-driven test with no device attached.
-- **CTRL-AC3** — `Y` + `LB` emits a workspace-change intent; `LB` alone emits a
-  tab-change intent; `Y` alone emits nothing; releasing `Y` restores `LB`
-  immediately.
-- **CTRL-AC4** — Asking for the focused pane always returns one, including
-  before the first frame, during a route transition, and after a pane unmounts.
-- **CTRL-AC5** — `X` with a focused pane that owns no session emits nothing and
-  changes no state.
-- **CTRL-AC6** — A stick held inside the dead zone publishes no motion; crossing
-  it publishes a continuous vector, with the angle preserved to at least one
-  degree.
-- **CTRL-AC7** — Disconnecting the controller mid-session is observable to the
-  app within one second, and reconnecting restores input with no relaunch.
-- **CTRL-AC8** — Dead-zone crossing to published intent stays within the budget
-  recorded in `tech.md` §6, measured in a test.
-- **CTRL-AC9** — Deleting the native module and binding the stub reader leaves
-  `pnpm typecheck:extraction` green.
+- **CTRL-AC1** - A table-driven test covers every accepted mapping in CTRL-R1;
+  provisional D-pad rows are absent from that table.
+- **CTRL-AC2** - `Y+LB` cycles workspace/project, `LB` cycles tab, `Y` alone is
+  inert, and release restores the unmodified action.
+- **CTRL-AC3** - Existing feature and route modules contain no raw controller
+  button or axis vocabulary.
+- **CTRL-AC4** - A destructive intent with no focused session invokes nothing.
+- **CTRL-AC5** - Stick motion inside the dead zone publishes no wheel motion;
+  crossing it preserves angle and magnitude.
+- **CTRL-AC6** - Disconnect releases held-button state and dismisses the notice
+  after a successful reconnect.
+- **CTRL-AC7** - The D-pad experiment can be disabled without changing the PRD
+  mapping or touch behavior.
+- **CTRL-AC8** - Retroid and iOS controller records identify the device, OS,
+  control map, trigger form, WebView result, disconnect result, and latency.
 
 ## Non-goals
 
-- Reproducing a desktop keyboard model (no chorded text entry, no modifiers
-  beyond `Y`).
-- Haptics. Worth exploring later; not part of the interaction contract.
-- Multiple simultaneous controllers.
-- Gyro, touchpad, or back-button inputs some pads expose.
+- Desktop keyboard emulation.
+- Haptics, gyro, touchpad, or vendor back buttons.
+- Treating a provisional D-pad experiment as an accepted contract.

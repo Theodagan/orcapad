@@ -1,255 +1,186 @@
-# Orca Controller — Software Architecture Design
+# Orca Controller - Software Architecture
 
-## 1. Architecture
+## 1. Purpose
 
-Use **feature-oriented modular architecture with hexagonal boundaries**, held
-in **one fork-owned subtree**.
+Orca Controller is a controller-first fork of Orca Mobile. The MVP validates a
+controller-native interaction model, especially the Context Wheel. It does not
+replace Orca Mobile's application, transport, runtime, or existing screens.
 
-This is a fork of Orca Mobile. The product layer therefore lives under a single
-root, `mobile/src/gamepad/`, rather than as folders interleaved with upstream's.
-That is what makes the fork's delta a `git diff` of one path, keeps a rebase
-from touching it, and turns extraction into a move.
+The architecture follows one rule:
 
-```text
-mobile/
-├── app/                         # upstream Expo Router / platform shell
-│
-└── src/
-    ├── gamepad/                 # the fork
-    │   ├── domain/
-    │   ├── application/         # ports/, use-cases/, adapter-registry.ts
-    │   ├── state/               # remote/, local/, connection/
-    │   ├── features/
-    │   │   ├── dashboard/ projects/ sessions/ agents/ terminal/ files/ pairing/
-    │   └── adapters/
-    │       ├── orca/            # rpc/, transport/, pairing/, protocol/, mapping/
-    │       ├── device/          # preferences, push, terminal WebView host
-    │       └── stub/
-    │
-    └── transport/ session/ terminal/ storage/ …   # upstream, untouched
-```
+> Add controller mechanics around existing Orca Mobile capabilities. Do not
+> create a parallel implementation of a capability Orca Mobile already owns.
 
-There is no `core/` level: once the root is `gamepad/`, it names nothing.
+This applies to pairing, transport, projects, workspaces, sessions, agents,
+dictation, terminal rendering, files, notifications, navigation, and storage.
 
-## 2. Dependency direction
+## 2. Runtime shape
 
 ```text
-UI / Features
-      ↓
-Application use cases
-      ↓
-Domain
-      ↑
-Orca adapters
+physical controller
+        |
+native input capture
+        |
+binding and intent resolver
+        +------------------+
+        |                  |
+focused Orca surface   Context Wheel
+        |                  |
+        +--------+---------+
+                 |
+     existing Orca Mobile action
 ```
 
-One rule enforces it, checked by `mobile/src/gamepad/gamepad-boundary.test.ts`:
+Existing touch behavior remains active. Controller input is another way to
+invoke the same actions, not a second application state or navigation model.
 
-> `src/gamepad/**` may not import anything outside `src/gamepad/**`, except
-> `src/gamepad/adapters/**`, which may reach a named list of upstream modules.
+## 3. Controller-owned code
 
-Nothing but the adapter imports Orca-specific code — and nothing but the adapter
-imports upstream Orca Mobile at all.
+Controller-specific code may live under `mobile/src/gamepad/` when it owns one
+of these concerns:
 
-The Orca adapter implements ports defined by the application layer.
+- normalized physical-controller samples;
+- the PRD controller binding and intent resolver;
+- focus registration for existing Orca surfaces;
+- Context Wheel geometry, state, rendering, registry, and experiment presets;
+- thin bindings from controller intents to existing Orca Mobile callbacks;
+- controller-specific notices and experiment measurements.
 
-## 3. Domain
+The subtree is an organizational boundary, not an extraction guarantee. A
+controller binding may import and compose an existing Orca Mobile controller,
+hook, route contract, or component when that is the smallest way to reuse the
+authoritative behavior.
 
-Contains product concepts independent of transport or UI.
+## 4. Existing Orca Mobile remains authoritative
 
-Examples:
+The following capabilities remain where they are today:
+
+| Capability | Authoritative implementation |
+| --- | --- |
+| QR and manual pairing | `mobile/app/pair-scan.tsx`, `mobile/app/pair-confirm.tsx`, `mobile/src/transport/pre-profile-pairing-coordinator.ts` |
+| Transport and reconnect | `mobile/src/transport/` |
+| Home and host navigation | `mobile/src/home/`, `mobile/app/h/[hostId]/index.tsx` |
+| Session state and navigation | `mobile/src/session/use-mobile-session-controller.ts`, `mobile/src/session/MobileSessionSurface.tsx` |
+| Agent conversation and interventions | `mobile/src/session/MobileNativeChatView.tsx` and related `mobile-native-chat-*` modules |
+| Dictation | `mobile/src/hooks/use-mobile-dictation.ts`, `mobile/src/dictation/mobile-dictation-setup.ts` |
+| Terminal | `mobile/src/session/TerminalPaneView.tsx`, `mobile/src/terminal/` |
+| Files and previews | `mobile/src/files/MobileFileExplorerPanel.tsx`, `mobile/src/files/MobileFilePreviewScreen.tsx` |
+| Notifications | `mobile/src/notifications/` |
+| Preferences and credentials | `mobile/src/storage/`, existing transport credential stores |
+
+Controller work may expose an existing action through a new input. It must not
+copy the action's orchestration, remote state, persistence, or protocol mapping.
+
+## 5. Reuse decision rule
+
+Before adding a domain projection, port, store, RPC descriptor, route, screen,
+or transport operation:
+
+1. Search Orca Mobile for the capability and its tests.
+2. Identify the existing callback, controller, hook, or component that owns it.
+3. Bind controller intent to that owner.
+4. Add a new abstraction only when no existing interface can provide the
+   controller behavior.
+5. Record the evidence and the missing interface in the relevant spec.
+
+Moving existing code into `mobile/src/gamepad/` is not reuse. A move or copy is
+allowed only when the original implementation is retired in the same change and
+the move is independently justified.
+
+## 6. Dependency rules
 
 ```text
-Project
-Session
-Agent
-Task
-Message
-Activity
-Connection
-Workspace
+native input adapter -> controller sample
+controller sample -> pure intent resolver
+intent resolver -> focus registry / wheel state
+focus registry -> existing Orca Mobile surface action
+wheel preset -> existing Orca Mobile surface action
 ```
 
-Keep these models minimal and driven by actual product requirements.
+Hard rules:
 
-Do not duplicate the entire Orca data model merely for architectural purity.
+- Existing surfaces never read raw controller buttons or axes.
+- Raw button and axis vocabulary stays in controller input modules.
+- Wheel mechanics never name an Orca action.
+- Experiment presets may bind actions, but remain replaceable data.
+- Controller bindings do not open sockets, schedule reconnects, parse pairing
+  payloads, register push tokens, stream microphone audio, decode terminal
+  protocols, or issue low-level RPC calls when existing code already does so.
+- Existing surface state remains the single source of truth.
 
-## 4. Application layer
+## 7. Focus and intents
 
-Contains user-facing capabilities/use cases and their ports.
+An existing surface registers a focus target with:
 
-Examples:
+- a stable target id;
+- the session or workspace identity already owned by that surface, when any;
+- the intents it accepts;
+- handlers that invoke its existing actions;
+- an optional text target for existing dictation.
 
-```text
-listProjects()
-listSessions()
-getSession()
-sendMessage()
-subscribeToSession()
-getTerminalOutput()
-inspectFiles()
-pairDevice()
-```
+Focus registration follows mounted routes and panes. It does not reproduce the
+navigation stack or session tree. Destructive intents with no valid target are
+no-ops.
 
-Ports describe **capabilities**, not generic infrastructure.
+## 8. Context Wheel experiments
 
-Avoid broad abstractions such as:
+Wheel mechanics and wheel contents are separate:
 
-```text
-IBackend
-IConnection
-IAgent
-```
+- mechanics implement the six PRD rules;
+- presets are mutable experiment data;
+- Wheel 1, Wheel 2, segment count, placement, and actions remain unsettled;
+- every preset carries trial metadata and is explicitly non-contractual;
+- no preset becomes a product default without a recorded device trial and a
+  human decision.
 
-unless they become genuinely necessary.
+## 9. Platform boundary
 
-## 5. Orca adapter
+Controller capture is platform-specific:
 
-The Orca adapter translates between the application's capability model and Orca's actual protocol/runtime.
+- iOS/iPadOS uses Apple's GameController framework;
+- Android uses native input-device, motion, and key events;
+- Expo exposes the native implementations through a local module;
+- a stub reader keeps non-controller and unsupported environments operational.
 
-```text
-Orca protocol
-     ↓
-transport / RPC
-     ↓
-Orca adapter
-     ↓
-application ports
-```
+Android event delivery on the Retroid Pocket Flip, vendor key mapping, trigger
+behavior, and terminal WebView interception are hardware gates. They are not
+assumed from documentation.
 
-Responsibilities:
+## 10. Compatibility
 
-* WebSocket/RPC communication
-* Orca protocol/version handling
-* pairing
-* serialization/deserialization
-* mapping Orca state into application/domain models
-* translating application commands into Orca operations
+The controller fork inherits Orca Mobile's compatibility behavior. A binding
+must reuse existing mixed-version fallbacks rather than create a second
+capability map or protocol gate.
 
-No controller UX logic belongs here.
+Changes to shared RPC parameters, stream frames, or host-published content must
+follow `docs/reference/remote-wire-compatibility.md`. The controller MVP adds no
+new terminal stream opcode or backend requirement.
 
-## 6. Interaction layer
+## 11. Extraction
 
-The gamepad is the primary interaction model (PRD §3), so the input model is
-architecture, not a feature's business.
+The PRD asks for the maximum practical portion to be extractable after the UX
+matures. The MVP therefore keeps controller mechanics clean, but does not force
+existing Orca Mobile presentation and application behavior behind duplicate
+ports today.
 
-```text
-domain/input-binding.ts   the §4 mapping, as data
-domain/pane.ts            panes and focus
-domain/wheel.ts           wheel geometry and selection
-application/ports/controller-input-port.ts
-adapters/device/          the platform reader
-```
+After interaction trials, extraction is evaluated module by module:
 
-Three consequences:
+1. identify mechanics proven independent in practice;
+2. identify bindings that remain Orca-specific;
+3. extract only the stable product concepts;
+4. replace Orca bindings if a standalone backend is actually built.
 
-* A feature never reads a button. It declares the intents its panes accept, and
-  the intents it can act on are resolved against focus.
-* The Context Wheel is a mechanism with a registry. Features contribute
-  segments; the wheel knows nothing about what a segment does.
-* Capture sits behind a port, so the interaction model survives both extraction
-  (PRD §9) and a change of platform reader.
+Extraction readiness is evidence, not a requirement to rebuild Orca Mobile.
 
-Specs `001`–`003` own this layer.
+## 12. Validation
 
-## 7. Features
+Architecture changes are accepted only when:
 
-Features own what the panes show.
-
-Each feature should contain only what it needs:
-
-```text
-sessions/
-├── components/
-├── panes/
-├── hooks/
-└── state/
-```
-
-Panes, not screens: PRD §4 scrolls "the current pane" and cycles tabs within a
-project, and the existing Orca shell already composes a workspace sidebar and a
-detail stack. A feature supplies pane content and declares what that pane
-accepts; it does not own navigation.
-
-Features consume application use cases rather than Orca APIs directly.
-
-This allows the UX to be redesigned without touching protocol compatibility.
-
-## 8. State
-
-Separate:
-
-* **remote state** — sessions, projects, agents, activity
-* **local UI state** — navigation, selections, expanded nodes, filters
-* **interaction state** — focus, current wheel, dictation
-* **connection state** — pairing/transport lifecycle
-
-Avoid coupling global state directly to the Orca protocol.
-
-## 9. Upstream compatibility strategy
-
-Treat Orca as an external implementation contract.
-
-```text
-                ┌───────────────┐
-                │ Controller UX │
-                └───────┬───────┘
-                        │
-                Application ports
-                        │
-                ┌───────▼───────┐
-                │  Orca Adapter │
-                └───────┬───────┘
-                        │
-                Orca protocol/API
-```
-
-When upstream changes:
-
-```text
-Orca change
-    ↓
-adapter adjustment
-    ↓
-gamepad/ remains stable
-```
-
-Protocol compatibility tests should live around the adapter boundary.
-
-## 10. Standalone extraction
-
-The architecture deliberately permits:
-
-```text
-Current:
-
-Controller
-   ↓
-Application
-   ↓
-Orca Adapter
-   ↓
-Orca
-```
-
-Later:
-
-```text
-Standalone Controller
-   ↓
-Application
-   ↓
-Standalone Adapter
-   ↓
-New runtime/backend
-```
-
-`src/gamepad/` minus `src/gamepad/adapters/orca/` is therefore the reusable product layer — not "most of" it, the whole of it. `mobile/tsconfig.extraction.json` is the proof.
-
-The Expo application shell should remain thin so that a future standalone app can reuse the same modules rather than requiring a second implementation.
-
-## 11. MVP architectural rule
-
-**Do not build the future standalone architecture twice.**
-
-Build the smallest clean boundary around Orca now, then let real UX requirements determine what becomes genuinely reusable.
+- each controller action invokes an existing authoritative action where one
+  exists;
+- no new screen replaces an existing screen solely for architectural purity;
+- no second transport, pairing, notification, dictation, terminal, or file
+  pipeline is introduced;
+- touch behavior remains functional;
+- controller and wheel mechanics are testable without a device;
+- hardware-dependent claims have recorded device evidence.

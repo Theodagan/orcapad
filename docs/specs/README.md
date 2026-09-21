@@ -1,98 +1,112 @@
-# Orca Controller — Specification Index
+# Orca Controller - Specification Index
 
-Detailed specifications derived from [`../PRD.md`](../PRD.md) and
-[`../architecture.md`](../architecture.md).
+These specifications derive from [`../PRD.md`](../PRD.md) and the reuse-first
+architecture in [`../architecture.md`](../architecture.md).
 
-## How to read these
+The specification set defines controller mechanics and their bindings into the
+existing Orca Mobile application. It does not respecify capabilities Orca
+Mobile already implements.
 
-Each feature directory holds the three SDD artifacts:
+## Specifications
 
-| File        | Answers                                                                       |
-| ----------- | ----------------------------------------------------------------------------- |
-| `product.md` | What the feature does, for whom, and how we know it works (requirements + acceptance criteria) |
-| `tech.md`    | Domain types, application ports, the Orca RPC calls the adapter maps them to, state, failure modes, tests |
-| `tasks.md`   | Ordered, individually shippable checkpoints with file paths and verification commands |
+| # | Specification | Depends on | PRD coverage |
+| --- | --- | --- | --- |
+| 000 | [Foundation and integration](./000-foundation-integration/) | - | Sections 6, 7, 9 |
+| 001 | [Controller input](./001-controller-input/) | 000 | Sections 3, 4, 7 |
+| 002 | [Context Wheel](./002-context-wheel/) | 000, 001 | Sections 2, 3, 7, 8 |
+| 003 | [Existing surface bindings](./003-existing-surface-bindings/) | 000, 001, 002 | Sections 4, 5, 6 |
 
-Requirement IDs are stable: `<FEATURE>-R<n>` for requirements, `<FEATURE>-AC<n>`
-for acceptance criteria, `<FEATURE>-T<n>` for tasks. Reference them in commits
-and PRs.
-
-## Features
-
-| #   | Feature                                    | Depends on              | PRD surface                                  |
-| --- | ------------------------------------------ | ----------------------- | -------------------------------------------- |
-| 000 | [Foundation](./000-foundation/)            | —                       | §6 Orca relationship, §9 extraction          |
-| 001 | [Controller input](./001-controller-input/) | 000                    | §3 controller-first, §4 controller mapping    |
-| 002 | [Context wheel](./002-context-wheel/)      | 000, 001                | §3 Context Wheel                              |
-| 003 | [Dictation](./003-dictation/)              | 000, 001                | §4 R3, §5 voice/dictation input               |
-| 004 | [Pairing & connection](./004-pairing/)     | 000                     | §6 Orca relationship                          |
-| 005 | [Projects & workspaces](./005-projects/)   | 000, 004                | §5 project/worktree context                   |
-| 006 | [Sessions](./006-sessions/)                | 000, 004, 005           | §4 LB/RB tabs, §5 tabs/sessions               |
-| 007 | [Agents](./007-agents/)                    | 000, 004, 006           | §4 X stop, §5 transcript, prompts, activity   |
-| 008 | [Terminal](./008-terminal/)                | 000, 004, 006           | §5 terminal/output                            |
-| 009 | [Dashboard](./009-dashboard/)              | 005, 006, 007, 008      | §5 project/worktree context                   |
-| 010 | [Files](./010-files/)                      | 000, 004, 005           | §5 file tree, files/code, diffs               |
-
-`001`–`003` own the interaction model. They come before every product feature
-because §7 makes controller interaction "a first-class design constraint, not an
-input accessory" — a feature surface cannot be specified before the model that
-navigates it exists.
-
-`010-files` is not in the `architecture.md` feature list but is required by
-PRD §5 ("actual file tree", "actual files/code", "diffs where relevant"). It is
-specified as its own feature rather than folded into `005-projects` because it
-owns a distinct port (`FileInspectionPort`) and a distinct failure surface
-(large files, binary content, remote-host latency).
-
-## Build order
+Build order:
 
 ```text
-000-foundation
-     ↓
+000-foundation-integration
+          |
 001-controller-input
-     ↓
-002-context-wheel ── 003-dictation
-     ↓
-004-pairing ──────────────┐
-     ↓                    │
-005-projects ─────────┬───┤
-     ↓                │   │
-006-sessions ──┬──────┤   │
-     ↓         │      │   │
-007-agents  008-terminal  010-files
-     └─────────┴──────┴───┘
-                ↓
-          009-dashboard
+          |
+002 Context Wheel mechanics and smoke presets
+          |
+003 existing-surface bindings
+          |
+002 real-action presets, device trials, and decision gate
 ```
 
-`000-foundation` must land before any other feature: it defines the domain
-types and port interfaces every other spec references. `001-controller-input`
-must land before every product feature: it defines the focus model and the §4
-mapping those features are operated through.
+## Product decisions
 
-## Conventions these specs inherit
+- `docs/PRD.md` remains the product authority.
+- Existing Orca Mobile routes, controllers, hooks, state, and components remain
+  authoritative.
+- D-pad behavior is experimental and is not part of the PRD controller
+  contract.
+- Wheel assignments are mutable experiment presets, not requirements.
+- A standalone product is deferred until controller UX evidence exists.
 
-From [`../../AGENTS.md`](../../AGENTS.md) and [`../STYLEGUIDE.md`](../STYLEGUIDE.md):
+## Reuse ledger
 
-- **One subtree.** The fork lives entirely under `mobile/src/gamepad/`.
-  `src/gamepad/**` imports nothing outside itself except through
-  `src/gamepad/adapters/**`, which reaches the upstream roots named in
-  `ADAPTER_UPSTREAM_REACH` (`mobile/src/gamepad/gamepad-boundary.test.ts`).
-  Everything else under `mobile/src/` is upstream Orca Mobile.
-- **Reuse before reimplementing.** The Orca adapter wraps the existing
-  `mobile/src/transport/` stack. It does not reimplement the RPC client,
-  the relay client, pairing crypto, or the terminal binary stream.
-- **No vague module names.** No `utils`, `helpers`, `common`, `misc`,
-  `shared-stuff` files or folders. Name modules after the concept they hold.
-- **No `max-lines` suppressions.** Split the module instead.
-- **`.ts` over `.d.ts`**; no type assertions except `as const`, and an
-  unavoidable cast carries a line-specific `SAFETY:` comment.
-- **Cross-platform.** iOS and Android, and hosts on macOS, Linux, and Windows.
-  No hardcoded path separators, no assumption of a POSIX host.
-- **SSH / remote execution.** The execution host owns execution state. Loss of
-  contact is never evidence of process death; the verdict vocabulary is
-  `live` / `unverifiable` / `exited`.
-- **Folder workspaces.** Not every workspace is a git worktree.
-- **Wire compatibility.** See
-  [`../reference/remote-wire-compatibility.md`](../reference/remote-wire-compatibility.md).
-  A new optional JSON field is safe; a new stream opcode must be negotiated.
+| Surface | Reuse |
+| --- | --- |
+| Pairing and QR | `mobile/app/pair-scan.tsx`, `mobile/app/pair-confirm.tsx`, `mobile/src/transport/pre-profile-pairing-coordinator.ts` |
+| Hosts and workspaces | `mobile/src/home/`, `mobile/src/host-screen/`, `mobile/app/h/[hostId]/index.tsx` |
+| Sessions | `mobile/src/session/use-mobile-session-controller.ts`, `mobile/src/session/MobileSessionSurface.tsx` |
+| Agents | `mobile/src/session/MobileNativeChatView.tsx`, existing `mobile-native-chat-*` modules |
+| Dictation | `mobile/src/hooks/use-mobile-dictation.ts`, `mobile/src/dictation/mobile-dictation-setup.ts` |
+| Terminal | `mobile/src/session/TerminalPaneView.tsx`, `mobile/src/terminal/` |
+| Files | `mobile/src/files/MobileFileExplorerPanel.tsx`, `mobile/src/files/MobileFilePreviewScreen.tsx` |
+| Notifications | `mobile/src/notifications/` |
+
+## PRD traceability
+
+| PRD obligation | Replacement requirement | Task coverage |
+| --- | --- | --- |
+| Controller is primary; touch remains useful | CTRL-R1, BIND-R1 | CTRL-T5, BIND-T1 through BIND-T7 |
+| Both sticks open contextual wheels | WHEEL-R1, WHEEL-R4 | WHEEL-T2, WHEEL-T5 |
+| Motion never executes; A commits; invalid direction cancels | WHEEL-R1, WHEEL-R2 | WHEEL-T2, WHEEL-T3 |
+| No summon delay | CTRL-R6, WHEEL-R5 | CTRL-T3, WHEEL-T5, WHEEL-T8 |
+| L2/R2 scroll | CTRL-R1, BIND-R3 | CTRL-T3, BIND-T3 through BIND-T7 |
+| LB/RB cycle tabs | CTRL-R1, BIND-R4 | CTRL-T3, BIND-T3 |
+| Y+LB/RB cycle workspace/project | CTRL-R1, BIND-R4 | CTRL-T3, BIND-T2 |
+| A confirm and B reject/back | CTRL-R1, BIND-R2 | CTRL-T3, BIND-T1 through BIND-T7 |
+| X stops the focused agent turn/tool call | CTRL-R3, BIND-R5 | CTRL-T3, BIND-T4 |
+| R3 toggles dictation | CTRL-R1, BIND-R6 | CTRL-T3, BIND-T5 |
+| L3 remains unassigned | CTRL-R1 | CTRL-T3 |
+| Project/worktree and tabs/session visibility | BIND-R1, BIND-R4 | BIND-T2, BIND-T3 |
+| Files, code, and diffs remain visible | BIND-R1, BIND-R7 | BIND-T4, BIND-T7 |
+| Agent transcript, prompts, responses, and activity remain visible | BIND-R1, BIND-R5 | BIND-T4 |
+| Terminal/output remains visible where relevant | BIND-R1, BIND-R8 | BIND-T6 |
+| Voice/dictation remains available | BIND-R6 | BIND-T5 |
+| Reuse Orca Mobile and isolate Orca-specific bindings | FND-R1 through FND-R5 | FND-T1 through FND-T5 |
+| Wheel remains easy to iterate | WHEEL-R3, WHEEL-R6 | WHEEL-T4, WHEEL-T6 through WHEEL-T9 |
+| Avoid backend/runtime reimplementation | FND-R2, FND-R3 | FND-T1, FND-T3, FND-T4 |
+| Preserve a practical extraction path | FND-R5 | FND-T5 |
+
+## External evidence
+
+- Expo local native modules:
+  <https://docs.expo.dev/modules/get-started/>
+- Expo Camera 55 QR support:
+  <https://docs.expo.dev/versions/v55.0.0/sdk/camera/>
+- Expo SecureStore 55:
+  <https://docs.expo.dev/versions/v55.0.0/sdk/securestore/>
+- Expo Notifications 55:
+  <https://docs.expo.dev/versions/v55.0.0/sdk/notifications/>
+- Apple GameController:
+  <https://developer.apple.com/documentation/gamecontroller/gccontroller>
+- Apple APNs environments:
+  <https://developer.apple.com/documentation/usernotifications/sending-notification-requests-to-apns>
+- React Native Reanimated shared values and worklets:
+  <https://docs.swmansion.com/react-native-reanimated/docs/guides/worklets>
+- Android controller input:
+  <https://developer.android.com/develop/ui/views/touch-and-input/game-controllers/controller-input>
+
+Official documentation establishes API feasibility. Retroid Pocket Flip event
+delivery, vendor mappings, trigger behavior, WebView interception, and latency
+remain device-tested facts.
+
+## Task rules
+
+- Every task names exact files and executable commands.
+- Every new abstraction cites the search that showed no existing implementation
+  could serve the requirement.
+- No task may create a replacement pairing, transport, notification, dictation,
+  session, agent, terminal, file, or home screen.
+- Tests separate PRD-contract mappings from experimental D-pad and wheel data.
+- Task checkboxes begin unchecked until work is revalidated against these specs.

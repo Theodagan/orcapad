@@ -1,97 +1,81 @@
-# 001 — Controller input — Tasks
+# 001 - Controller Input - Tasks
 
-Each task is independently shippable and leaves `pnpm typecheck`, `pnpm test`,
-and `oxlint` green in `mobile/`.
+- [ ] **CTRL-T1 - Retroid input spike**
 
-- [ ] **CTRL-T1 — Input domain** → needs: —
+  Build the smallest temporary Android native probe needed to record the Retroid
+  Pocket Flip's device sources, axes, key codes, trigger form, disconnect events,
+  and focused-terminal WebView behavior. Store scrubbed results under
+  `docs/evidence/controller-input/`.
 
-  `src/gamepad/domain/input-binding.ts`, `controller-intent.ts`, `pane.ts` per
-  `tech.md` §2 and §3. The §4 mapping is a `as const` table; `ControllerIntent`
-  is a discriminated union; `stop-session` carries a `SessionId` so it cannot be
-  constructed without a target.
+  **Needs:** FND-T1
 
-  **Verify:** `pnpm test src/gamepad/domain`
+  **Verify:** `ORCA_BACKGROUND_LAUNCH=1 pnpm --dir mobile android`
 
-- [ ] **CTRL-T2 — Port and stub reader** → needs: 1
+- [ ] **CTRL-T2 - iOS input spike**
 
-  `src/gamepad/application/ports/controller-input-port.ts` per `tech.md` §4, and
-  `src/gamepad/adapters/device/controller-input-absent.ts` — a reader that never
-  connects and reports `support(): 'unavailable'`. This is what proves CTRL-AC9
-  before any native code exists.
+  Use Apple's GameController framework in a development build to record a
+  Bluetooth controller's profile, values, connect/disconnect behavior, and
+  trigger ranges. Store scrubbed results beside the Retroid record.
 
-  **Verify:** `pnpm typecheck:extraction`
+  **Needs:** FND-T1
 
-- [ ] **CTRL-T3 — Native module, iOS** → needs: 2
+  **Verify:** `ORCA_BACKGROUND_LAUNCH=1 pnpm --dir mobile ios`
 
-  `mobile/modules/orca-gamepad/` with `expo-module.config.json`, the Swift module
-  over `GCController` notifications and `GCExtendedGamepad.valueChangedHandler`,
-  and axis normalisation to `tech.md` §5's ranges.
+- [ ] **CTRL-T3 - Controller domain and resolver**
 
-  **Verify:** builds in a dev client; connect a pad and observe samples. Record
-  the §6 on-device measurement.
+  Implement normalized samples, `PRD_CONTROLLER_BINDINGS`, the separate
+  `EXPERIMENTAL_DPAD_BINDINGS`, intents, dead-zone handling, trigger velocity,
+  and the `Y` chord under `mobile/src/gamepad/`.
 
-- [ ] **CTRL-T4 — Native module, Android** → needs: 3
+  **Needs:** CTRL-T1, CTRL-T2
 
-  The Kotlin half: `InputManager.InputDeviceListener` for connect/disconnect, and
-  decor-view `setOnGenericMotionListener` / `setOnKeyListener` for axes and
-  buttons, re-attached on activity recreation.
+  **Verify:** `pnpm --dir mobile test src/gamepad/controller-input`; `pnpm --dir mobile typecheck`
 
-  Answer open question 2 here — whether a focused terminal WebView consumes key
-  events before the decor view sees them — and record the result in `tech.md`
-  rather than working around it silently.
+- [ ] **CTRL-T4 - Local Expo module**
 
-  **Verify:** builds in a dev client on a Retroid Pocket Flip; confirm the
-  integrated controls' `KEYCODE_BUTTON_*` map and close open question 1.
+  Implement `mobile/modules/orca-gamepad/` for iOS and Android using the
+  mechanisms validated by CTRL-T1 and CTRL-T2. Provide an absent reader for
+  unsupported environments.
 
-- [ ] **CTRL-T5 — Adapter binding** → needs: 2
+  **Needs:** CTRL-T1, CTRL-T2, CTRL-T3
 
-  `src/gamepad/adapters/device/controller-input.ts` implementing the port over
-  the native module, including releasing held buttons on disconnect
-  (`tech.md` §8).
+  **Verify:** `ORCA_BACKGROUND_LAUNCH=1 pnpm --dir mobile ios`; `ORCA_BACKGROUND_LAUNCH=1 pnpm --dir mobile android`
 
-  **Verify:** `pnpm test src/gamepad/adapters/device/controller-input.test.ts`
+- [ ] **CTRL-T5 - Focus registry and shell lifecycle**
 
-- [ ] **CTRL-T6 — Intent resolver** → needs: 1
+  Mount one reader/provider at the existing mobile shell, register mounted
+  existing surfaces, dispatch intents to one active target, and keep route state
+  authoritative.
 
-  `src/gamepad/application/use-cases/resolve-controller-intent.ts` — a pure
-  function from previous sample, next sample and focus to intents. Owns the dead
-  zone, the `Y` chord, analog trigger velocity, and the silent no-op when the
-  focused pane owns no session.
+  **Needs:** FND-T5, CTRL-T3, CTRL-T4
 
-  Table-driven tests over every CTRL-R1 row, plus the 1 ms budget from
-  `tech.md` §6.
+  **Verify:** `pnpm --dir mobile test src/gamepad/focus`; `pnpm --dir mobile typecheck`
 
-  **Verify:** `pnpm test src/gamepad/application/use-cases/resolve-controller-intent.test.ts`
+- [ ] **CTRL-T6 - Controller connection notice**
 
-- [ ] **CTRL-T7 — Focus model** → needs: 1
+  Add a non-blocking notice for an active controller disconnect. Release held
+  state, preserve touch, and dismiss the notice on reconnect.
 
-  Focus state and its derivation from the existing shell per `tech.md` §7, keyed
-  to `useResponsiveLayout().isWideLayout` without changing it. Focus is always
-  resolvable, including before first paint and across a route transition.
+  **Needs:** CTRL-T5
 
-  **Verify:** `pnpm test src/gamepad/domain/pane.test.ts`
+  **Verify:** `pnpm --dir mobile test src/gamepad/controller-connection`
 
-- [ ] **CTRL-T8 — Shell wiring** → needs: 5, 6, 7
+- [ ] **CTRL-T7 - Raw-input and experiment ratchets**
 
-  Mount the reader once at the shell, publish intents, and route them to the
-  focused pane. `app/h/_layout.tsx` gains focus ownership; no feature subscribes
-  to the port directly.
+  Extend `mobile/src/gamepad/gamepad-boundary.test.ts` so existing surfaces do
+  not name raw controls and accepted PRD mapping tests cannot import provisional
+  D-pad bindings.
 
-  **Verify:** `pnpm test src/gamepad/gamepad-boundary.test.ts`; no feature file
-  imports `controller-input-port`.
+  **Needs:** CTRL-T3, FND-T3
 
-- [ ] **CTRL-T9 — Disconnection surface** → needs: 8
+  **Verify:** `pnpm --dir mobile test src/gamepad/gamepad-boundary.test.ts`
 
-  A non-blocking notice when the controller disconnects, dismissed on reconnect.
-  Touch stays live throughout — the notice explains, it does not gate.
+- [ ] **CTRL-T8 - Device performance record**
 
-  **Verify:** `pnpm test src/gamepad/features/controller`
+  Measure dead-zone-to-wheel-frame p95 and disconnect-notice timing on Retroid
+  and iOS. Record tool, build, sample count, raw results, and conclusion. Add a
+  schema test that fails when either required record is absent or incomplete.
 
-- [ ] **CTRL-T10 — Boundary rule for raw input** → needs: 8
+  **Needs:** CTRL-T4, CTRL-T5, WHEEL-T5
 
-  Extend `gamepad-boundary.test.ts` so `ControllerButton` and `ControllerAxis`
-  names may not appear outside `domain/input-binding.ts` and
-  `adapters/device/` — the CTRL-AC1 check, in the same shape as the existing
-  FND-AC6 vocabulary rule.
-
-  **Verify:** `pnpm test src/gamepad/gamepad-boundary.test.ts`
+  **Verify:** `pnpm --dir mobile test src/gamepad/controller-input/controller-evidence.test.ts`

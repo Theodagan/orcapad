@@ -1,229 +1,155 @@
-# 001 — Controller input — Technical Specification
+# 001 - Controller Input - Technical Specification
 
-## 1. Layout
+## 1. Evidence and uncertainty
 
-```text
-mobile/
-├── modules/orca-gamepad/             # local Expo native module
-│   ├── expo-module.config.json
-│   ├── ios/OrcaGamepadModule.swift
-│   ├── android/.../OrcaGamepadModule.kt
-│   └── index.ts
-│
-└── src/gamepad/
-    ├── domain/
-    │   ├── input-binding.ts          # buttons, axes, chords, the §4 table
-    │   ├── controller-intent.ts      # what an input means
-    │   └── pane.ts                   # panes, focus, selection
-    ├── application/
-    │   ├── ports/controller-input-port.ts
-    │   └── use-cases/resolve-controller-intent.ts
-    └── adapters/device/
-        ├── controller-input.ts       # the native module, behind the port
-        └── controller-input-absent.ts # stub reader: never connects
-```
+The implementation direction is supported by official documentation:
 
-The native module lives beside `modules/orca-notification-dismissal/`, which
-already establishes the pattern in this repo.
+- Expo supports local native modules with Android and iOS implementations:
+  <https://docs.expo.dev/modules/get-started/>.
+- Apple's `GCController` exposes connected controllers, connect/disconnect
+  notifications, extended gamepad profiles, and value-change handlers:
+  <https://developer.apple.com/documentation/gamecontroller/gccontroller>.
+- Android documents joystick motion and controller key handling:
+  <https://developer.android.com/develop/ui/views/touch-and-input/game-controllers/controller-input>.
 
-## 2. Domain
+Official APIs do not prove how the Retroid Pocket Flip reports every control or
+whether Orca's focused terminal WebView intercepts events. Those are device
+checkpoints.
+
+## 2. Data model
 
 ```ts
-// input-binding.ts
-export const CONTROLLER_BUTTONS = [
-  'a', 'b', 'x', 'y',
-  'lb', 'rb', 'l3', 'r3',
-  'dpadUp', 'dpadDown', 'dpadLeft', 'dpadRight'
-] as const
-export type ControllerButton = (typeof CONTROLLER_BUTTONS)[number]
+type ControllerButton =
+  | 'a' | 'b' | 'x' | 'y'
+  | 'lb' | 'rb' | 'l3' | 'r3'
+  | 'dpad-up' | 'dpad-down' | 'dpad-left' | 'dpad-right'
 
-export const CONTROLLER_AXES = [
-  'leftStickX', 'leftStickY', 'rightStickX', 'rightStickY', 'l2', 'r2'
-] as const
-export type ControllerAxis = (typeof CONTROLLER_AXES)[number]
+type ControllerAxis =
+  | 'left-x' | 'left-y' | 'right-x' | 'right-y'
+  | 'l2' | 'r2'
 
-/** Sticks report a vector because 002 needs the angle, not a direction. */
-export type StickVector = {
-  readonly x: number
-  readonly y: number
-  /** 0..1 after the dead zone is removed and the remainder rescaled. */
-  readonly magnitude: number
-  /** Degrees clockwise from up. Undefined below the dead zone, so it is null there. */
-  readonly angleDeg: number | null
-}
-
-export const DEAD_ZONE = 0.25
-export const TRIGGER_THRESHOLD = 0.05
-```
-
-```ts
-// pane.ts
-export type PaneId = BrandedId<'PaneId'>
-
-/** The panes Orca's shell already has (app/h/_layout.tsx). */
-export const PANE_KINDS = ['workspace-sidebar', 'detail'] as const
-export type PaneKind = (typeof PANE_KINDS)[number]
-
-export type Pane = {
-  readonly id: PaneId
-  readonly kind: PaneKind
-  /** Null for a pane whose content belongs to no session — a workspace list. */
-  readonly sessionId: SessionId | null
-  readonly scrollable: boolean
-  /** Null when the pane holds no traversable list. */
-  readonly itemCount: number | null
-}
-
-export type Focus = {
-  readonly paneId: PaneId
-  /** Null when the focused pane holds no traversable list. */
-  readonly selectionIndex: number | null
+type ControllerSample = {
+  readonly connected: boolean
+  readonly buttons: ReadonlyMap<ControllerButton, number>
+  readonly axes: ReadonlyMap<ControllerAxis, number>
+  readonly sampledAt: number
 }
 ```
 
-`Pane` carries `sessionId` because that is what makes CTRL-R3 expressible: `X`
-resolves against the focused pane's session without any feature re-deriving it.
+Sticks normalize to `-1..1`; triggers normalize to `0..1`. Trigger-as-button
+devices retain an explicit digital classification rather than pretending to be
+analog.
 
-## 3. Intents
+## 3. Contract and experiment mappings
+
+Two independent data sets feed the resolver:
 
 ```ts
-// controller-intent.ts
-export type ControllerIntent =
-  | { readonly kind: 'scroll'; readonly velocity: number }   // signed: -1..1
-  | { readonly kind: 'cycle-tab'; readonly direction: Direction }
-  | { readonly kind: 'cycle-workspace'; readonly direction: Direction }
-  | { readonly kind: 'move-selection'; readonly direction: Direction }
-  | { readonly kind: 'move-focus'; readonly direction: Direction }
-  | { readonly kind: 'stick-motion'; readonly stick: StickSide; readonly vector: StickVector | null }
+const PRD_CONTROLLER_BINDINGS = [/* CTRL-R1 only */] as const
+const EXPERIMENTAL_DPAD_BINDINGS = [/* CTRL-R2 only */] as const
+```
+
+Production behavior may enable the provisional set through one experiment
+flag. Tests over `PRD_CONTROLLER_BINDINGS` must not import the provisional set.
+
+## 4. Intents
+
+The initial intent vocabulary is controller-specific and surface-neutral:
+
+```ts
+type ControllerIntent =
+  | { readonly kind: 'scroll'; readonly direction: 'up' | 'down'; readonly velocity: number }
+  | { readonly kind: 'cycle-tab'; readonly direction: 'previous' | 'next' }
+  | { readonly kind: 'cycle-workspace'; readonly direction: 'previous' | 'next' }
+  | { readonly kind: 'wheel-motion'; readonly wheel: 1 | 2; readonly x: number; readonly y: number }
   | { readonly kind: 'confirm' }
   | { readonly kind: 'back' }
-  | { readonly kind: 'stop-session'; readonly sessionId: SessionId }
+  | { readonly kind: 'stop' }
   | { readonly kind: 'toggle-dictation' }
+  | { readonly kind: 'move-selection'; readonly direction: 'up' | 'down' }
+  | { readonly kind: 'move-horizontal'; readonly direction: 'left' | 'right' }
 ```
 
-`stick-motion` with `vector: null` means the stick returned inside the dead zone.
-That is the whole of this feature's knowledge of wheels: `002` builds its state
-machine on `stick-motion` plus `confirm`, and this feature never learns that a
-wheel exists.
+The last two intents are emitted only by the provisional D-pad set.
 
-`stop-session` carries the resolved `SessionId`, so it is only ever emitted when
-there is a target — CTRL-AC5 falls out of the type rather than out of a check at
-the far end.
+## 5. Input port
 
-## 4. Port
+The native boundary reports device truth and nothing about Orca:
 
 ```ts
-// controller-input-port.ts
-export type ControllerConnection = {
-  readonly connected: boolean
-  /** The pad's reported name, for the disconnection notice. Null when unknown. */
-  readonly label: string | null
-}
-
-export type ControllerSample = {
-  readonly pressed: ReadonlySet<ControllerButton>
-  readonly axes: Readonly<Record<ControllerAxis, number>>
-  /** Host-free: the device clock at capture, used only for deltas. */
-  readonly at: number
-}
-
-export type ControllerInputPort = {
-  readonly observeConnection: Subscription<ControllerConnection>
-  readonly observeSamples: Subscription<ControllerSample>
-  readonly support: () => Capability
+type ControllerInput = {
+  readonly support: () => 'available' | 'unavailable'
+  readonly current: () => ControllerSample
+  readonly subscribe: (listener: (sample: ControllerSample) => void) => () => void
 }
 ```
 
-The port reports raw device truth. Dead zone, chords and mapping are applied
-above it, in the pure resolver — so they are testable without a device and they
-survive the reader being replaced (CTRL-R7).
+Dead zones, chords, mappings, and focus resolution remain in TypeScript so they
+are tested without hardware.
 
-## 5. Native module
+## 6. Native module
 
-| Platform | Mechanism |
-| -------- | --------- |
-| iOS / iPadOS | `GCController`, `GCControllerDidConnect`/`DidDisconnect` notifications, `GCExtendedGamepad.valueChangedHandler` — push-based |
-| Android | `InputManager.InputDeviceListener` for connect/disconnect; a generic-motion and key listener installed on the activity's decor view for axes and buttons |
+Use a local Expo module under `mobile/modules/orca-gamepad/`.
 
-The Android half is the implementation risk. Gamepad axes arrive as
-`MotionEvent` with `SOURCE_JOYSTICK` and buttons as `KeyEvent`, both dispatched
-to the activity. An Expo module cannot override `Activity.dispatchGenericMotionEvent`,
-so the module attaches `setOnGenericMotionListener` and `setOnKeyListener` to the
-decor view of `appContext.currentActivity`, and re-attaches when the activity is
-recreated. If a focused `WebView` — the terminal engine — swallows key events,
-the listener must be installed at the decor view rather than on a child, and
-that interaction is the first thing CTRL-T3 tests on a device.
+### iOS and iPadOS
 
-Axis normalisation happens in native code so both platforms publish the same
-ranges: sticks `-1..1` with Y positive up, triggers `0..1`.
+- discover `GCController` instances;
+- observe connect and disconnect notifications;
+- read `GCExtendedGamepad` values with change handlers;
+- publish a full normalized sample after each change;
+- release all held state on disconnect.
 
-## 6. Latency budget
+### Android
 
-Two budgets, because only one of them is honestly testable in CI:
+- observe devices through `InputManager.InputDeviceListener`;
+- accept joystick `MotionEvent` data and gamepad `KeyEvent` data;
+- bind listeners to the current activity lifecycle;
+- record the actual Retroid source, axis, and key codes before finalizing its
+  translation table;
+- determine on hardware whether the terminal WebView consumes events before the
+  selected listener location.
 
-| Path | Budget | How it is held |
-| ---- | ------ | -------------- |
-| Sample → intents (the pure resolver) | ≤ 1 ms for a 60 Hz sample on the test runner | asserted in `resolve-controller-intent.test.ts` |
-| Dead-zone crossing → first wheel frame, on device | ≤ 50 ms p95 | measured on a Retroid Pocket Flip and recorded; not a CI gate |
+If decor-view listeners cannot reliably observe events, implementation pauses
+for an architecture decision rather than adding an undocumented workaround.
 
-The second is deliberately not a CI gate: this repo has no device in CI, and a
-budget that cannot be measured where it is asserted rots into a comment. It is
-the number that decides whether the native module is fast enough, so it gets
-recorded on a real device before `002` tunes the wheel's feel.
+Native changes require rebuilding the development client. Expo Go is not a
+valid verification environment for this local module.
 
-## 7. Focus against Orca's shell
+## 7. Focus registry
 
-Focus is derived from the shell that already exists, not from a parallel tree:
+The shell owns a registry of currently mounted `FocusTarget` entries from
+`000`. Route transitions select from registered targets. Existing routes remain
+the navigation source of truth.
 
-| Shell state | Focused pane |
-| ----------- | ------------ |
-| Narrow layout (sidebar not mounted) | `detail`, always |
-| Wide layout, detail route open | `detail` on entry; `D-pad ←` moves to `workspace-sidebar` |
-| Wide layout, base host route | `workspace-sidebar` — the detail pane is a placeholder |
+Resolution order:
 
-`useResponsiveLayout().isWideLayout` is the existing predicate and is not
-changed by this feature: on a Retroid Pocket Flip its short side is below the
-600 dp threshold, so the sidebar never mounts and focus has one home.
+1. an open wheel receives wheel motion and `A`;
+2. global `R3` may stop active dictation;
+3. the active focus target receives accepted intents;
+4. unaccepted or targetless intents are no-ops.
 
-`Pane.sessionId` is populated by whichever feature mounts the pane — `006` for a
-session route, `null` for the workspace list.
+Whether `R3` starts dictation while a wheel is open is measured as a wheel
+experiment and must not affect its ability to stop an active microphone.
 
-## 8. Failure modes
+## 8. Performance evidence
 
-| Condition | Behaviour |
-| --------- | --------- |
-| No controller ever connects | `support()` is `available` but `connected` is false; touch continues to work; no error surface |
-| Platform cannot report gamepads | `support()` is `unavailable`; the app never claims a pad is missing when it simply cannot look |
-| Controller disconnects mid-session | connection state flips within 1 s; the app says so; in-flight held buttons are released rather than latched |
-| An unmapped button is pressed | ignored, silently |
-| Two controllers connect | the first is used; the second is ignored (non-goal) |
+Performance targets are project criteria, not platform guarantees:
 
-Releasing held buttons on disconnect matters: a pad that vanishes while `Y` is
-held must not leave the app permanently in the workspace-cycling chord.
+| Measurement | Target | Evidence |
+| --- | --- | --- |
+| Pure sample-to-intent resolver | No material frame-budget contribution | benchmark recorded with test runner and environment |
+| Dead-zone crossing to first visible wheel frame | 50 ms p95 target | Retroid device trace |
+| Controller disconnect notice | within 1 second | Retroid and iOS device trace |
 
-## 9. Testing
+No specification assumes a fixed controller sample rate.
 
-| Level | Location | What it proves |
-| ----- | -------- | -------------- |
-| Mapping | `domain/input-binding.test.ts` | every CTRL-R1 row resolves to one intent, table-driven, no device |
-| Resolver | `application/use-cases/resolve-controller-intent.test.ts` | chords, dead zone, focus-dependent intents, CTRL-AC5's silent no-op, the 1 ms budget |
-| Focus | `domain/pane.test.ts` | focus is always resolvable; §7's table |
-| Adapter | `adapters/device/controller-input.test.ts` | sample normalisation and disconnect-releases-buttons, against a fake native module |
-| Extraction | `pnpm typecheck:extraction` | CTRL-AC9 — the stub reader compiles with the native module gone |
+## 9. Failure behavior
 
-Device-dependent behaviour (CTRL-AC7's one-second disconnect, the §6 on-device
-budget, and the WebView key-event interaction) is verified on hardware and
-recorded, not simulated in CI.
-
-## 10. Open questions
-
-1. **Retroid Pocket Flip button map.** Android gamepad key codes vary by vendor;
-   the Flip's integrated controls need their mapping confirmed against
-   `KEYCODE_BUTTON_*` on the device before `input-binding.ts` is called done.
-2. **Terminal WebView key capture.** Whether a focused terminal WebView consumes
-   `KeyEvent`s before the decor-view listener sees them. If it does, the terminal
-   pane needs an explicit pass-through rather than a workaround in this feature.
-3. **Trigger-as-button on some pads.** A few controllers report `L2`/`R2` only as
-   digital buttons. Analog scroll then degrades to a fixed velocity; whether that
-   is acceptable or the pad is unsupported is a product call deferred to hardware
-   testing.
+| Condition | Behavior |
+| --- | --- |
+| No controller connected | touch continues; controller state says disconnected |
+| Platform reader unavailable | no false disconnected warning; support says unavailable |
+| Controller disconnects with buttons held | publish neutral sample and show notice |
+| Unmapped input | ignore |
+| Second controller connects | keep the first active controller for MVP |
+| Digital-only trigger | record digital classification; evaluate fixed scroll velocity in trial |
