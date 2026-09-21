@@ -38,7 +38,7 @@
 
   **Verify:** `pnpm --dir mobile test src/gamepad/gamepad-boundary.test.ts`
 
-- [ ] **FND-T5 - Establish the controller provider**
+- [x] **FND-T5 - Establish the controller provider**
 
   Add the smallest shell-level provider needed to own controller reader
   lifecycle, intent dispatch, focus registration, and wheel overlay mounting.
