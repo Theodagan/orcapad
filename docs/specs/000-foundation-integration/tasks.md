@@ -1,6 +1,6 @@
 # 000 - Foundation and Integration - Tasks
 
-- [ ] **FND-T1 - Reconcile existing controller source**
+- [x] **FND-T1 - Reconcile existing controller source**
 
   Inspect every file under `mobile/src/gamepad/` and add a disposition table to
   the implementation PR description: retain, simplify, replace, or remove, with
@@ -8,7 +8,7 @@
 
   **Verify:** `git diff -- mobile/src/gamepad mobile/tsconfig.extraction.json mobile/package.json`
 
-- [ ] **FND-T2 - Remove speculative foundation code**
+- [x] **FND-T2 - Remove speculative foundation code**
 
   Remove remote-domain copies, unused broad ports, protocol/capability wrappers,
   transport bindings, and extraction-only scaffolding that no requirement in
