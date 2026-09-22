@@ -7,7 +7,9 @@ A controller-first fork of Orca Mobile that redesigns the mobile Orca experience
 The product is intended for:
 
 - Android handhelds with integrated controls, initially the Retroid Pocket Flip.
-- iPhone/iPad paired with a Bluetooth controller.
+- iPhone/iPad paired with a Bluetooth controller. **Deferred.** Android is the
+  only platform built, tested, and shipped until the Retroid device trials
+  conclude. The iOS audience remains a product intent, not current scope.
 
 Orca is the initial backend/integration target, but the UX and product layer should remain sufficiently backend-agnostic to support extraction into a standalone application later.
 

@@ -137,8 +137,9 @@ Wheel mechanics and wheel contents are separate:
 
 Controller capture is platform-specific:
 
-- iOS/iPadOS uses Apple's GameController framework;
 - Android uses native input-device, motion, and key events;
+- iOS/iPadOS would use Apple's GameController framework, and is deferred: no
+  iOS controller capture is built until Android device evidence exists;
 - Expo exposes the native implementations through a local module;
 - a stub reader keeps non-controller and unsupported environments operational.
 

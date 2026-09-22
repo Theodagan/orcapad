@@ -4,11 +4,12 @@
 
 The implementation direction is supported by official documentation:
 
+Android is the only platform in scope. iOS and iPadOS are deferred until the
+Retroid device trials conclude; the notes below are kept so the work can resume
+without rediscovery, not because it is scheduled.
+
 - Expo supports local native modules with Android and iOS implementations:
   <https://docs.expo.dev/modules/get-started/>.
-- Apple's `GCController` exposes connected controllers, connect/disconnect
-  notifications, extended gamepad profiles, and value-change handlers:
-  <https://developer.apple.com/documentation/gamecontroller/gccontroller>.
 - Android documents joystick motion and controller key handling:
   <https://developer.android.com/develop/ui/views/touch-and-input/game-controllers/controller-input>.
 
@@ -91,7 +92,12 @@ are tested without hardware.
 
 Use a local Expo module under `mobile/modules/orca-gamepad/`.
 
-### iOS and iPadOS
+### iOS and iPadOS — deferred
+
+Not built. Recorded for whoever resumes it. Apple's `GCController` documents
+connected controllers, connect/disconnect notifications, extended gamepad
+profiles, and value-change handlers:
+<https://developer.apple.com/documentation/gamecontroller/gccontroller>.
 
 - discover `GCController` instances;
 - observe connect and disconnect notifications;
@@ -139,7 +145,7 @@ Performance targets are project criteria, not platform guarantees:
 | --- | --- | --- |
 | Pure sample-to-intent resolver | No material frame-budget contribution | benchmark recorded with test runner and environment |
 | Dead-zone crossing to first visible wheel frame | 50 ms p95 target | Retroid device trace |
-| Controller disconnect notice | within 1 second | Retroid and iOS device trace |
+| Controller disconnect notice | within 1 second | Retroid device trace |
 
 No specification assumes a fixed controller sample rate.
 

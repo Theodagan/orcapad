@@ -88,10 +88,6 @@ Build order:
   <https://docs.expo.dev/versions/v55.0.0/sdk/securestore/>
 - Expo Notifications 55:
   <https://docs.expo.dev/versions/v55.0.0/sdk/notifications/>
-- Apple GameController:
-  <https://developer.apple.com/documentation/gamecontroller/gccontroller>
-- Apple APNs environments:
-  <https://developer.apple.com/documentation/usernotifications/sending-notification-requests-to-apns>
 - React Native Reanimated shared values and worklets:
   <https://docs.swmansion.com/react-native-reanimated/docs/guides/worklets>
 - Android controller input:

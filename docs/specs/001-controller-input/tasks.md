@@ -1,5 +1,9 @@
 # 001 - Controller Input - Tasks
 
+Android only. iOS and iPadOS are deferred until the Retroid device trials
+conclude; a task marked `[~]` is parked, not scheduled, and nothing may depend
+on one.
+
 - [ ] **CTRL-T1 - Retroid input spike**
 
   Build the smallest temporary Android native probe needed to record the Retroid
@@ -11,11 +15,13 @@
 
   **Verify:** `ORCA_BACKGROUND_LAUNCH=1 pnpm --dir mobile android`
 
-- [ ] **CTRL-T2 - iOS input spike**
+- [~] **CTRL-T2 - iOS input spike — DEFERRED**
 
-  Use Apple's GameController framework in a development build to record a
-  Bluetooth controller's profile, values, connect/disconnect behavior, and
-  trigger ranges. Store scrubbed results beside the Retroid record.
+  Out of scope until the Retroid device trials conclude. Kept so the work can
+  resume without rediscovery: use Apple's GameController framework in a
+  development build to record a Bluetooth controller's profile, values,
+  connect/disconnect behavior, and trigger ranges, and store scrubbed results
+  beside the Retroid record. Nothing downstream may depend on it.
 
   **Needs:** FND-T1
 
@@ -27,19 +33,20 @@
   `EXPERIMENTAL_DPAD_BINDINGS`, intents, dead-zone handling, trigger velocity,
   and the `Y` chord under `mobile/src/gamepad/`.
 
-  **Needs:** CTRL-T1, CTRL-T2
+  **Needs:** CTRL-T1
 
   **Verify:** `pnpm --dir mobile test src/gamepad/controller-input`; `pnpm --dir mobile typecheck`
 
 - [ ] **CTRL-T4 - Local Expo module**
 
-  Implement `mobile/modules/orca-gamepad/` for iOS and Android using the
-  mechanisms validated by CTRL-T1 and CTRL-T2. Provide an absent reader for
-  unsupported environments.
+  Implement `mobile/modules/orca-gamepad/` for Android using the mechanisms
+  validated by CTRL-T1. Provide an absent reader for unsupported environments,
+  which is what iOS and every non-controller build get while iOS is deferred.
+  Delete the CTRL-T1 probe module, screen and route in the same change.
 
-  **Needs:** CTRL-T1, CTRL-T2, CTRL-T3
+  **Needs:** CTRL-T1, CTRL-T3
 
-  **Verify:** `ORCA_BACKGROUND_LAUNCH=1 pnpm --dir mobile ios`; `ORCA_BACKGROUND_LAUNCH=1 pnpm --dir mobile android`
+  **Verify:** `ORCA_BACKGROUND_LAUNCH=1 pnpm --dir mobile android`
 
 - [ ] **CTRL-T5 - Focus registry and shell lifecycle**
 
@@ -72,8 +79,8 @@
 
 - [ ] **CTRL-T8 - Device performance record**
 
-  Measure dead-zone-to-wheel-frame p95 and disconnect-notice timing on Retroid
-  and iOS. Record tool, build, sample count, raw results, and conclusion. Add a
+  Measure dead-zone-to-wheel-frame p95 and disconnect-notice timing on Retroid.
+  Record tool, build, sample count, raw results, and conclusion. Add a
   schema test that fails when either required record is absent or incomplete.
 
   **Needs:** CTRL-T4, CTRL-T5, WHEEL-T5

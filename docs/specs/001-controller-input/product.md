@@ -13,7 +13,7 @@ capability.
 
 In scope:
 
-- integrated Android controls and Bluetooth controllers on Android and iOS;
+- integrated Android controls and Bluetooth controllers on Android;
 - button, stick, and analog-trigger samples;
 - one dead-zone policy;
 - the accepted PRD mapping as inspectable data;
@@ -117,11 +117,12 @@ recorded on hardware.
   after a successful reconnect.
 - **CTRL-AC7** - The D-pad experiment can be disabled without changing the PRD
   mapping or touch behavior.
-- **CTRL-AC8** - Retroid and iOS controller records identify the device, OS,
+- **CTRL-AC8** - The Retroid controller record identifies the device, OS,
   control map, trigger form, WebView result, disconnect result, and latency.
 
 ## Non-goals
 
+- iOS and iPadOS controller capture, deferred until Android evidence exists.
 - Desktop keyboard emulation.
 - Haptics, gyro, touchpad, or vendor back buttons.
 - Treating a provisional D-pad experiment as an accepted contract.

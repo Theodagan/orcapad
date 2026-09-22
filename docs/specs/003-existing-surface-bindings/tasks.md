@@ -93,7 +93,7 @@
 
 - [ ] **BIND-T10 - Device validation**
 
-  On Retroid and iOS with Bluetooth controller, record pairing navigation,
+  On Retroid, record pairing navigation,
   workspace/session cycling, agent `A/B/X`, dictation target selection,
   terminal scrolling/control input, file navigation, and continued touch use.
   Add a schema test covering both platforms and every required surface.
