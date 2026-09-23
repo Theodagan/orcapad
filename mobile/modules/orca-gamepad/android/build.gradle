@@ -1,6 +1,6 @@
 apply plugin: 'com.android.library'
 
-group = 'expo.modules.orcagamepadprobe'
+group = 'expo.modules.orcagamepad'
 version = '0.0.1'
 
 def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
@@ -24,7 +24,7 @@ project.android {
 }
 
 android {
-  namespace "expo.modules.orcagamepadprobe"
+  namespace "expo.modules.orcagamepad"
   defaultConfig {
     versionCode 1
     versionName "0.0.1"

@@ -4,16 +4,23 @@ Android only. iOS and iPadOS are deferred until the Retroid device trials
 conclude; a task marked `[~]` is parked, not scheduled, and nothing may depend
 on one.
 
-- [ ] **CTRL-T1 - Retroid input spike**
+- [~] **CTRL-T1 - Retroid input spike — SUPERSEDED by CTRL-T4**
 
-  Build the smallest temporary Android native probe needed to record the Retroid
-  Pocket Flip's device sources, axes, key codes, trigger form, disconnect events,
-  and focused-terminal WebView behavior. Store scrubbed results under
-  `docs/evidence/controller-input/`.
+  Not built. The task assumed a per-device translation table was needed, and the
+  research says the opposite: Android's guidance is to key off `KEYCODE_*` and
+  `AXIS_*` rather than a device name or vendor id, because those stay constant
+  across physical layouts. A table recorded from one handheld is the thing that
+  would stop other pads working.
 
-  **Needs:** FND-T1
+  The variation that does exist is documented and bounded — a trigger arrives as
+  `AXIS_LTRIGGER`, as the racing-wheel alias `AXIS_BRAKE`, or as a digital
+  `KEYCODE_BUTTON_L2`; a D-pad arrives as a hat axis or as key codes — and
+  CTRL-T4 handles all of it. Dead zones come from each device's declared
+  `MotionRange.flat` rather than a recorded constant.
 
-  **Verify:** `ORCA_BACKGROUND_LAUNCH=1 pnpm --dir mobile android`
+  What did survive is the one question no documentation answers: whether a
+  focused terminal WebView consumes controller events first. CTRL-T4 answers it
+  at runtime on every sample instead of in a one-off record.
 
 - [~] **CTRL-T2 - iOS input spike — DEFERRED**
 
@@ -39,12 +46,15 @@ on one.
 
 - [ ] **CTRL-T4 - Local Expo module**
 
-  Implement `mobile/modules/orca-gamepad/` for Android using the mechanisms
-  validated by CTRL-T1. Provide an absent reader for unsupported environments,
-  which is what iOS and every non-controller build get while iOS is deferred.
-  Delete the CTRL-T1 probe module, screen and route in the same change.
+  Implement `mobile/modules/orca-gamepad/` for Android against Android's
+  documented input contract: both trigger spellings plus the digital fallback,
+  both D-pad forms, right stick on either axis pair, and dead zones read from
+  each device's `MotionRange.flat`. Publish whether the focused view consumed
+  the event, which is the WebView checkpoint in `tech.md` §6. Provide an absent
+  reader for unsupported environments, which is what iOS and every
+  non-controller build get while iOS is deferred.
 
-  **Needs:** CTRL-T1, CTRL-T3
+  **Needs:** FND-T5
 
   **Verify:** `ORCA_BACKGROUND_LAUNCH=1 pnpm --dir mobile android`
 
