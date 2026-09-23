@@ -47,7 +47,8 @@ function recordedMeasurements(): Map<PerformanceMeasurement, { file: string; raw
     } catch {
       continue
     }
-    const measurement = (raw as { measurement?: unknown }).measurement
+    const measurement =
+      typeof raw === 'object' && raw !== null && 'measurement' in raw ? raw.measurement : undefined
     for (const known of PERFORMANCE_MEASUREMENTS) {
       if (measurement === known) {
         found.set(known, { file: entry, raw })
