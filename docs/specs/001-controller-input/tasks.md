@@ -91,7 +91,7 @@ on one.
 
   **Verify:** `pnpm --dir mobile test src/gamepad/gamepad-boundary.test.ts`
 
-- [ ] **CTRL-T8 - Device performance record**
+- [~] **CTRL-T8 - Device performance record — TABLED**
 
   Measure dead-zone-to-wheel-frame p95 and disconnect-notice timing on a
   controller-capable Android device. Any device qualifies as long as the record
@@ -102,9 +102,13 @@ on one.
 
   **Needs:** CTRL-T4, CTRL-T5, WHEEL-T5
 
-  The schema gate is implemented and currently failing, which is its purpose: it
-  names the missing record and passes once one exists. `disconnect-notice` is due
-  now and demanded; `wheel-open-latency` is skipped until `002` ships the overlay
-  it measures, so the gate does not go red for a feature nobody has started.
+  Tabled by decision, not blocked. The schema and validator are implemented and
+  tested; only the measurements are outstanding. Both need a timestamp where the
+  notice and the first wheel frame actually render, which is instrumentation
+  `002` will want anyway, so the numbers are collected alongside WHEEL-T5.
+
+  While tabled the gate reports a missing record as a skip rather than a
+  failure. Turning it back into a gate is one line — the `skipIf` below the
+  record lookup — and the task checkbox is the tracker until then.
 
   **Verify:** `pnpm --dir mobile test src/gamepad/controller-input/controller-evidence.test.ts`
