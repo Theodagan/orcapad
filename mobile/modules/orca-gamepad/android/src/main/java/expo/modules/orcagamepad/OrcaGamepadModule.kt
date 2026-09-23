@@ -5,6 +5,7 @@ import android.hardware.input.InputManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -142,6 +143,7 @@ class OrcaGamepadModule : Module() {
 
   private fun onDevicesChanged() {
     val controllers = connectedControllers()
+    Log.d(TAG, "controllers: " + controllers.joinToString { "${it.name}#${it.id}" }.ifEmpty { "none" })
     // MVP keeps the first controller active; a second pad connecting does not steal the session.
     if (activeDeviceId == null || controllers.none { it.id == activeDeviceId }) {
       activeDeviceId = controllers.firstOrNull()?.id
@@ -162,6 +164,9 @@ class OrcaGamepadModule : Module() {
     val button = BUTTON_BY_KEY_CODE[event.keyCode]
     val digitalTrigger = TRIGGER_AXIS_BY_KEY_CODE[event.keyCode]
     if (button == null && digitalTrigger == null) {
+      // A controller key this build has no name for. Logged rather than dropped silently: an
+      // unrecognised code is the first thing to look at when a pad behaves oddly.
+      Log.d(TAG, "unmapped ${KeyEvent.keyCodeToString(event.keyCode)} (${event.keyCode})")
       return
     }
     activeDeviceId = event.deviceId
@@ -169,6 +174,7 @@ class OrcaGamepadModule : Module() {
     focusedView = focusedViewName()
     if (button != null) {
       buttons[button] = pressed
+      Log.d(TAG, "button $button=$pressed consumed=$consumed focus=$focusedView")
     }
     // Only when the pad declares no trigger axis: otherwise the axis is authoritative and this
     // key event is the same press counted twice.
@@ -261,6 +267,7 @@ class OrcaGamepadModule : Module() {
   }
 
   private companion object {
+    const val TAG = "OrcaGamepad"
     const val EVENT_SAMPLE = "onControllerSample"
     const val EVENT_DEVICES = "onControllerDevices"
   }

@@ -77,7 +77,7 @@ on one.
 
   **Verify:** `pnpm --dir mobile test src/gamepad/controller-connection`
 
-- [ ] **CTRL-T7 - Raw-input and experiment ratchets**
+- [x] **CTRL-T7 - Raw-input and experiment ratchets**
 
   Extend `mobile/src/gamepad/gamepad-boundary.test.ts` so existing surfaces do
   not name raw controls and accepted PRD mapping tests cannot import provisional
@@ -93,6 +93,7 @@ on one.
   Record tool, build, sample count, raw results, and conclusion. Add a
   schema test that fails when either required record is absent or incomplete.
 
-  **Needs:** CTRL-T4, CTRL-T5, WHEEL-T5
+  **Needs:** CTRL-T4, CTRL-T5, WHEEL-T5 — blocked: WHEEL-T5 is in `002`, so the
+  wheel-frame measurement has nothing to measure yet.
 
   **Verify:** `pnpm --dir mobile test src/gamepad/controller-input/controller-evidence.test.ts`

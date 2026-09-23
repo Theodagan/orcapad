@@ -35,6 +35,19 @@ const experimentsRoot = join(wheelRoot, 'experiments')
 const bindingsRoot = join(gamepadRoot, 'bindings')
 const hostSharedRoot = resolve(mobileRoot, '..', 'src', 'shared')
 
+/** Everything the controller layer binds to. CTRL-T7 keeps raw controls out of all of it. */
+const upstreamRoots = [srcRoot, join(mobileRoot, 'app')]
+
+/**
+ * Pre-existing literals that only look like controls. A ratchet, not an amnesty: each entry is
+ * a file plus the word it is allowed to contain, so a new occurrence anywhere still fails.
+ */
+const UPSTREAM_RAW_CONTROL_ALLOWANCES: readonly { readonly file: string; readonly name: string }[] =
+  [
+    // Ruby's file extension, in a list of source-file extensions.
+    { file: join(srcRoot, 'components', 'markdown-file-path-detection.ts'), name: 'rb' }
+  ]
+
 /** This file is the rule table, so it names every vocabulary the rules forbid elsewhere. */
 const ratchetFile = join(gamepadRoot, 'gamepad-boundary.test.ts')
 
@@ -253,6 +266,26 @@ export function rawControlViolations(path: string, source: string): string[] {
     .map((text) => `'${text}' — ${RAW_CONTROL_RULE}`)
 }
 
+/**
+ * CTRL-T7: an existing surface must not learn controller vocabulary. A binding translates an
+ * intent into that surface's own action, so a raw control name appearing out here means the
+ * translation leaked into the thing it was supposed to keep clean.
+ */
+export function upstreamRawControlViolations(path: string, source: string): string[] {
+  if (testFile.test(path) || within(gamepadRoot, path)) {
+    return []
+  }
+  const allowed = new Set(
+    UPSTREAM_RAW_CONTROL_ALLOWANCES.filter((entry) => entry.file === path).map(
+      (entry) => entry.name
+    )
+  )
+  return literalTexts(path, source)
+    .map((text) => text.toLowerCase())
+    .filter((text) => RAW_CONTROL_NAMES.includes(text) && !allowed.has(text))
+    .map((text) => `'${text}' — ${RAW_CONTROL_RULE}`)
+}
+
 export function wheelGeometryViolations(path: string, source: string): string[] {
   if (testFile.test(path)) {
     return []
@@ -321,6 +354,24 @@ function propertyOf(
 }
 
 /** WHEEL-R6: a preset is an experiment until a product-decision record says otherwise. */
+/**
+ * CTRL-T7: a test over the accepted mapping may not reach the provisional set, by identifier or
+ * by module. The identifier check above catches a re-export; this catches the plain import.
+ */
+export function mappingModuleViolations(path: string, source: string): string[] {
+  if (!testFile.test(path)) {
+    return []
+  }
+  const specifiers = moduleSpecifiers(path, source)
+  const touchesContract = specifiers.some((specifier) => specifier.includes('controller-bindings'))
+  const touchesExperiment = specifiers.some((specifier) =>
+    specifier.includes('experimental-dpad-bindings')
+  )
+  return touchesContract && touchesExperiment
+    ? [`imports both binding modules — ${MAPPING_SET_RULE}`]
+    : []
+}
+
 export function presetContractViolations(path: string, source: string): string[] {
   if (testFile.test(path)) {
     return []
@@ -410,7 +461,8 @@ export function boundaryViolations(path: string, source: string): string[] {
     ...mappingSetViolations(path, source),
     ...presetContractViolations(path, source),
     ...lowLevelReachViolations(path, source),
-    ...duplicateInfrastructureViolations(path, source)
+    ...duplicateInfrastructureViolations(path, source),
+    ...mappingModuleViolations(path, source)
   ]
 }
 
@@ -475,6 +527,51 @@ describe('Controller boundary', () => {
     expect(wheelGeometryViolations(presetProbe, 'const a = Math.cos(t)')).toEqual([
       `Math.cos — ${PRESET_GEOMETRY_RULE}`
     ])
+  })
+
+  it('keeps raw control names out of an existing surface, allowing the known lookalikes', () => {
+    const surfaceProbe = join(srcRoot, 'home', 'MobileHomeHostList.tsx')
+
+    expect(upstreamRawControlViolations(surfaceProbe, "const held = 'dpad-up'")).toEqual([
+      `'dpad-up' — ${RAW_CONTROL_RULE}`
+    ])
+    // Intent vocabulary is what a surface is meant to receive.
+    expect(upstreamRawControlViolations(surfaceProbe, "onIntent('cycle-tab')")).toEqual([])
+    // A surface test may describe controls in prose.
+    expect(
+      upstreamRawControlViolations(
+        join(srcRoot, 'home', 'probe.test.ts'),
+        "it('maps lb', () => {})"
+      )
+    ).toEqual([])
+    // The allowance is file-scoped: Ruby's extension is not a shoulder button.
+    const [allowance] = UPSTREAM_RAW_CONTROL_ALLOWANCES
+    expect(upstreamRawControlViolations(allowance.file, "const ext = 'rb'")).toEqual([])
+    expect(upstreamRawControlViolations(surfaceProbe, "const ext = 'rb'")).toHaveLength(1)
+  })
+
+  it('stops a contract test from importing the provisional set (CTRL-T7)', () => {
+    const contractTest = join(controllerInputRoot, 'controller-bindings.test.ts')
+
+    expect(
+      mappingModuleViolations(
+        contractTest,
+        "import { PRD_CONTROLLER_BINDINGS } from './controller-bindings'"
+      )
+    ).toEqual([])
+    expect(
+      mappingModuleViolations(
+        contractTest,
+        "import { PRD_CONTROLLER_BINDINGS } from './controller-bindings'\nimport { EXPERIMENTAL_DPAD_BINDINGS } from './experimental-dpad-bindings'"
+      )
+    ).toEqual([`imports both binding modules — ${MAPPING_SET_RULE}`])
+    // The resolver is not a test and may compose both behind the experiment flag.
+    expect(
+      mappingModuleViolations(
+        join(controllerInputRoot, 'controller-resolver.ts'),
+        "import { PRD_CONTROLLER_BINDINGS } from './controller-bindings'\nimport { EXPERIMENTAL_DPAD_BINDINGS } from './experimental-dpad-bindings'"
+      )
+    ).toEqual([])
   })
 
   it('keeps the PRD mapping and the provisional D-pad set apart', () => {
@@ -582,6 +679,30 @@ describe('Controller boundary', () => {
     expect(
       lowLevelReachViolations(bindingProbe, "import { x } from '@/transport/rpc-client'")
     ).toHaveLength(1)
+  })
+
+  it('keeps raw control names out of every existing surface (CTRL-T7)', () => {
+    // Text pre-filter first: parsing every upstream module on each run would cost seconds for a
+    // rule that almost never has anything to say.
+    const offenders = upstreamRoots
+      .flatMap(sourceFiles)
+      .filter((path) => sourceExtensions.has(extname(path)) && !testFile.test(path))
+      .flatMap((path) => {
+        const source = readFileSync(path, 'utf8')
+        const lowered = source.toLowerCase()
+        if (
+          !RAW_CONTROL_NAMES.some(
+            (name) => lowered.includes(`'${name}'`) || lowered.includes(`"${name}"`)
+          )
+        ) {
+          return []
+        }
+        return upstreamRawControlViolations(path, source).map(
+          (violation) => `${relative(mobileRoot, path)}: ${violation}`
+        )
+      })
+
+    expect(offenders).toEqual([])
   })
 
   it('holds every rule across the whole controller tree', () => {
