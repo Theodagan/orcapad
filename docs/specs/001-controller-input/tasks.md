@@ -34,13 +34,13 @@ on one.
 
   **Verify:** `ORCA_BACKGROUND_LAUNCH=1 pnpm --dir mobile ios`
 
-- [ ] **CTRL-T3 - Controller domain and resolver**
+- [x] **CTRL-T3 - Controller domain and resolver**
 
   Implement normalized samples, `PRD_CONTROLLER_BINDINGS`, the separate
   `EXPERIMENTAL_DPAD_BINDINGS`, intents, dead-zone handling, trigger velocity,
   and the `Y` chord under `mobile/src/gamepad/`.
 
-  **Needs:** CTRL-T1
+  **Needs:** CTRL-T4
 
   **Verify:** `pnpm --dir mobile test src/gamepad/controller-input`; `pnpm --dir mobile typecheck`
 
@@ -58,7 +58,7 @@ on one.
 
   **Verify:** `ORCA_BACKGROUND_LAUNCH=1 pnpm --dir mobile android`
 
-- [ ] **CTRL-T5 - Focus registry and shell lifecycle**
+- [x] **CTRL-T5 - Focus registry and shell lifecycle**
 
   Mount one reader/provider at the existing mobile shell, register mounted
   existing surfaces, dispatch intents to one active target, and keep route state
@@ -68,7 +68,7 @@ on one.
 
   **Verify:** `pnpm --dir mobile test src/gamepad/focus`; `pnpm --dir mobile typecheck`
 
-- [ ] **CTRL-T6 - Controller connection notice**
+- [x] **CTRL-T6 - Controller connection notice**
 
   Add a non-blocking notice for an active controller disconnect. Release held
   state, preserve touch, and dismiss the notice on reconnect.

@@ -63,7 +63,9 @@ const RAW_CONTROL_NAMES: readonly string[] = [
   'right-y'
 ]
 
-const GEOMETRY_MATH = new Set(['atan2', 'cos', 'sin', 'hypot', 'PI'])
+// Angle, not distance: `hypot` is how a dead zone is measured, which is input policy and lives
+// with the resolver. Trigonometry is what turns a vector into a segment, and that is the wheel's.
+const GEOMETRY_MATH = new Set(['atan2', 'cos', 'sin', 'PI'])
 const GEOMETRY_WORD = /angle|radian|degree/i
 
 const PRD_SET = 'PRD_CONTROLLER_BINDINGS'
