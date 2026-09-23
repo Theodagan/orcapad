@@ -93,7 +93,11 @@ on one.
   Record tool, build, sample count, raw results, and conclusion. Add a
   schema test that fails when either required record is absent or incomplete.
 
-  **Needs:** CTRL-T4, CTRL-T5, WHEEL-T5 — blocked: WHEEL-T5 is in `002`, so the
-  wheel-frame measurement has nothing to measure yet.
+  **Needs:** CTRL-T4, CTRL-T5, WHEEL-T5
+
+  The schema gate is implemented and currently failing, which is its purpose: it
+  names the missing record and passes once one exists. `disconnect-notice` is due
+  now and demanded; `wheel-open-latency` is skipped until `002` ships the overlay
+  it measures, so the gate does not go red for a feature nobody has started.
 
   **Verify:** `pnpm --dir mobile test src/gamepad/controller-input/controller-evidence.test.ts`
