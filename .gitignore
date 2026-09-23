@@ -136,6 +136,9 @@ docs/**
 !docs/reference/xterm-patch-regeneration.md
 !docs/specs/
 !docs/specs/**
+# Device evidence records the specs treat as normative (001 CTRL-T1/CTRL-T8).
+!docs/evidence/
+!docs/evidence/**
 # The fork's product definition and architecture decision, cited by every spec above.
 !docs/PRD.md
 !docs/architecture.md

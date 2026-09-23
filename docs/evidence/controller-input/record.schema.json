@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Controller input evidence record",
+  "description": "What the CTRL-T1 probe copies to the clipboard, after scrubbing.",
+  "type": "object",
+  "required": ["startedAt", "devices", "events", "deviceChanges", "droppedEvents"],
+  "additionalProperties": false,
+  "properties": {
+    "startedAt": { "const": 0, "description": "Zeroed by the scrubber." },
+    "droppedEvents": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Events the ring buffer discarded; a non-zero value means the record is truncated."
+    },
+    "devices": { "type": "array", "items": { "$ref": "#/$defs/device" } },
+    "events": { "type": "array", "items": { "$ref": "#/$defs/event" } },
+    "deviceChanges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["change", "deviceId", "devices"],
+        "properties": {
+          "change": { "enum": ["added", "removed", "changed"] },
+          "deviceId": { "type": "integer" },
+          "devices": { "type": "array", "items": { "$ref": "#/$defs/device" } }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "device": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "sources",
+        "sourceNames",
+        "isGameController",
+        "triggerForm",
+        "motionRanges"
+      ],
+      "properties": {
+        "id": { "type": "integer" },
+        "name": { "type": "string" },
+        "vendorId": { "type": "integer" },
+        "productId": { "type": "integer" },
+        "sources": { "type": "integer" },
+        "sourceNames": { "type": "array", "items": { "type": "string" } },
+        "isVirtual": { "type": "boolean" },
+        "controllerNumber": { "type": "integer" },
+        "isGameController": { "type": "boolean" },
+        "triggerForm": { "enum": ["analog", "digital-or-absent"] },
+        "motionRanges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["axis", "axisName", "min", "max", "flat"],
+            "properties": {
+              "axis": { "type": "integer" },
+              "axisName": { "type": "string" },
+              "source": { "type": "integer" },
+              "min": { "type": "number" },
+              "max": { "type": "number" },
+              "flat": { "type": "number" },
+              "fuzz": { "type": "number" },
+              "resolution": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+    "event": {
+      "type": "object",
+      "required": [
+        "seq",
+        "kind",
+        "deviceId",
+        "source",
+        "eventTime",
+        "consumedByViewTree",
+        "focusedView"
+      ],
+      "properties": {
+        "seq": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Recording order; gaps mean dropped events."
+        },
+        "kind": { "enum": ["key", "motion"] },
+        "action": { "type": "string" },
+        "keyCode": { "type": "integer" },
+        "keyCodeName": { "type": "string" },
+        "scanCode": { "type": "integer" },
+        "repeatCount": { "type": "integer" },
+        "axes": { "type": "object", "additionalProperties": { "type": "number" } },
+        "deviceId": { "type": "integer" },
+        "source": { "type": "integer" },
+        "sourceNames": { "type": "array", "items": { "type": "string" } },
+        "eventTime": { "type": "integer", "minimum": 0 },
+        "consumedByViewTree": { "type": "boolean" },
+        "focusedView": { "type": "string" }
+      }
+    }
+  }
+}
