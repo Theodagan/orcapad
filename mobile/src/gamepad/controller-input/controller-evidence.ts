@@ -18,7 +18,7 @@ export const MEASUREMENT_TARGET_MS: Readonly<Record<PerformanceMeasurement, numb
 
 export type PerformanceRecord = {
   readonly measurement: PerformanceMeasurement
-  /** The hardware, not a class of hardware: 'Retroid Pocket Flip 2', never 'an Android handheld'. */
+  /** The exact configuration measured — an emulator and AVD, or a named handheld. */
   readonly device: string
   readonly tool: string
   readonly build: string

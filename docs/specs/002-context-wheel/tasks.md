@@ -68,7 +68,7 @@
 
 - [ ] **WHEEL-T8 - Device trials**
 
-  Run smoke and existing-action presets on Retroid Pocket Flip
+  Run smoke and existing-action presets on a controller-capable Android device
   with Bluetooth controller. Record the complete `WheelTrialRecord` fields under
   `docs/evidence/context-wheel/` and add a schema test for required devices and
   fields.

@@ -44,7 +44,7 @@ on one.
 
   **Verify:** `pnpm --dir mobile test src/gamepad/controller-input`; `pnpm --dir mobile typecheck`
 
-- [ ] **CTRL-T4 - Local Expo module**
+- [x] **CTRL-T4 - Local Expo module**
 
   Implement `mobile/modules/orca-gamepad/` for Android against Android's
   documented input contract: both trigger spellings plus the digital fallback,
@@ -56,7 +56,11 @@ on one.
 
   **Needs:** FND-T5
 
-  **Verify:** `ORCA_BACKGROUND_LAUNCH=1 pnpm --dir mobile android`
+  **Verify:** `ORCA_BACKGROUND_LAUNCH=1 pnpm --dir mobile android` — validated on
+  an Android runtime with a real `InputDevice` registered through `uinput`, no
+  handheld required. Detection, shoulders, stick clicks, hat-form D-pad and
+  disconnect all confirmed; see
+  [`docs/evidence/controller-input/android-input-findings.md`](../../evidence/controller-input/android-input-findings.md).
 
 - [x] **CTRL-T5 - Focus registry and shell lifecycle**
 
@@ -89,8 +93,11 @@ on one.
 
 - [ ] **CTRL-T8 - Device performance record**
 
-  Measure dead-zone-to-wheel-frame p95 and disconnect-notice timing on Retroid.
-  Record tool, build, sample count, raw results, and conclusion. Add a
+  Measure dead-zone-to-wheel-frame p95 and disconnect-notice timing on a
+  controller-capable Android device. Any device qualifies as long as the record
+  names it — an emulator with a virtual gamepad is evidence about that
+  configuration, a handheld is evidence about that handheld, and both are worth
+  having. Record tool, build, sample count, raw results, and conclusion. Add a
   schema test that fails when either required record is absent or incomplete.
 
   **Needs:** CTRL-T4, CTRL-T5, WHEEL-T5

@@ -62,7 +62,7 @@ function record(overrides: Partial<PerformanceRecord> = {}): PerformanceRecord {
   const samplesMs = overrides.samplesMs ?? [30, 34, 41, 38, 46]
   return {
     measurement: 'disconnect-notice',
-    device: 'Retroid Pocket Flip 2',
+    device: 'Android emulator (orca-controller, API 36)',
     tool: 'adb logcat timestamps',
     build: 'app-release 0.0.50',
     recordedAt: '2026-09-24',
