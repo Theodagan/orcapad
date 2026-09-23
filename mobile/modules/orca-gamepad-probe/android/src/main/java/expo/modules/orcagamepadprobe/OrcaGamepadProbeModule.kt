@@ -172,7 +172,7 @@ class OrcaGamepadProbeModule : Module() {
   }
 
   private fun describeDevices(): List<Bundle> =
-    InputDevice.getDeviceIds().mapNotNull { InputDevice.getDevice(it) }.map { describe(it) }
+    InputDevice.getDeviceIds().toList().mapNotNull { InputDevice.getDevice(it) }.map { describe(it) }
 
   private fun describe(device: InputDevice): Bundle {
     val ranges = ArrayList<Bundle>()
