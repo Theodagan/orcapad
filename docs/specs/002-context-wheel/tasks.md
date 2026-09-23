@@ -1,6 +1,6 @@
 # 002 - Context Wheel - Tasks
 
-- [ ] **WHEEL-T1 - Geometry**
+- [x] **WHEEL-T1 - Geometry**
 
   Implement total vector-to-segment selection under
   `mobile/src/gamepad/wheel/`, covering dead arcs, wraparound, empty presets,
