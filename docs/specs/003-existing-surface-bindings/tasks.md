@@ -1,12 +1,24 @@
 # 003 - Existing Surface Bindings - Tasks
 
-- [ ] **BIND-T1 - Pairing and home bindings**
+- [x] **BIND-T1 - Pairing and home bindings**
 
   Register focus and controller navigation around the existing pair scan,
   confirmation, home, and host-list actions. Do not add screens, pairing decode,
   pairing RPCs, transport, credentials, or host stores.
 
   **Needs:** CTRL-T5
+
+  Bindings live in `mobile/src/gamepad/bindings/`. Each screen passes the
+  callbacks it is currently rendering, so `A` and `B` reach the same function the
+  button's `onPress` does (BIND-AC3) and an action that is not on screen is not
+  accepted rather than accepted and ignored. Home holds a selected id — never a
+  second catalog — and only while a controller is attached, so touch is unchanged
+  (BIND-AC10). `home.pair-desktop` is the first wheel action id (BIND-R10).
+
+  This is also where the CTRL-T4 fallback finding was actioned: the window tap
+  now consumes `BUTTON_A` and `BUTTON_B`, so a bound `B` no longer navigates
+  twice. See
+  [`docs/evidence/controller-input/android-input-findings.md`](../../evidence/controller-input/android-input-findings.md).
 
   **Verify:** `pnpm --dir mobile test src/transport/pairing.test.ts src/transport/pre-profile-pairing-coordinator.test.ts src/home/mobile-home-connection-state.test.ts`
 

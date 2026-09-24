@@ -47,6 +47,16 @@ in the tap would suppress the fallback, but it would also remove the system
 behaviour while nothing has replaced it yet. BIND-T1 is where `back` gains a real
 handler and where consumption can be turned on in the same change.
 
+**Resolved in BIND-T1.** `FALLBACK_KEY_CODES` in `ControllerVocabulary.kt` names
+the two codes that have a fallback, and `WindowCallbackTap.dispatchKeyEvent`
+returns consumed for them when the event came from a pad. Only those two: every
+other button has no fallback to suppress, and consuming one would take it from a
+view that might want it.
+
+An unhandled `B` is now a no-op rather than a system back, which is what `001`
+§7 step 4 already specified. Screens reached before their BIND task lands
+therefore answer `B` only through touch and the system gesture, both untouched.
+
 ## Not yet measured
 
 - Dead-zone-to-wheel-frame latency: needs the overlay from `002`.

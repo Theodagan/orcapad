@@ -1,8 +1,9 @@
-import { useCallback, useState } from 'react'
-import { Alert, StyleSheet } from 'react-native'
+import { useCallback, useRef, useState } from 'react'
+import { Alert, StyleSheet, type FlatList } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useOpenMobileAccounts } from '../accounts/use-open-mobile-accounts'
 import { getProvenCachedWorktrees } from '../cache/worktree-cache'
+import { useHomeControllerBinding } from '../gamepad/bindings/use-home-controller-binding'
 import { ActionSheetModal } from '../components/ActionSheetModal'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { getHostListActionSheetActions } from '../host-list-action-sheet-actions'
@@ -46,6 +47,7 @@ export function MobileHomeScreen() {
   const forceReconnectHost = useForceReconnect()
   const [actionTarget, setActionTarget] = useState<HostProfile | null>(null)
   const [confirmRemove, setConfirmRemove] = useState<{ id: string; name: string } | null>(null)
+  const hostListRef = useRef<FlatList<HostCatalogEntry> | null>(null)
 
   const openResume = useCallback(
     (card: HomeResumeCard) => {
@@ -76,17 +78,36 @@ export function MobileHomeScreen() {
     [data.primaryHost, openMobileTasks]
   )
 
-  function openHost(host: HostCatalogEntry): void {
-    if (host.credentialStatus === 'missing') {
-      data.router.push('/pair-scan')
-    } else if (host.credentialStatus === 'temporarily-unavailable') {
-      void loadHostCatalog()
-        .then(data.setHostCatalog)
-        .catch(() => Alert.alert('Could not check pairing', 'Please try again.'))
-    } else {
-      data.router.push(`/h/${host.id}`)
-    }
-  }
+  const scrollHostList = useCallback((offset: number) => {
+    hostListRef.current?.scrollToOffset({ offset, animated: false })
+  }, [])
+
+  const pairDesktop = useCallback(() => data.router.push('/pair-scan'), [data.router])
+
+  // Stable so the controller binding and every memoized host row survive a re-render unchanged.
+  const openHost = useCallback(
+    (host: HostCatalogEntry): void => {
+      if (host.credentialStatus === 'missing') {
+        data.router.push('/pair-scan')
+      } else if (host.credentialStatus === 'temporarily-unavailable') {
+        void loadHostCatalog()
+          .then(data.setHostCatalog)
+          .catch(() => Alert.alert('Could not check pairing', 'Please try again.'))
+      } else {
+        data.router.push(`/h/${host.id}`)
+      }
+    },
+    [data.router, data.setHostCatalog]
+  )
+
+  // The controller's view of this screen: the same open action the cards use, the same order the
+  // list renders, and a selected id the list draws. No second catalog (BIND-R1).
+  const selectedHostId = useHomeControllerBinding({
+    hosts: data.sortedHostCatalog,
+    onOpen: openHost,
+    onPairDesktop: pairDesktop,
+    scrollTo: scrollHostList
+  })
 
   function openHostActions(host: HostCatalogEntry): void {
     if (host.profile) {
@@ -149,6 +170,8 @@ export function MobileHomeScreen() {
           hosts={data.sortedHostCatalog}
           hostStates={data.hostStates}
           isWideLayout={isWideLayout}
+          listRef={hostListRef}
+          selectedHostId={selectedHostId}
           stats={data.stats}
           worktreeInfo={data.worktreeInfo}
           onOpen={openHost}

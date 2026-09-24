@@ -1,4 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
+import { pairingRouteBinding } from '../src/gamepad/bindings/pairing-route-binding'
+import { useSurfaceBinding } from '../src/gamepad/bindings/use-surface-binding'
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, BackHandler } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
@@ -138,6 +140,21 @@ export default function PairConfirmScreen() {
       )
     }
   }
+
+  // The same two callbacks the buttons below call, offered to the controller. Availability
+  // follows what is actually rendered: mid-connect there is nothing to confirm and nothing to
+  // cancel, so `A` and `B` stay no-ops rather than reaching a button that is not on screen.
+  useSurfaceBinding(
+    pairingRouteBinding('pair-confirm', {
+      confirm:
+        offer && resolvedStatus === 'awaiting-confirm'
+          ? () => void confirm()
+          : resolvedStatus === 'error'
+            ? cancel
+            : null,
+      back: resolvedStatus === 'connecting' ? null : cancel
+    })
+  )
 
   const containerPadding = { paddingTop: insets.top + spacing.sm }
 

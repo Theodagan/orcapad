@@ -1,4 +1,4 @@
-import { memo, useCallback, type ReactElement } from 'react'
+import { memo, useCallback, type ReactElement, type RefObject } from 'react'
 import { FlatList, StyleSheet, View } from 'react-native'
 import type { ListRenderItemInfo } from 'react-native'
 import { MobileHostCard } from '../components/MobileHostCard'
@@ -25,6 +25,10 @@ type MobileHomeHostListProps = {
   hosts: HostCatalogEntry[]
   hostStates: Record<string, ConnectionState>
   isWideLayout: boolean
+  /** Lets the controller binding scroll the same list a finger does (BIND-R3). */
+  listRef?: RefObject<FlatList<HostCatalogEntry> | null>
+  /** Null unless a controller is attached; touch never shows a selection (BIND-AC10). */
+  selectedHostId?: string | null
   stats: HomeStatsSummary | null
   worktreeInfo: Record<string, HostWorktreeInfo>
   onOpen: (host: HostCatalogEntry) => void
@@ -37,6 +41,7 @@ export function MobileHomeHostList(props: MobileHomeHostListProps) {
     ({ item }: ListRenderItemInfo<HostCatalogEntry>) => (
       <MobileHomeHostRow
         item={item}
+        selected={item.id === props.selectedHostId}
         autoConnectHostIds={props.autoConnectHostIds}
         hostAttempts={props.hostAttempts}
         hostLastConnected={props.hostLastConnected}
@@ -63,12 +68,14 @@ export function MobileHomeHostList(props: MobileHomeHostListProps) {
       props.onLongPress,
       props.onOpen,
       props.onOpenActions,
+      props.selectedHostId,
       props.worktreeInfo
     ]
   )
 
   return (
     <FlatList
+      ref={props.listRef}
       data={props.hosts}
       keyExtractor={(host) => host.id}
       contentContainerStyle={[
@@ -102,7 +109,7 @@ type MobileHomeHostRowProps = Pick<
   | 'onOpen'
   | 'onLongPress'
   | 'onOpenActions'
-> & { item: HostCatalogEntry }
+> & { item: HostCatalogEntry; selected: boolean }
 
 const MobileHomeHostRow = memo(function MobileHomeHostRow(props: MobileHomeHostRowProps) {
   const { item, onLongPress, onOpen, onOpenActions } = props
@@ -132,6 +139,7 @@ const MobileHomeHostRow = memo(function MobileHomeHostRow(props: MobileHomeHostR
       verdict={verdict}
       path={props.hostPaths[item.id] ?? 'lan'}
       worktreeInfo={props.worktreeInfo[item.id]}
+      selected={props.selected}
       onPress={open}
       onLongPress={longPress}
       onOpenActions={openActions}

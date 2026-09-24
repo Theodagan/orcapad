@@ -1,0 +1,95 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useController } from '../controller-provider'
+import { nextScrollOffset } from './controller-scroll-offset'
+import { nextSelectedHostId, selectedHost, type SelectableHost } from './host-list-selection'
+import { focusTargetFor, type IntentHandlerEntry } from './surface-binding'
+import { useSurfaceBinding } from './use-surface-binding'
+
+/**
+ * The home screen's controller edge. Every action here is the one the card's own `onPress`
+ * reaches, so a press and a tap cannot drift apart (BIND-AC3), and the host list stays the
+ * existing one — this contributes a selected id and nothing else (BIND-R1).
+ *
+ * Selection only exists while a controller is attached. A highlighted card is meaningless to a
+ * thumb, and BIND-AC10 keeps every bound surface working by touch exactly as before.
+ */
+
+export type HomeControllerBindingOptions<T extends SelectableHost> = {
+  /** The existing sorted catalog, in the order the list actually renders it (BIND-AC4). */
+  readonly hosts: readonly T[]
+  readonly onOpen: (host: T) => void
+  readonly onPairDesktop: () => void
+  readonly scrollTo: (offset: number) => void
+}
+
+export function useHomeControllerBinding<T extends SelectableHost>(
+  options: HomeControllerBindingOptions<T>
+): string | null {
+  const { hosts, onOpen, onPairDesktop, scrollTo } = options
+  const { connected } = useController()
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const offsetRef = useRef(0)
+
+  const firstHostId = hosts[0]?.id ?? null
+  useEffect(() => {
+    // Give the controller something to press `A` on, and take the highlight away again when the
+    // pad leaves so a touch user is never left looking at a selection they cannot move.
+    setSelectedId((current) => {
+      if (!connected) {
+        return null
+      }
+      return current ?? firstHostId
+    })
+  }, [connected, firstHostId])
+
+  const binding = useMemo(() => {
+    const entries: IntentHandlerEntry[] = [
+      [
+        'confirm',
+        () => {
+          const host = selectedHost(hosts, selectedId)
+          if (host !== null) {
+            onOpen(host)
+          }
+        }
+      ],
+      [
+        'scroll',
+        (intent) => {
+          if (intent.kind !== 'scroll') {
+            return
+          }
+          offsetRef.current = nextScrollOffset(offsetRef.current, intent.direction, intent.velocity)
+          scrollTo(offsetRef.current)
+        }
+      ],
+      [
+        // Provisional: the PRD contract has no list movement, so this arrives only when the
+        // experimental D-pad set is enabled (CTRL-R2).
+        'move-selection',
+        (intent) => {
+          if (intent.kind !== 'move-selection') {
+            return
+          }
+          setSelectedId((current) => nextSelectedHostId(hosts, current, intent.direction))
+        }
+      ]
+    ]
+    return {
+      focusTarget: focusTargetFor('home', entries),
+      // BIND-R10: an id a preset may name. Opening the existing pair route is as non-destructive
+      // as an action gets, which is what WHEEL-R7 asks of anything a trial can reach.
+      wheelActions: [
+        {
+          id: 'home.pair-desktop',
+          label: 'Pair desktop',
+          availability: 'available' as const,
+          run: onPairDesktop
+        }
+      ]
+    }
+  }, [hosts, selectedId, onOpen, onPairDesktop, scrollTo])
+
+  useSurfaceBinding(binding)
+  return selectedId
+}

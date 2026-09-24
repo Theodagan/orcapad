@@ -18,6 +18,8 @@ export function MobileHostCard(props: {
   // Why: the card owns the fresh/stale/unavailable wording so no caller can re-gate the counts
   // away (STA-3123 shipped that bug once already).
   worktreeInfo?: HostWorktreeInfo
+  /** Controller selection: what `A` would open right now. Absent for touch. */
+  selected?: boolean
   onPress: () => void
   onLongPress: () => void
   onOpenActions: () => void
@@ -62,7 +64,7 @@ export function MobileHostCard(props: {
     .filter(Boolean)
     .join(', ')
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, props.selected === true && styles.cardSelected]}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
@@ -135,6 +137,9 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSubtle,
     overflow: 'hidden'
   },
+  // Same accent the wheel uses for a locked segment, so "what the controller is on" reads the
+  // same way everywhere in the fork.
+  cardSelected: { borderColor: colors.accentBlue },
   cardMain: {
     flex: 1,
     minWidth: 0,

@@ -9,6 +9,7 @@ import {
 import type { ControllerSample } from './controller-input/controller-sample'
 import { createFocusRegistry } from './focus/focus-registry'
 import type { FocusTarget } from './focus/focus-target'
+import type { WheelActionBinding } from './wheel/wheel-registry'
 
 /**
  * The controller layer's one composition point: reader lifecycle, intent dispatch, focus
@@ -27,9 +28,17 @@ export type ControllerContextValue = {
   readonly registerFocusTarget: (target: FocusTarget) => () => void
   readonly activateFocusTarget: (id: string) => void
   readonly dispatchIntent: (intent: ControllerIntent) => boolean
+  /**
+   * BIND-R10: a mounted surface offers an action a wheel preset may name. Inert without a
+   * registry above, so a surface can be rendered in a test without standing a wheel up.
+   */
+  readonly registerWheelAction: (binding: WheelActionBinding) => () => void
 }
 
 const ControllerContext = createContext<ControllerContextValue | null>(null)
+
+/** No wheel above: the surface still mounts, and its action simply has nowhere to be named. */
+const noWheelRegistration = (): (() => void) => () => {}
 
 export function useController(): ControllerContextValue {
   const value = useContext(ControllerContext)
@@ -53,6 +62,8 @@ export type ControllerProviderProps = {
    * underneath does.
    */
   readonly intercept?: (intent: ControllerIntent) => boolean
+  /** WHEEL-T4's registry, passed in rather than reached for, so the provider owns no wheel state. */
+  readonly registerWheelAction?: (binding: WheelActionBinding) => () => void
 }
 
 export function ControllerProvider({
@@ -60,7 +71,8 @@ export function ControllerProvider({
   reader,
   resolve,
   wheelOverlay,
-  intercept
+  intercept,
+  registerWheelAction
 }: ControllerProviderProps): ReactNode {
   const activeReader = useMemo(() => reader ?? createAbsentControllerReader(), [reader])
   const registry = useMemo(() => createFocusRegistry(), [])
@@ -89,9 +101,10 @@ export function ControllerProvider({
       connected,
       registerFocusTarget: registry.register,
       activateFocusTarget: registry.activate,
-      dispatchIntent: registry.dispatch
+      dispatchIntent: registry.dispatch,
+      registerWheelAction: registerWheelAction ?? noWheelRegistration
     }),
-    [support, connected, registry]
+    [support, connected, registry, registerWheelAction]
   )
 
   return (

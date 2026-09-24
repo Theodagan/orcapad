@@ -199,11 +199,6 @@ class OrcaGamepadModule : Module() {
     emit(force = false)
   }
 
-  private fun isControllerSource(source: Int): Boolean =
-    source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
-      source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK ||
-      source and InputDevice.SOURCE_DPAD == InputDevice.SOURCE_DPAD
-
   private fun focusedViewName(): String =
     appContext.currentActivity?.window?.currentFocus?.javaClass?.simpleName ?: "none"
 
@@ -256,7 +251,11 @@ class OrcaGamepadModule : Module() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
       val consumed = delegate.dispatchKeyEvent(event)
       onKey(event, consumed)
-      return consumed
+      // Reporting what the view tree did is the tap's job; suppressing Android's fallback is the
+      // one place it has to act. An unconsumed `BUTTON_B` comes back as `KEYCODE_BACK`, so a
+      // bound `B` would navigate twice. `001` §7 makes an unhandled intent a no-op, which is the
+      // behaviour this preserves — not the system's guess at what the button meant.
+      return consumed || (isControllerSource(event.source) && event.keyCode in FALLBACK_KEY_CODES)
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {

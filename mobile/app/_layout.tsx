@@ -219,6 +219,7 @@ export default function RootLayout() {
         reader={controllerRuntime.reader}
         resolve={controllerRuntime.resolve}
         intercept={wheel.intercept}
+        registerWheelAction={wheelRegistry.register}
         wheelOverlay={<WheelOverlay controller={wheel} />}
       >
         <View style={styles.root} onLayout={onNavigatorLayout}>

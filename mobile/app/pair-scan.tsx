@@ -1,4 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
+import { pairingRouteBinding } from '../src/gamepad/bindings/pairing-route-binding'
+import { useSurfaceBinding } from '../src/gamepad/bindings/use-surface-binding'
 import {
   View,
   Text,
@@ -191,6 +193,16 @@ export default function PairScanScreen() {
     setLogs([])
     processingRef.current = false
   }
+
+  // Back is whatever the chevron does; `A` retries only on the error screen, which is the one
+  // state with a primary button to press. While the camera is up there is nothing to confirm —
+  // the scan itself is the confirmation.
+  useSurfaceBinding(
+    pairingRouteBinding('pair-scan', {
+      confirm: status === 'error' ? retry : null,
+      back: status === 'connecting' ? null : () => router.back()
+    })
+  )
 
   // Why: bottom inset accounts for Android 3-button nav bars and iOS
   // home-indicator areas that would otherwise overlap the 'Or paste

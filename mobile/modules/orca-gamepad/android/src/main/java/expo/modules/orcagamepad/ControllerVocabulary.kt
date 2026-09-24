@@ -33,6 +33,21 @@ val BUTTON_BY_KEY_CODE: Map<Int, String> = mapOf(
   KeyEvent.KEYCODE_DPAD_RIGHT to "dpad-right"
 )
 
+/**
+ * Buttons Android re-sends as something else when nobody consumes them: `BUTTON_A` arrives again
+ * as `KEYCODE_DPAD_CENTER` and `BUTTON_B` as `KEYCODE_BACK`. That is documented fallback
+ * behaviour for a gamepad button no view took, and it is why the tap consumes these two — once
+ * `B` is bound to back, a single press would otherwise navigate twice: once through our intent
+ * and once through the system's synthetic back.
+ *
+ * Only these two. Every other pad button has no fallback to suppress, and consuming one would
+ * take it away from a view that might want it.
+ */
+val FALLBACK_KEY_CODES: Set<Int> = setOf(
+  KeyEvent.KEYCODE_BUTTON_A,
+  KeyEvent.KEYCODE_BUTTON_B
+)
+
 /** A pad with no trigger axis reports L2/R2 here instead; the axis is then digital. */
 val TRIGGER_AXIS_BY_KEY_CODE: Map<Int, String> = mapOf(
   KeyEvent.KEYCODE_BUTTON_L2 to "l2",
@@ -55,6 +70,16 @@ private val AXIS_CANDIDATES: Map<String, List<Int>> = mapOf(
   "l2" to listOf(MotionEvent.AXIS_LTRIGGER, MotionEvent.AXIS_BRAKE),
   "r2" to listOf(MotionEvent.AXIS_RTRIGGER, MotionEvent.AXIS_GAS)
 )
+
+/**
+ * Whether an event came from a pad at all. Source bits, not a device list: the same reason the
+ * key table is keyed by `KEYCODE_*`. Shared with the window tap, which needs the answer before
+ * it can decide whether suppressing a fallback is its business.
+ */
+fun isControllerSource(source: Int): Boolean =
+  source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
+    source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK ||
+    source and InputDevice.SOURCE_DPAD == InputDevice.SOURCE_DPAD
 
 fun isGameController(device: InputDevice): Boolean =
   device.supportsSource(InputDevice.SOURCE_GAMEPAD) ||
