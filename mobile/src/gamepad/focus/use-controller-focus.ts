@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useController } from '../controller-provider'
+import { useControllerBinding } from '../controller-provider'
 import type { FocusTarget } from './focus-target'
 
 /**
@@ -12,7 +12,7 @@ import type { FocusTarget } from './focus-target'
  * looks like a missed press.
  */
 export function useControllerFocus(target: FocusTarget | null): void {
-  const { registerFocusTarget } = useController()
+  const { registerFocusTarget } = useControllerBinding()
 
   useEffect(() => {
     if (target === null) {

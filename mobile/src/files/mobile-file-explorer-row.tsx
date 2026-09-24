@@ -15,6 +15,8 @@ import { canPreviewMobileFileRow } from './mobile-file-preview-navigation'
 
 type Props = {
   item: FileExplorerRow
+  /** Controller selection: the row `A` would act on. Absent for touch. */
+  selected?: boolean
   expanded: ReadonlySet<string>
   onPreviewFile: (relativePath: string, displayName: string) => void
   onRetryDirectory: (relativePath: string) => void
@@ -22,7 +24,14 @@ type Props = {
 }
 
 export function MobileFileExplorerRow(props: Props) {
-  const { item, expanded, onPreviewFile, onRetryDirectory, onToggleDirectory } = props
+  const {
+    item,
+    selected = false,
+    expanded,
+    onPreviewFile,
+    onRetryDirectory,
+    onToggleDirectory
+  } = props
 
   if (item.kind === 'loading') {
     return (
@@ -59,6 +68,7 @@ export function MobileFileExplorerRow(props: Props) {
     return (
       <TreeRow
         item={item}
+        selected={selected}
         expanded={expanded}
         onPreviewFile={onPreviewFile}
         onToggleDirectory={onToggleDirectory}
@@ -75,11 +85,12 @@ function isTreeNode(item: FileExplorerRow): item is TreeNode {
 
 function TreeRow(props: {
   item: TreeNode
+  selected: boolean
   expanded: ReadonlySet<string>
   onPreviewFile: (relativePath: string, displayName: string) => void
   onToggleDirectory: (relativePath: string) => void
 }) {
-  const { item, expanded, onPreviewFile, onToggleDirectory } = props
+  const { item, selected, expanded, onPreviewFile, onToggleDirectory } = props
   const isDirectory = item.kind === 'directory'
   const isExpanded = expanded.has(item.relativePath)
   // Images render in the mobile viewer (via files.readPreview), so a binary
@@ -96,6 +107,7 @@ function TreeRow(props: {
       style={({ pressed }) => [
         styles.row,
         { paddingLeft: spacing.lg + item.depth * 18 },
+        selected && styles.rowSelected,
         pressed && !disabled && styles.rowPressed,
         disabled && styles.rowDisabled
       ]}

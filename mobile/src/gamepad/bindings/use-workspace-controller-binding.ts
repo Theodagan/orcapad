@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useController } from '../controller-provider'
+import { useControllerBinding } from '../controller-provider'
 import { nextScrollOffset } from './controller-scroll-offset'
 import { nextSelectedId, selectedItem } from './list-selection'
 import { flattenSectionOrder, type OrderedSection } from './workspace-list-order'
@@ -30,7 +30,7 @@ export function useWorkspaceControllerBinding<T>(
   options: WorkspaceControllerBindingOptions<T>
 ): string | null {
   const { sections, idOf, onOpen, onBack, scrollTo } = options
-  const { connected } = useController()
+  const { connected } = useControllerBinding()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const offsetRef = useRef(0)
 

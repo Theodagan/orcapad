@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useController } from '../controller-provider'
+import { useControllerBinding } from '../controller-provider'
 import { nextScrollOffset } from './controller-scroll-offset'
 import { nextSelectedId, selectedItem } from './list-selection'
 import { focusTargetFor, type IntentHandlerEntry } from './surface-binding'
@@ -28,7 +28,7 @@ export function useHomeControllerBinding<T extends { readonly id: string }>(
   options: HomeControllerBindingOptions<T>
 ): string | null {
   const { hosts, onOpen, onPairDesktop, scrollTo } = options
-  const { connected } = useController()
+  const { connected } = useControllerBinding()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const offsetRef = useRef(0)
 

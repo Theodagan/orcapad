@@ -20,6 +20,7 @@ import {
   type MobileDirEntry
 } from './file-tree'
 import type { RpcSuccess } from '../transport/types'
+import { useFileExplorerControllerBinding } from '../gamepad/bindings/use-file-explorer-controller-binding'
 import { colors } from '../theme/mobile-theme'
 import {
   beginDirectoryLoad,
@@ -37,6 +38,23 @@ import { fileExplorerStyles as styles } from './mobile-file-explorer-styles'
 import { MobileFileExplorerRow } from './mobile-file-explorer-row'
 import { navigateToMobileFilePreview } from './mobile-file-preview-navigation'
 
+const explorerRowId = (row: FileExplorerRow): string => row.id
+
+/**
+ * The row above this one at a shallower depth. The rows are a flattened tree, so walking back up
+ * the list is what "step out one level" means — no parent pointers exist to consult.
+ */
+function explorerParentId(rows: readonly FileExplorerRow[], row: FileExplorerRow): string | null {
+  const index = rows.findIndex((candidate) => candidate.id === row.id)
+  for (let above = index - 1; above >= 0; above -= 1) {
+    const candidate = rows[above]
+    if (candidate !== undefined && candidate.depth < row.depth) {
+      return candidate.id
+    }
+  }
+  return null
+}
+
 export function MobileFileExplorerPanel(props: {
   hostId: string
   worktreeId: string
@@ -53,6 +71,7 @@ export function MobileFileExplorerPanel(props: {
   scopeRef.current = scope
   const directoryLoadRevisionsRef = useRef<DirectoryLoadRevisions>(createDirectoryLoadRevisions())
   const pendingDirectoryRetriesRef = useRef<Set<string>>(new Set())
+  const listRef = useRef<FlatList<FileExplorerRow> | null>(null)
   const directoryCacheRef = useRef<DirectoryCache>({})
   const [directoryCache, setDirectoryCache] = useState<DirectoryCache>({})
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
@@ -274,10 +293,34 @@ export function MobileFileExplorerPanel(props: {
     [embedded, hostId, name, onRequestClose, router, worktreeId]
   )
 
+  const collapseAll = useCallback(() => setExpanded(() => new Set<string>()), [])
+
+  const scrollExplorer = useCallback((offset: number) => {
+    listRef.current?.scrollToOffset({ offset, animated: false })
+  }, [])
+
+  // Controller navigation over the rows the panel is already rendering. Every action below is the
+  // one the row's own press calls, so the readDir fallback, cache and preview routing are
+  // untouched (BIND-R7, BIND-AC8).
+  const selectedRowId = useFileExplorerControllerBinding({
+    rows,
+    idOf: explorerRowId,
+    isExpanded: (row) => expanded.has(row.relativePath),
+    parentIdOf: (row) => explorerParentId(rows, row),
+    onToggleDirectory: (row) => toggleDirectory(row.relativePath),
+    onPreviewFile: (row) =>
+      previewFile(row.relativePath, 'name' in row ? row.name : row.relativePath),
+    onRetryDirectory: (row) => retryDirectory(row.relativePath),
+    onCollapseAll: collapseAll,
+    onBack: () => (onRequestClose === undefined ? router.back() : onRequestClose()),
+    scrollTo: scrollExplorer
+  })
+
   const renderItem: ListRenderItem<FileExplorerRow> = ({ item }) => {
     return (
       <MobileFileExplorerRow
         item={item}
+        selected={item.id === selectedRowId}
         expanded={expanded}
         onPreviewFile={previewFile}
         onRetryDirectory={retryDirectory}
@@ -344,6 +387,7 @@ export function MobileFileExplorerPanel(props: {
     </View>
   ) : (
     <FlatList
+      ref={listRef}
       data={rows}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}

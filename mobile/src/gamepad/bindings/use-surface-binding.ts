@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useController } from '../controller-provider'
+import { useControllerBinding } from '../controller-provider'
 import { useControllerFocus } from '../focus/use-controller-focus'
 import type { SurfaceBinding } from './surface-binding'
 
@@ -9,7 +9,7 @@ import type { SurfaceBinding } from './surface-binding'
  * can be built and tested without React or a renderer.
  */
 export function useSurfaceBinding(binding: SurfaceBinding | null): void {
-  const { registerWheelAction } = useController()
+  const { registerWheelAction } = useControllerBinding()
   useControllerFocus(binding?.focusTarget ?? null)
 
   const actions = binding?.wheelActions

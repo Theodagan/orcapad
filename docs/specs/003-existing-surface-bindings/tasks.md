@@ -97,13 +97,31 @@
 
   **Verify:** `pnpm --dir mobile test src/terminal/terminal-webview-scroll-routing.test.ts src/terminal/terminal-accessory-keys.test.ts src/terminal/quick-commands.test.ts src/session/mobile-terminal-stream-subscribe.test.ts`
 
-- [ ] **BIND-T7 - File and diff bindings**
+- [x] **BIND-T7 - File and diff bindings**
 
   Bind scroll, open/back, and provisional selection/hierarchy behavior to the
   existing explorer, preview, markdown, and diff entry points. Preserve current
   compatibility fallback and editing behavior.
 
   **Needs:** CTRL-T5, BIND-T3
+
+  `A` means what the row means: a folder toggles, a file previews, a failed
+  folder retries, and a loading placeholder does nothing. Hierarchy sits on the
+  horizontal provisional axis because `A` on a folder is already spoken for —
+  right opens a closed folder, left closes an open one, and left on anything else
+  steps out to the parent.
+
+  Three non-destructive wheel ids (`explorer.preview-selected`,
+  `explorer.collapse-all`, `explorer.reload-selected`), which is what WHEEL-T7
+  references. Deliberately not prefixed `files.`: that namespace is reserved for
+  the file RPC layer a binding must never become, and the boundary ratchet
+  enforces it.
+
+  Binding the panel first made seven of its own tests throw, because
+  `useController` demanded a provider. The controller layer is additive, so
+  `useControllerBinding` is inert when no shell is above — matching what the
+  absent reader already does for the native module — and a test now holds that
+  line.
 
   **Verify:** `pnpm --dir mobile test src/files/MobileFileExplorerPanel.test.ts src/files/MobileFilePreviewScreen.test.ts src/files/file-list-fallback.test.ts src/session/mobile-diff-hunks.test.ts src/session/mobile-diff-lines.test.ts`
 

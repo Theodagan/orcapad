@@ -56,6 +56,12 @@ export const fileExplorerStyles = StyleSheet.create({
   rowPressed: {
     backgroundColor: colors.bgRaised
   },
+  // Controller selection, in the accent the fork uses everywhere for "where the pad is".
+  rowSelected: {
+    backgroundColor: colors.bgPanel,
+    borderLeftColor: colors.accentBlue,
+    borderLeftWidth: 2
+  },
   rowDisabled: {
     opacity: 0.58
   },

@@ -48,6 +48,27 @@ export function useController(): ControllerContextValue {
   return value
 }
 
+/**
+ * The same value, inert when no provider is above. What a binding wants: the controller layer is
+ * additive, so an existing surface must still render — and still work by touch (BIND-AC10) —
+ * wherever it is mounted without the shell, which is every one of its own tests.
+ *
+ * The absent reader next door takes the same position for the native module: without one the
+ * layer is inert, never broken.
+ */
+const INERT_CONTROLLER: ControllerContextValue = {
+  support: 'unavailable',
+  connected: false,
+  registerFocusTarget: () => () => {},
+  activateFocusTarget: () => {},
+  dispatchIntent: () => false,
+  registerWheelAction: noWheelRegistration
+}
+
+export function useControllerBinding(): ControllerContextValue {
+  return useContext(ControllerContext) ?? INERT_CONTROLLER
+}
+
 export type ControllerProviderProps = {
   readonly children?: ReactNode
   /** CTRL-T4 supplies the native module; without one the layer is inert, never broken. */
