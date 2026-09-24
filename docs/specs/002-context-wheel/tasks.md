@@ -19,7 +19,7 @@
 
   **Verify:** `pnpm --dir mobile test src/gamepad/wheel/wheel-state.test.ts`
 
-- [ ] **WHEEL-T3 - Zero-side-effect proof**
+- [x] **WHEEL-T3 - Zero-side-effect proof**
 
   Drive open, motion, invalid-direction, center, back, disconnect, unavailable,
   and unmount paths against recording actions. Assert only a commit outcome can
