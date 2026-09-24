@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useControllerBinding } from '../controller-provider'
 import { nextScrollOffset } from './controller-scroll-offset'
+import { homeWheelActions } from './home-wheel-actions'
 import { nextSelectedId, selectedItem } from './list-selection'
 import { focusTargetFor, type IntentHandlerEntry } from './surface-binding'
 import { useSurfaceBinding } from './use-surface-binding'
@@ -79,16 +80,8 @@ export function useHomeControllerBinding<T extends { readonly id: string }>(
     ]
     return {
       focusTarget: focusTargetFor('home', entries),
-      // BIND-R10: an id a preset may name. Opening the existing pair route is as non-destructive
-      // as an action gets, which is what WHEEL-R7 asks of anything a trial can reach.
-      wheelActions: [
-        {
-          id: 'home.pair-desktop',
-          label: 'Pair desktop',
-          availability: 'available' as const,
-          run: onPairDesktop
-        }
-      ]
+      // BIND-R10: an id a preset may name, declared next door so preset data never imports React.
+      wheelActions: homeWheelActions(onPairDesktop)
     }
   }, [hosts, selectedId, onOpen, onPairDesktop, scrollTo])
 

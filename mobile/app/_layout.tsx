@@ -18,7 +18,7 @@ import { createControllerRuntime } from '../src/gamepad/controller-input/control
 import { WheelOverlay } from '../src/gamepad/wheel/WheelOverlay'
 import { useWheelController } from '../src/gamepad/wheel/use-wheel-controller'
 import { createWheelRegistry } from '../src/gamepad/wheel/wheel-registry'
-import { ACTIVE_SMOKE_TRIAL } from '../src/gamepad/wheel/experiments/active-smoke-trial'
+import { ACTIVE_WHEEL_TRIAL } from '../src/gamepad/wheel/experiments/active-wheel-trial'
 import { createSmokeDiagnostics } from '../src/gamepad/wheel/experiments/smoke-diagnostic-bindings'
 import { getNotificationNavigationTarget } from '../src/notifications/notification-routing'
 import { useOpenNotificationRoute } from '../src/notifications/use-open-notification-route'
@@ -62,7 +62,7 @@ export default function RootLayout() {
   // Whichever layouts are being tried, from experiment data. Not a default: WHEEL-T9 is where a
   // preset could become one, and only behind a trial record and a recorded human decision.
   const wheel = useWheelController({
-    presets: ACTIVE_SMOKE_TRIAL,
+    presets: ACTIVE_WHEEL_TRIAL,
     registry: wheelRegistry,
     deadZone: 0.15
   })

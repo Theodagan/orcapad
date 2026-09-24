@@ -64,13 +64,26 @@
 
   **Verify:** `pnpm --dir mobile test src/gamepad/wheel/experiments`
 
-- [ ] **WHEEL-T7 - Existing-action experiment presets**
+- [x] **WHEEL-T7 - Existing-action experiment presets**
 
   After `003` bindings exist, add non-destructive real-action presets that
   reference binding ids. Do not include stop, close, forget, delete, or other
   destructive actions.
 
   **Needs:** WHEEL-T6, BIND-T7
+
+  Two presets in `real-action-presets.ts`, bound to ids BIND-T1 and BIND-T7
+  register. `explorer-actions` has three segments because that is how many
+  non-destructive actions the panel offers; padding it to four would mean
+  inventing one. `cross-surface` spans two surfaces on purpose, so a trial can
+  see what a mostly-disabled wheel feels like — off the home screen its explorer
+  segments are unavailable, and inside a session its pairing segment is.
+
+  A test asserts every segment names an id some surface actually registers, which
+  is what separates a real-action preset from a plausible-looking one, and a
+  second asserts no id matches stop/close/forget/delete/remove/archive (WHEEL-R7).
+  The active trial now runs one smoke preset and one real-action preset, one per
+  stick, which is what WHEEL-T8 needs from a single session.
 
   **Verify:** `pnpm --dir mobile test src/gamepad/wheel/experiments`
 
