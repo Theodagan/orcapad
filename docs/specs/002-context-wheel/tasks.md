@@ -10,7 +10,7 @@
 
   **Verify:** `pnpm --dir mobile test src/gamepad/wheel/wheel-geometry.test.ts`
 
-- [ ] **WHEEL-T2 - Pure state machine**
+- [x] **WHEEL-T2 - Pure state machine**
 
   Implement the transition table in `tech.md` section 2 with one named test per
   PRD wheel rule.
