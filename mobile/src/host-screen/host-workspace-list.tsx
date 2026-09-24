@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { Pressable, RefreshControl, SectionList, Text, View } from 'react-native'
 import { ChevronDown, ChevronRight, Pin } from 'lucide-react-native'
 import { AuthFailedBanner } from '../components/AuthFailedBanner'
@@ -7,6 +8,7 @@ import { MobileRepoIcon } from '../components/MobileRepoIcon'
 import { MobileSearchField } from '../components/MobileSearchField'
 import { NewWorkspaceFab, FAB_SIZE } from '../components/NewWorkspaceFab'
 import { WorktreeListRow } from '../components/WorktreeListRow'
+import { useWorkspaceControllerBinding } from '../gamepad/bindings/use-workspace-controller-binding'
 import { colors, spacing } from '../theme/mobile-theme'
 import { getWorktreeRowIdentity } from '../worktree/worktree-host-row-identity'
 import { HostWorkspaceListStates } from '../worktree/host-workspace-list-states'
@@ -14,6 +16,8 @@ import { getWorktreeStatus } from '../worktree/workspace-list-sections'
 import { repoColor } from '../worktree/repo-color'
 import { hostScreenStyles as styles } from './host-screen-styles'
 import type { HostScreenController } from './use-host-screen-controller'
+
+const worktreeIdOf = (item: { worktreeId: string }): string => item.worktreeId
 
 export function HostWorkspaceList({ controller }: { controller: HostScreenController }) {
   const {
@@ -41,6 +45,25 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
     state
   } = controller
   const { rawSections, sections, uniqueRepoColors } = sectionsResult
+
+  const scrollWorkspaceList = useCallback(
+    (offset: number) => {
+      activeWorktreeScroll.sectionListRef.current
+        ?.getScrollResponder()
+        ?.scrollTo({ y: offset, animated: false })
+    },
+    [activeWorktreeScroll.sectionListRef]
+  )
+
+  // The controller's view of this list: the order it renders, the activation its rows use, and a
+  // selected id it draws. No parallel catalog and no second ordering (BIND-R1, BIND-AC4).
+  const selectedWorktreeId = useWorkspaceControllerBinding({
+    sections,
+    idOf: worktreeIdOf,
+    onOpen: actions.openWorktreeSession,
+    onBack: router.back,
+    scrollTo: scrollWorkspaceList
+  })
 
   return (
     <>
@@ -167,6 +190,7 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
           renderItem={({ item }) => (
             <WorktreeListRow
               item={item}
+              selected={worktreeIdOf(item) === selectedWorktreeId}
               isReadOnly={isReadOnly}
               now={now}
               status={getWorktreeStatus(item)}

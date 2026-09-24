@@ -69,6 +69,11 @@ type Props<T extends WorktreeListRowItem> = {
   // omits its own repo icon+name to avoid the redundant "📁 orca" on every row.
   hideRepo?: boolean
   status: WorktreeRollupStatus
+  /**
+   * Controller selection: what `A` would open. Distinct from `item.isActive`, which is the
+   * workspace the desktop is focused on — the two are often different rows.
+   */
+  selected?: boolean
   onPress: (item: T) => void
   onLongPress?: (item: T) => void
   onToggleLineage?: (item: T) => void
@@ -82,6 +87,7 @@ function WorktreeListRowComponent<T extends WorktreeListRowItem>({
   repoIcon,
   hideRepo = false,
   status,
+  selected = false,
   onPress,
   onLongPress,
   onToggleLineage
@@ -98,6 +104,7 @@ function WorktreeListRowComponent<T extends WorktreeListRowItem>({
         styles.worktreeRow,
         lineageDepth > 0 && { paddingLeft: spacing.lg + lineageDepth * 18 },
         item.isActive && styles.worktreeRowActive,
+        selected && styles.worktreeRowSelected,
         pressed && styles.worktreeRowPressed
       ]}
       disabled={isReadOnly}
@@ -241,6 +248,12 @@ const styles = StyleSheet.create({
   },
   worktreeRowPressed: {
     backgroundColor: colors.bgRaised
+  },
+  // Controller selection, in the same accent the wheel uses for a locked segment. Deliberately
+  // not the grey of `worktreeRowActive`: "where the pad is" and "what the desktop is on" have to
+  // stay tellable apart when they are different rows.
+  worktreeRowSelected: {
+    borderLeftColor: colors.accentBlue
   },
   // Highlight the worktree currently focused on the desktop, mirroring the
   // desktop sidebar's selected-card treatment (raised fill + left accent).

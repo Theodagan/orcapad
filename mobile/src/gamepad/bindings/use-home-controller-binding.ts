@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useController } from '../controller-provider'
 import { nextScrollOffset } from './controller-scroll-offset'
-import { nextSelectedHostId, selectedHost, type SelectableHost } from './host-list-selection'
+import { nextSelectedId, selectedItem } from './list-selection'
 import { focusTargetFor, type IntentHandlerEntry } from './surface-binding'
 import { useSurfaceBinding } from './use-surface-binding'
 
@@ -14,7 +14,9 @@ import { useSurfaceBinding } from './use-surface-binding'
  * thumb, and BIND-AC10 keeps every bound surface working by touch exactly as before.
  */
 
-export type HomeControllerBindingOptions<T extends SelectableHost> = {
+const hostId = (host: { readonly id: string }): string => host.id
+
+export type HomeControllerBindingOptions<T extends { readonly id: string }> = {
   /** The existing sorted catalog, in the order the list actually renders it (BIND-AC4). */
   readonly hosts: readonly T[]
   readonly onOpen: (host: T) => void
@@ -22,7 +24,7 @@ export type HomeControllerBindingOptions<T extends SelectableHost> = {
   readonly scrollTo: (offset: number) => void
 }
 
-export function useHomeControllerBinding<T extends SelectableHost>(
+export function useHomeControllerBinding<T extends { readonly id: string }>(
   options: HomeControllerBindingOptions<T>
 ): string | null {
   const { hosts, onOpen, onPairDesktop, scrollTo } = options
@@ -47,7 +49,7 @@ export function useHomeControllerBinding<T extends SelectableHost>(
       [
         'confirm',
         () => {
-          const host = selectedHost(hosts, selectedId)
+          const host = selectedItem(hosts, hostId, selectedId)
           if (host !== null) {
             onOpen(host)
           }
@@ -71,7 +73,7 @@ export function useHomeControllerBinding<T extends SelectableHost>(
           if (intent.kind !== 'move-selection') {
             return
           }
-          setSelectedId((current) => nextSelectedHostId(hosts, current, intent.direction))
+          setSelectedId((current) => nextSelectedId(hosts, hostId, current, intent.direction))
         }
       ]
     ]

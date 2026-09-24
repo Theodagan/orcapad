@@ -22,12 +22,21 @@
 
   **Verify:** `pnpm --dir mobile test src/transport/pairing.test.ts src/transport/pre-profile-pairing-coordinator.test.ts src/home/mobile-home-connection-state.test.ts`
 
-- [ ] **BIND-T2 - Workspace bindings**
+- [x] **BIND-T2 - Workspace bindings**
 
   Bind scroll, confirm/back, workspace cycling, and provisional D-pad selection
   to the current host-screen controller and rendered ordering.
 
   **Needs:** CTRL-T5
+
+  Selection walks the rendered sections, flattened, so it follows sort, filter,
+  search, grouping and collapse rather than a second ordering (BIND-AC4).
+  Cycling moves the selection and does not open as it goes — a cycle that
+  activated each workspace it passed would fire a `worktree.activate` per step —
+  which also gives the PRD contract a way to move through a list without the
+  experimental D-pad. Scroll reuses the existing `sectionListRef`. The row's
+  controller highlight is deliberately a different colour from `isActive`: where
+  the pad is and what the desktop is on are often different rows.
 
   **Verify:** `pnpm --dir mobile test src/worktree/workspace-list-sections.test.ts src/worktree/mobile-worktree-activation-source.test.ts src/worktree/worktree-catalog-snapshot-client.test.ts`
 
