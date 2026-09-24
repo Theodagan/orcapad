@@ -29,7 +29,7 @@
 
   **Verify:** `pnpm --dir mobile test src/gamepad/wheel/wheel-side-effects.test.ts`
 
-- [ ] **WHEEL-T4 - Binding registry and preset schema**
+- [x] **WHEEL-T4 - Binding registry and preset schema**
 
   Implement action registration, lifecycle-based unregistration, immutable
   preset loading, and required non-contract/trial metadata.
