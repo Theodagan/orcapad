@@ -47,13 +47,20 @@ export type ControllerProviderProps = {
   readonly resolve?: (sample: ControllerSample) => readonly ControllerIntent[]
   /** WHEEL-T5 mounts the overlay here, above the app and outside its touch path. */
   readonly wheelOverlay?: ReactNode
+  /**
+   * Consulted before the focus registry, and returns true when it took the intent. Step 1 of the
+   * resolution order in `001` §7: an open wheel receives wheel motion and `A` before the surface
+   * underneath does.
+   */
+  readonly intercept?: (intent: ControllerIntent) => boolean
 }
 
 export function ControllerProvider({
   children,
   reader,
   resolve,
-  wheelOverlay
+  wheelOverlay,
+  intercept
 }: ControllerProviderProps): ReactNode {
   const activeReader = useMemo(() => reader ?? createAbsentControllerReader(), [reader])
   const registry = useMemo(() => createFocusRegistry(), [])
@@ -68,10 +75,13 @@ export function ControllerProvider({
         return
       }
       for (const intent of resolve(sample)) {
+        if (intercept?.(intent) === true) {
+          continue
+        }
         registry.dispatch(intent)
       }
     })
-  }, [activeReader, registry, resolve])
+  }, [activeReader, registry, resolve, intercept])
 
   const value = useMemo<ControllerContextValue>(
     () => ({

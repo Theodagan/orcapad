@@ -15,6 +15,9 @@ import { RpcClientProvider } from '../src/transport/client-context'
 import { ControllerProvider } from '../src/gamepad/controller-provider'
 import { ControllerConnectionNotice } from '../src/gamepad/controller-connection/ControllerConnectionNotice'
 import { createControllerRuntime } from '../src/gamepad/controller-input/controller-runtime'
+import { WheelOverlay } from '../src/gamepad/wheel/WheelOverlay'
+import { useWheelController } from '../src/gamepad/wheel/use-wheel-controller'
+import { createWheelRegistry } from '../src/gamepad/wheel/wheel-registry'
 import { getNotificationNavigationTarget } from '../src/notifications/notification-routing'
 import { useOpenNotificationRoute } from '../src/notifications/use-open-notification-route'
 import {
@@ -36,6 +39,8 @@ SplashScreen.preventAutoHideAsync()
 // One per process: the reader holds a native subscription and the resolver holds the button
 // edge state, so rebuilding either on a re-render would swallow presses.
 const controllerRuntime = createControllerRuntime()
+// One registry per process, like the runtime: surfaces register into it as they mount.
+const wheelRegistry = createWheelRegistry()
 
 // Why at boot and not only on subscribe: the gateway's FCM payload targets the
 // 'orca-desktop' channel, and a background push can land before any socket has
@@ -49,6 +54,9 @@ Notifications.setNotificationHandler({
 })
 
 export default function RootLayout() {
+  // Presets arrive with WHEEL-T6; until then the wheel opens with nothing to lock, which is the
+  // documented empty-preset behaviour rather than a placeholder.
+  const wheel = useWheelController({ presets: {}, registry: wheelRegistry, deadZone: 0.15 })
   const router = useRouter()
   const pathname = usePathname()
   const { hostId, worktreeId } = useGlobalSearchParams<{ hostId?: string; worktreeId?: string }>()
@@ -198,7 +206,12 @@ export default function RootLayout() {
 
   return (
     <RpcClientProvider>
-      <ControllerProvider reader={controllerRuntime.reader} resolve={controllerRuntime.resolve}>
+      <ControllerProvider
+        reader={controllerRuntime.reader}
+        resolve={controllerRuntime.resolve}
+        intercept={wheel.intercept}
+        wheelOverlay={<WheelOverlay controller={wheel} />}
+      >
         <View style={styles.root} onLayout={onNavigatorLayout}>
           <StatusBar style="light" />
           <Stack

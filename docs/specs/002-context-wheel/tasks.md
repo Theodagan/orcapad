@@ -38,7 +38,7 @@
 
   **Verify:** `pnpm --dir mobile test src/gamepad/wheel/wheel-registry.test.ts`; `pnpm --dir mobile test src/gamepad/wheel/wheel-preset.test.ts`
 
-- [ ] **WHEEL-T5 - Overlay and input wiring**
+- [x] **WHEEL-T5 - Overlay and input wiring**
 
   Render the overlay above the existing focused surface, drive it from
   `wheel-motion` and `confirm` intents, and ensure rendering never blocks commit.
