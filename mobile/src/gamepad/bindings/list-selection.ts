@@ -48,3 +48,30 @@ export function nextSelectedId<T>(
   const next = items[Math.min(Math.max(current + step, 0), items.length - 1)]
   return next === undefined ? null : idOf(next)
 }
+
+/**
+ * The next item round a ring, wrapping at both ends. Tabs, not lists: a tab strip is a ring you
+ * cycle until you find the one you want, which is what LB/RB means everywhere else a person has
+ * met it (BIND-R4). A scrolling list is a column you walk, so `nextSelectedId` above clamps.
+ *
+ * Falls to the first item when nothing is current, so a cycle always lands somewhere.
+ */
+export function nextCyclicId<T>(
+  items: readonly T[],
+  idOf: IdOf<T>,
+  currentId: string | null,
+  direction: 'previous' | 'next'
+): string | null {
+  if (items.length === 0) {
+    return null
+  }
+  const current = items.findIndex((item) => idOf(item) === currentId)
+  if (current === -1) {
+    const first = items[0]
+    return first === undefined ? null : idOf(first)
+  }
+  const step = direction === 'next' ? 1 : -1
+  const wrapped = (current + step + items.length) % items.length
+  const next = items[wrapped]
+  return next === undefined ? null : idOf(next)
+}

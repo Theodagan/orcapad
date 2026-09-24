@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { nextSelectedId, selectedItem } from './list-selection'
+import { nextCyclicId, nextSelectedId, selectedItem } from './list-selection'
 
 const hosts = [{ id: 'alpha' }, { id: 'beta' }, { id: 'gamma' }]
 const byId = (host: { id: string }): string => host.id
@@ -31,5 +31,25 @@ describe('list selection', () => {
   it('has nothing to select in an empty catalog', () => {
     expect(nextSelectedId([], byId, null, 'down')).toBeNull()
     expect(selectedItem([], byId, 'alpha')).toBeNull()
+  })
+})
+
+describe('cyclic selection', () => {
+  it('wraps both ways', () => {
+    expect(nextCyclicId(hosts, byId, 'gamma', 'next')).toBe('alpha')
+    expect(nextCyclicId(hosts, byId, 'alpha', 'previous')).toBe('gamma')
+  })
+
+  it('starts at the first item when nothing is current', () => {
+    expect(nextCyclicId(hosts, byId, null, 'next')).toBe('alpha')
+    expect(nextCyclicId(hosts, byId, 'gone', 'previous')).toBe('alpha')
+  })
+
+  it('returns the single item to itself, so the caller can notice nothing changed', () => {
+    expect(nextCyclicId([{ id: 'only' }], byId, 'only', 'next')).toBe('only')
+  })
+
+  it('has nothing to cycle in an empty list', () => {
+    expect(nextCyclicId([], byId, null, 'next')).toBeNull()
   })
 })

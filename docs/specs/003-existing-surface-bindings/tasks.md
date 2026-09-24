@@ -40,13 +40,28 @@
 
   **Verify:** `pnpm --dir mobile test src/worktree/workspace-list-sections.test.ts src/worktree/mobile-worktree-activation-source.test.ts src/worktree/worktree-catalog-snapshot-client.test.ts`
 
-- [ ] **BIND-T3 - Session bindings**
+- [x] **BIND-T3 - Session bindings**
 
   Bind LB/RB cycling, scroll, back, and active-session focus to
   `use-mobile-session-controller.ts` and `MobileSessionSurface.tsx`. Add no new
   session list, route, subscription, or session store.
 
   **Needs:** CTRL-T5, BIND-T2
+
+  Cycling activates as it goes, unlike the list bindings: a tab strip already has
+  an active item and LB/RB is how the PRD changes it, so there is no selection to
+  confirm. It wraps, because a tab strip is a ring; the lists clamp, because they
+  are columns. The existing `switchSessionTab` does the work, so the host
+  notification and subscription handover are untouched, and cycling to the tab
+  already active is skipped rather than replaying one.
+
+  The target is named for its session, which is the active-session identity `X`
+  needs: BIND-T4's stop handler answers for the focused session because it is
+  mounted inside this target, not because anything keeps a second record.
+
+  Scroll is **not** bound here. The scrollable things are inside the tab — the
+  transcript (BIND-T4) and the terminal scrollback (BIND-T6) — and both own their
+  own scrollers, so a session-level one would fight them.
 
   **Verify:** `pnpm --dir mobile test src/session/mobile-session-tab-activation.test.ts src/session/mobile-tab-close-selection.test.ts`
 
