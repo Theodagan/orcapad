@@ -47,12 +47,20 @@
 
   **Verify:** `pnpm --dir mobile test src/gamepad/wheel/WheelOverlay.test.tsx`; `pnpm --dir mobile typecheck`
 
-- [ ] **WHEEL-T6 - Harmless smoke presets**
+- [x] **WHEEL-T6 - Harmless smoke presets**
 
   Add replaceable presets using local no-op/diagnostic bindings only. Include
   different segment counts without naming a product default.
 
   **Needs:** WHEEL-T4, WHEEL-T5
+
+  Five presets in `mobile/src/gamepad/wheel/experiments/`, at three segment
+  counts plus the empty case, bound only to local diagnostics that record a run
+  and relabel their own segment — a commit and a cancel both close the wheel, so
+  WHEEL-T8 needs something that tells them apart. `smoke-mixed` carries a
+  refused, an unproven, and a never-registered binding, which is the only way a
+  device trial sees those states. `active-smoke-trial.ts` is what the shell
+  runs; it is experiment data, not a default (WHEEL-AC7).
 
   **Verify:** `pnpm --dir mobile test src/gamepad/wheel/experiments`
 

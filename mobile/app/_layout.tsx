@@ -18,6 +18,8 @@ import { createControllerRuntime } from '../src/gamepad/controller-input/control
 import { WheelOverlay } from '../src/gamepad/wheel/WheelOverlay'
 import { useWheelController } from '../src/gamepad/wheel/use-wheel-controller'
 import { createWheelRegistry } from '../src/gamepad/wheel/wheel-registry'
+import { ACTIVE_SMOKE_TRIAL } from '../src/gamepad/wheel/experiments/active-smoke-trial'
+import { createSmokeDiagnostics } from '../src/gamepad/wheel/experiments/smoke-diagnostic-bindings'
 import { getNotificationNavigationTarget } from '../src/notifications/notification-routing'
 import { useOpenNotificationRoute } from '../src/notifications/use-open-notification-route'
 import {
@@ -41,6 +43,9 @@ SplashScreen.preventAutoHideAsync()
 const controllerRuntime = createControllerRuntime()
 // One registry per process, like the runtime: surfaces register into it as they mount.
 const wheelRegistry = createWheelRegistry()
+// The smoke bindings belong to the process rather than to any surface, so they register once and
+// are never retracted — there is no mount whose end would mean they should go away.
+createSmokeDiagnostics().register(wheelRegistry)
 
 // Why at boot and not only on subscribe: the gateway's FCM payload targets the
 // 'orca-desktop' channel, and a background push can land before any socket has
@@ -54,9 +59,13 @@ Notifications.setNotificationHandler({
 })
 
 export default function RootLayout() {
-  // Presets arrive with WHEEL-T6; until then the wheel opens with nothing to lock, which is the
-  // documented empty-preset behaviour rather than a placeholder.
-  const wheel = useWheelController({ presets: {}, registry: wheelRegistry, deadZone: 0.15 })
+  // Whichever layouts are being tried, from experiment data. Not a default: WHEEL-T9 is where a
+  // preset could become one, and only behind a trial record and a recorded human decision.
+  const wheel = useWheelController({
+    presets: ACTIVE_SMOKE_TRIAL,
+    registry: wheelRegistry,
+    deadZone: 0.15
+  })
   const router = useRouter()
   const pathname = usePathname()
   const { hostId, worktreeId } = useGlobalSearchParams<{ hostId?: string; worktreeId?: string }>()
