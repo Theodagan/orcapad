@@ -27,6 +27,11 @@ export type ControllerContextValue = {
   /** Returns the unregister function; a surface calls it on unmount. */
   readonly registerFocusTarget: (target: FocusTarget) => () => void
   readonly activateFocusTarget: (id: string) => void
+  /**
+   * Straight to the focus registry — it does **not** consult the wheel. Only the reader
+   * subscription below runs the full order in `001` §7, so anything checking what a real press
+   * does has to go through a sample, not through this.
+   */
   readonly dispatchIntent: (intent: ControllerIntent) => boolean
   /**
    * BIND-R10: a mounted surface offers an action a wheel preset may name. Inert without a

@@ -65,13 +65,35 @@
 
   **Verify:** `pnpm --dir mobile test src/session/mobile-session-tab-activation.test.ts src/session/mobile-tab-close-selection.test.ts`
 
-- [ ] **BIND-T4 - Agent bindings**
+- [x] **BIND-T4 - Agent bindings**
 
   Bind transcript scroll, intervention `A/B`, focused-session `X`, composer text
   target, and non-destructive wheel action ids through existing native-chat
   callbacks.
 
   **Needs:** CTRL-T5, BIND-T3, WHEEL-T4
+
+  Precedence mirrors `MobileNativeChatPromptCard` exactly — ask, then permission,
+  then question — because the controller has to agree with the one card on
+  screen. `A` accepts only a permission, whose affirmative the card renders
+  first; an ask and a question are lists of peers with no default, and picking
+  one could answer "Delete everything?" with whatever the agent listed first. `B`
+  reaches each card's own dismiss. `X` is the existing stop, offered only while
+  the view's `canStop` says the turn can be stopped.
+
+  `003` §5 rule 3 — neither input also commits a wheel action — turned out to be
+  structural rather than enforced: the provider consults the wheel first and
+  stops when it takes the intent. A test now drives that through the reader to
+  prove the structure holds with a real binding underneath.
+
+  Two things this exposed. The focus registry's code did not match its own
+  comment: a newly mounted target never took focus, so an inner surface could
+  never answer for itself. It does now, without stealing focus on a re-render.
+  And `dispatchIntent` from context goes straight to the registry, skipping the
+  wheel — documented, because a test written through it silently proves nothing.
+
+  **Not bound:** the composer text target. That is BIND-T5's, which owns the
+  dictation sink it belongs to.
 
   **Verify:** `pnpm --dir mobile test src/session/MobileNativeChatView.test.ts src/session/MobileNativeChatQuestion.test.tsx src/session/use-mobile-structured-agent-session-prompt-cancel.test.tsx`
 

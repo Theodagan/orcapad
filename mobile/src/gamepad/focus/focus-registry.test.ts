@@ -73,6 +73,29 @@ describe('focus registry', () => {
     expect(registry.activeTarget()).toBe(list)
   })
 
+  it('gives focus to a newly mounted target, so an inner surface answers for itself', () => {
+    const registry = createFocusRegistry()
+    const session = target('session')
+    registry.register(session)
+    const chat = target('chat')
+    registry.register(chat)
+
+    // The agent view mounts inside the session route, so it is the one that should hear `A`.
+    expect(registry.activeTarget()).toBe(chat)
+  })
+
+  it('does not hand focus to a re-render of an unrelated surface', () => {
+    const registry = createFocusRegistry()
+    registry.register(target('session'))
+    const chat = target('chat')
+    registry.register(chat)
+
+    // The session's props change and it re-registers; focus must stay where the user is.
+    registry.register(target('session'))
+
+    expect(registry.activeTarget()).toBe(chat)
+  })
+
   it('keeps the active target across a re-render that replaces the entry', () => {
     const registry = createFocusRegistry()
     const first = target('session')

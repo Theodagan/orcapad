@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+import { useNativeChatControllerBinding } from './use-native-chat-controller-binding'
 import {
   ActivityIndicator,
   FlatList,
@@ -135,59 +136,60 @@ type Props = {
   keyboardInset?: number
 }
 
-export function MobileNativeChatView({
-  messages,
-  folded,
-  status,
-  error,
-  agent,
-  agentWorking,
-  canStop = agentWorking,
-  structuredActivityUi = false,
-  turnIndicator = null,
-  workingStartedAt,
-  settledTurns,
-  onStop,
-  streaming,
-  hasMore,
-  loadingEarlier,
-  onLoadEarlier,
-  onSend,
-  sendSurfaceId,
-  getSendCompletionGeneration,
-  getComposerEditGeneration,
-  pending,
-  imagePreviewsByMessageId,
-  composerText,
-  onComposerTextChange,
-  onAttachImage,
-  attachments,
-  onRemoveAttachment,
-  isAttaching,
-  onMicPress,
-  micActive,
-  dictationMode,
-  onMicPressIn,
-  onMicPressOut,
-  inputLockReason,
-  sendErrorMessage,
-  onClearSendError,
-  filePaths,
-  onNeedFiles,
-  sessionOptions,
-  ask,
-  askKey,
-  onDismissAsk,
-  onAnswerAsk,
-  onCancelAsk,
-  onCancelPrompt,
-  question,
-  onAnswerQuestion,
-  permission,
-  onRespondPermission,
-  onOpenFile,
-  keyboardInset = 0
-}: Props): React.JSX.Element {
+export function MobileNativeChatView(props: Props): React.JSX.Element {
+  const {
+    messages,
+    folded,
+    status,
+    error,
+    agent,
+    agentWorking,
+    canStop = agentWorking,
+    structuredActivityUi = false,
+    turnIndicator = null,
+    workingStartedAt,
+    settledTurns,
+    onStop,
+    streaming,
+    hasMore,
+    loadingEarlier,
+    onLoadEarlier,
+    onSend,
+    sendSurfaceId,
+    getSendCompletionGeneration,
+    getComposerEditGeneration,
+    pending,
+    imagePreviewsByMessageId,
+    composerText,
+    onComposerTextChange,
+    onAttachImage,
+    attachments,
+    onRemoveAttachment,
+    isAttaching,
+    onMicPress,
+    micActive,
+    dictationMode,
+    onMicPressIn,
+    onMicPressOut,
+    inputLockReason,
+    sendErrorMessage,
+    onClearSendError,
+    filePaths,
+    onNeedFiles,
+    sessionOptions,
+    ask,
+    askKey,
+    onDismissAsk,
+    onAnswerAsk,
+    onCancelAsk,
+    onCancelPrompt,
+    question,
+    onAnswerQuestion,
+    permission,
+    onRespondPermission,
+    onOpenFile,
+    keyboardInset = 0
+  } = props
   const insets = useSafeAreaInsets()
   const [toolsExpanded, setToolsExpanded] = useState(false)
   // Lift the composer clear of the keyboard, plus the bottom safe-area so it
@@ -222,6 +224,8 @@ export function MobileNativeChatView({
     detachFromTail,
     recordScrollMetrics
   } = useMobileNativeChatTailFollow<NativeChatMessage>({ hasItems: data.length > 0 })
+
+  useNativeChatControllerBinding({ ...props, sessionId: sendSurfaceId, listRef, detachFromTail })
 
   const handleSend = useCallback(
     async (text: string): Promise<boolean> => {

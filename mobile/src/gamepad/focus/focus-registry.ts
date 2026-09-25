@@ -34,8 +34,13 @@ export function createFocusRegistry(): FocusRegistry {
   }
 
   function register(target: FocusTarget): () => void {
+    // A newly mounted target takes focus; a re-render replacing an existing one does not. Inner
+    // surfaces mount after the routes that contain them, so this is what lets an agent view
+    // answer for its own intents rather than the session around it — and the "not on re-render"
+    // half is what stops an unrelated surface stealing focus every time its props change.
+    const isNewMount = !targets.has(target.id)
     targets.set(target.id, target)
-    if (activeId === null) {
+    if (activeId === null || isNewMount) {
       activeId = target.id
     }
     return () => {
