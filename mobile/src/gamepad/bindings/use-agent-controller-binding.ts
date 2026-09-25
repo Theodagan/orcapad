@@ -2,6 +2,7 @@ import { useMemo, useRef } from 'react'
 import { nextScrollOffset } from './controller-scroll-offset'
 import { resolveAgentIntervention, type InterventionSurface } from './agent-intervention'
 import { focusTargetFor, type IntentHandlerEntry } from './surface-binding'
+import type { DictationTextTarget } from '../focus/focus-target'
 import { useSurfaceBinding } from './use-surface-binding'
 
 /**
@@ -24,12 +25,17 @@ export type AgentControllerBindingOptions = InterventionSurface & {
   readonly canStop: boolean
   readonly onStop?: () => void
   readonly scrollTo: (offset: number) => void
+  /**
+   * Where dictated text would land. Its presence is what lets `R3` start a microphone at all —
+   * recording with nowhere to put the words leaves a mic running for nothing (`003` §6).
+   */
+  readonly textTarget?: DictationTextTarget
   /** The transcript's tail-follow release; scrolling up must not snap back to the newest message. */
   readonly onDetachFromTail: () => void
 }
 
 export function useAgentControllerBinding(options: AgentControllerBindingOptions): void {
-  const { sessionId, canStop, onStop, scrollTo, onDetachFromTail } = options
+  const { sessionId, canStop, onStop, scrollTo, onDetachFromTail, textTarget } = options
   const offsetRef = useRef(0)
 
   const { ask, permission, question, onRespondPermission, onCancelAsk, onCancelPrompt } = options
@@ -76,8 +82,11 @@ export function useAgentControllerBinding(options: AgentControllerBindingOptions
 
     // No wheel actions: everything the agent view can do is either an answer to a prompt that is
     // already on screen, or a stop — which WHEEL-R7 keeps off a trial wheel entirely.
-    return { focusTarget: focusTargetFor(`agent:${sessionId}`, entries), wheelActions: [] }
-  }, [sessionId, canStop, onStop, intervention, scrollTo, onDetachFromTail])
+    return {
+      focusTarget: focusTargetFor(`agent:${sessionId}`, entries, textTarget),
+      wheelActions: []
+    }
+  }, [sessionId, canStop, onStop, intervention, scrollTo, onDetachFromTail, textTarget])
 
   useSurfaceBinding(binding)
 }

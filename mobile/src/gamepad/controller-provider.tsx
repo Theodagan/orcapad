@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode
+} from 'react'
 import { StyleSheet, View } from 'react-native'
 import type { ControllerIntent } from './controller-input/controller-intent'
 import {
@@ -10,6 +18,11 @@ import type { ControllerSample } from './controller-input/controller-sample'
 import { createFocusRegistry } from './focus/focus-registry'
 import type { FocusTarget } from './focus/focus-target'
 import type { WheelActionBinding } from './wheel/wheel-registry'
+import {
+  shouldToggleDictation,
+  type ActiveDictation,
+  type ActiveDictationRegistry
+} from './bindings/active-dictation'
 
 /**
  * The controller layer's one composition point: reader lifecycle, intent dispatch, focus
@@ -38,12 +51,15 @@ export type ControllerContextValue = {
    * registry above, so a surface can be rendered in a test without standing a wheel up.
    */
   readonly registerWheelAction: (binding: WheelActionBinding) => () => void
+  /** The mounted session's dictation, so `R3` reaches it from step 2 wherever focus is. */
+  readonly registerActiveDictation: (dictation: ActiveDictation) => () => void
 }
 
 const ControllerContext = createContext<ControllerContextValue | null>(null)
 
 /** No wheel above: the surface still mounts, and its action simply has nowhere to be named. */
 const noWheelRegistration = (): (() => void) => () => {}
+const noDictationRegistration = (): (() => void) => () => {}
 
 export function useController(): ControllerContextValue {
   const value = useContext(ControllerContext)
@@ -67,7 +83,8 @@ const INERT_CONTROLLER: ControllerContextValue = {
   registerFocusTarget: () => () => {},
   activateFocusTarget: () => {},
   dispatchIntent: () => false,
-  registerWheelAction: noWheelRegistration
+  registerWheelAction: noWheelRegistration,
+  registerActiveDictation: noDictationRegistration
 }
 
 export function useControllerBinding(): ControllerContextValue {
@@ -90,6 +107,12 @@ export type ControllerProviderProps = {
   readonly intercept?: (intent: ControllerIntent) => boolean
   /** WHEEL-T4's registry, passed in rather than reached for, so the provider owns no wheel state. */
   readonly registerWheelAction?: (binding: WheelActionBinding) => () => void
+  /**
+   * Step 2 of `001` §7, between the wheel and the focused surface: `R3` reaches a live
+   * microphone wherever focus is. Absent means no dictation layer, and `R3` is an ordinary
+   * intent.
+   */
+  readonly activeDictation?: ActiveDictationRegistry
 }
 
 export function ControllerProvider({
@@ -98,12 +121,26 @@ export function ControllerProvider({
   resolve,
   wheelOverlay,
   intercept,
-  registerWheelAction
+  registerWheelAction,
+  activeDictation
 }: ControllerProviderProps): ReactNode {
   const activeReader = useMemo(() => reader ?? createAbsentControllerReader(), [reader])
   const registry = useMemo(() => createFocusRegistry(), [])
   const support = useMemo(() => activeReader.support(), [activeReader])
   const [connected, setConnected] = useState(false)
+
+  const takeDictationToggle = useCallback((): boolean => {
+    const dictation = activeDictation?.current()
+    if (dictation == null) {
+      return false
+    }
+    // A start needs somewhere for the words to land; a stop never does.
+    if (!shouldToggleDictation(dictation.activity, registry.activeTarget()?.textTarget != null)) {
+      return false
+    }
+    dictation.toggle()
+    return true
+  }, [activeDictation, registry])
 
   useEffect(() => {
     setConnected(activeReader.current().connected)
@@ -113,13 +150,18 @@ export function ControllerProvider({
         return
       }
       for (const intent of resolve(sample)) {
+        // The resolution order of `001` §7, in the order it is written there: an open wheel,
+        // then a live microphone, then the focused surface.
         if (intercept?.(intent) === true) {
+          continue
+        }
+        if (intent.kind === 'toggle-dictation' && takeDictationToggle()) {
           continue
         }
         registry.dispatch(intent)
       }
     })
-  }, [activeReader, registry, resolve, intercept])
+  }, [activeReader, registry, resolve, intercept, takeDictationToggle])
 
   const value = useMemo<ControllerContextValue>(
     () => ({
@@ -128,9 +170,10 @@ export function ControllerProvider({
       registerFocusTarget: registry.register,
       activateFocusTarget: registry.activate,
       dispatchIntent: registry.dispatch,
-      registerWheelAction: registerWheelAction ?? noWheelRegistration
+      registerWheelAction: registerWheelAction ?? noWheelRegistration,
+      registerActiveDictation: activeDictation?.register ?? noDictationRegistration
     }),
-    [support, connected, registry, registerWheelAction]
+    [support, connected, registry, registerWheelAction, activeDictation]
   )
 
   return (

@@ -97,7 +97,7 @@
 
   **Verify:** `pnpm --dir mobile test src/session/MobileNativeChatView.test.ts src/session/MobileNativeChatQuestion.test.tsx src/session/use-mobile-structured-agent-session-prompt-cancel.test.tsx`
 
-- [ ] **BIND-T5 - Dictation binding**
+- [x] **BIND-T5 - Dictation binding**
 
   Route `R3` to the existing `useMobileDictation` start/stop behavior and route
   transcripts to the focused existing text target. Derive the listening
@@ -105,6 +105,25 @@
   pipeline.
 
   **Needs:** CTRL-T5, BIND-T3
+
+  `R3` is step 2 of `001` §7, so it registers rather than being dispatched to:
+  the provider now implements that step between the wheel and the focused
+  surface. Stopping works wherever focus has gone, including while a wheel is
+  open — a live microphone the user cannot reach is the failure worth designing
+  against. Starting needs a focused text target, because a microphone with
+  nowhere to put the words is one left running for nothing; that is what
+  `FocusTarget.textTarget` has been for since CTRL-T5, and the composer now
+  declares itself as one using the existing append rule.
+
+  Transcript routing is **not** reimplemented. The existing router still decides
+  composer versus terminal (BIND-R6); the focused text target gates whether a
+  start is sensible rather than replacing the route. The listening state is
+  `dictation.status` read through `dictationActivityOf`, which folds `error` to
+  idle — a failed session holds no microphone.
+
+  Adding a hook to the session chain tripped the route-parity ratchet. Re-pinned
+  deliberately, after diffing: the only delta was `useDictationBinding`, with
+  nothing removed and callbacks and effects unchanged.
 
   **Verify:** `pnpm --dir mobile test src/hooks/use-mobile-dictation-source.test.ts src/hooks/mobile-dictation-desktop-start.test.ts src/terminal/terminal-live-dictation-routing.test.ts`
 

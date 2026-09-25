@@ -62,8 +62,11 @@ const HOST_COMPONENT_NAMES = new Set([
   'View'
 ])
 
-const HEAD_MAIN_HOOK_SHA256 = 'c7a1bbc0588a5d27797bbab13168e76eb20200288921fdc3347632c2b4afd0ae'
-const HEAD_HOOK_BINDING_SHA256 = '06edf1a4314eba41b1d3e1cb67b0cfab2a936aef7d127c5dc48e789c9adc6c8f'
+// Re-pinned in BIND-T5: `useDictationBinding` was added to useMobileSessionNativeChatDictation
+// so `R3` reaches the existing toggle. The diff against the previous pin was exactly that one
+// hook — nothing removed, callbacks and effects unchanged.
+const HEAD_MAIN_HOOK_SHA256 = '6422ec9ee9d49a5513ca0f9ed63196f4184d7ce045ad84f8c8606f5f41f66cc3'
+const HEAD_HOOK_BINDING_SHA256 = '2ff38d42b35127cea3d2aa1cdb13492e75f7c4397c1fa83fb1c9c6dbcc3072ca'
 const HEAD_CALLBACK_IDENTITY_SHA256 =
   '2a9e4825df007f6ef53b81aa5004991d6318eee7507b44d625c07e630be432eb'
 const HEAD_CALLBACK_BODY_SHA256 = '85c4f4605e66c45e2b6bc7de739cb3493d9e2d0db9c9242c379db8ed34a8cefe'
@@ -472,7 +475,7 @@ describe('mobile session route extraction parity', () => {
     const contentBindings = CONTENT_COMPONENT_NAMES.flatMap(
       (name) => readHookFacts(name, definitions).bindings
     )
-    expect(main.hooks).toHaveLength(269)
+    expect(main.hooks).toHaveLength(270)
     expect(hash(main.hooks)).toBe(HEAD_MAIN_HOOK_SHA256)
     expect(hash(main.bindings)).toBe(HEAD_HOOK_BINDING_SHA256)
     expect(main.callbacks).toHaveLength(77)

@@ -1,6 +1,8 @@
 import { useEffect, useCallback } from 'react'
 import { useFocusEffect } from 'expo-router'
 import { useMobileDictation } from '../hooks/use-mobile-dictation'
+import { useDictationBinding } from '../gamepad/bindings/use-dictation-binding'
+import { dictationActivityOf } from '../gamepad/bindings/dictation-activity'
 import { triggerError } from '../platform/haptics'
 import {
   appendBufferedDictation,
@@ -189,6 +191,13 @@ export function useMobileSessionNativeChatDictation(
       cancelDictation()
     }
   }, [cancelDictation, dictation])
+
+  // `R3` reaches the same toggle the mic button does (BIND-R6, BIND-AC6). Nothing about the
+  // microphone is reimplemented here — the hook above still owns all of it.
+  useDictationBinding({
+    activity: dictationActivityOf(dictation.status),
+    toggle: handleDictationToggle
+  })
 
   const refreshDictationMode = useCallback(async () => {
     if (!client) {

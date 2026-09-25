@@ -1,7 +1,8 @@
-import { useCallback, type RefObject } from 'react'
+import { useCallback, useMemo, type RefObject } from 'react'
 import type { FlatList } from 'react-native'
 import { useAgentControllerBinding } from '../gamepad/bindings/use-agent-controller-binding'
 import type { InterventionSurface } from '../gamepad/bindings/agent-intervention'
+import { appendBufferedDictation } from '../terminal/terminal-live-dictation-routing'
 
 /**
  * The agent view's controller edge: the same intervention callbacks, stop and transcript the
@@ -16,12 +17,29 @@ export type NativeChatControllerBindingOptions<T> = InterventionSurface & {
   readonly onStop?: () => void
   readonly listRef: RefObject<FlatList<T> | null>
   readonly detachFromTail: () => void
+  /** The composer, when it can take text. Null while it is locked or absent. */
+  readonly composerText?: string
+  readonly onComposerTextChange?: (text: string) => void
 }
 
 export function useNativeChatControllerBinding<T>(
   options: NativeChatControllerBindingOptions<T>
 ): void {
-  const { listRef, detachFromTail, ...rest } = options
+  const { listRef, detachFromTail, composerText, onComposerTextChange, ...rest } = options
+
+  // Declared, not re-routed: the existing dictation router still decides where a transcript goes
+  // (BIND-R6). This says the composer is a destination, which is what lets `R3` start at all, and
+  // it appends by the same rule the existing route uses.
+  const textTarget = useMemo(
+    () =>
+      onComposerTextChange === undefined
+        ? undefined
+        : {
+            onTranscript: (text: string) =>
+              onComposerTextChange(appendBufferedDictation(composerText ?? '', text))
+          },
+    [composerText, onComposerTextChange]
+  )
 
   const scrollTo = useCallback(
     (offset: number) => {
@@ -34,6 +52,7 @@ export function useNativeChatControllerBinding<T>(
     ...rest,
     canStop: rest.canStop === true,
     scrollTo,
-    onDetachFromTail: detachFromTail
+    onDetachFromTail: detachFromTail,
+    textTarget
   })
 }

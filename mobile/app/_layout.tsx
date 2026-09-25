@@ -18,6 +18,7 @@ import { createControllerRuntime } from '../src/gamepad/controller-input/control
 import { WheelOverlay } from '../src/gamepad/wheel/WheelOverlay'
 import { useWheelController } from '../src/gamepad/wheel/use-wheel-controller'
 import { createWheelRegistry } from '../src/gamepad/wheel/wheel-registry'
+import { createActiveDictationRegistry } from '../src/gamepad/bindings/active-dictation'
 import { ACTIVE_WHEEL_TRIAL } from '../src/gamepad/wheel/experiments/active-wheel-trial'
 import { createSmokeDiagnostics } from '../src/gamepad/wheel/experiments/smoke-diagnostic-bindings'
 import { getNotificationNavigationTarget } from '../src/notifications/notification-routing'
@@ -46,6 +47,9 @@ const wheelRegistry = createWheelRegistry()
 // The smoke bindings belong to the process rather than to any surface, so they register once and
 // are never retracted — there is no mount whose end would mean they should go away.
 createSmokeDiagnostics().register(wheelRegistry)
+// `R3` is step 2 of `001` §7, so the mounted session's dictation registers here rather than
+// being dispatched to: a live microphone stays stoppable from wherever focus has gone.
+const activeDictation = createActiveDictationRegistry()
 
 // Why at boot and not only on subscribe: the gateway's FCM payload targets the
 // 'orca-desktop' channel, and a background push can land before any socket has
@@ -220,6 +224,7 @@ export default function RootLayout() {
         resolve={controllerRuntime.resolve}
         intercept={wheel.intercept}
         registerWheelAction={wheelRegistry.register}
+        activeDictation={activeDictation}
         wheelOverlay={<WheelOverlay controller={wheel} />}
       >
         <View style={styles.root} onLayout={onNavigatorLayout}>
