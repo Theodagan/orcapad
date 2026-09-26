@@ -8,7 +8,7 @@ import {
   type ReactNode
 } from 'react'
 import { StyleSheet, View } from 'react-native'
-import type { ControllerIntent } from './controller-input/controller-intent'
+import type { ControllerIntent, ControllerIntentKind } from './controller-input/controller-intent'
 import {
   createAbsentControllerReader,
   type ControllerReader,
@@ -53,6 +53,8 @@ export type ControllerContextValue = {
   readonly registerWheelAction: (binding: WheelActionBinding) => () => void
   /** The mounted session's dictation, so `R3` reaches it from step 2 wherever focus is. */
   readonly registerActiveDictation: (dictation: ActiveDictation) => () => void
+  /** What the focused surface answers for right now, so hints can be derived rather than authored. */
+  readonly activeAccepts: ReadonlySet<ControllerIntentKind>
 }
 
 const ControllerContext = createContext<ControllerContextValue | null>(null)
@@ -84,7 +86,8 @@ const INERT_CONTROLLER: ControllerContextValue = {
   activateFocusTarget: () => {},
   dispatchIntent: () => false,
   registerWheelAction: noWheelRegistration,
-  registerActiveDictation: noDictationRegistration
+  registerActiveDictation: noDictationRegistration,
+  activeAccepts: new Set<ControllerIntentKind>()
 }
 
 export function useControllerBinding(): ControllerContextValue {
@@ -128,6 +131,11 @@ export function ControllerProvider({
   const registry = useMemo(() => createFocusRegistry(), [])
   const support = useMemo(() => activeReader.support(), [activeReader])
   const [connected, setConnected] = useState(false)
+  // Mirrors the active target's capabilities into render, purely so the hint bar can read them.
+  // The registry stays the source of truth; this is a copy that exists to be drawn.
+  const [activeAccepts, setActiveAccepts] = useState<ReadonlySet<ControllerIntentKind>>(
+    () => new Set()
+  )
 
   const takeDictationToggle = useCallback((): boolean => {
     const dictation = activeDictation?.current()
@@ -149,6 +157,7 @@ export function ControllerProvider({
       if (resolve === undefined) {
         return
       }
+      setActiveAccepts(registry.activeTarget()?.accepts ?? new Set<ControllerIntentKind>())
       for (const intent of resolve(sample)) {
         // The resolution order of `001` §7, in the order it is written there: an open wheel,
         // then a live microphone, then the focused surface.
@@ -171,9 +180,10 @@ export function ControllerProvider({
       activateFocusTarget: registry.activate,
       dispatchIntent: registry.dispatch,
       registerWheelAction: registerWheelAction ?? noWheelRegistration,
-      registerActiveDictation: activeDictation?.register ?? noDictationRegistration
+      registerActiveDictation: activeDictation?.register ?? noDictationRegistration,
+      activeAccepts: activeAccepts ?? new Set<ControllerIntentKind>()
     }),
-    [support, connected, registry, registerWheelAction, activeDictation]
+    [support, connected, registry, registerWheelAction, activeDictation, activeAccepts]
   )
 
   return (

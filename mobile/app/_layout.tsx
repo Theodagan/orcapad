@@ -14,6 +14,7 @@ import { OrcaLogo } from '../src/components/OrcaLogo'
 import { RpcClientProvider } from '../src/transport/client-context'
 import { ControllerProvider } from '../src/gamepad/controller-provider'
 import { ControllerConnectionNotice } from '../src/gamepad/controller-connection/ControllerConnectionNotice'
+import { ActionHintBar } from '../src/gamepad/ActionHintBar'
 import { createControllerRuntime } from '../src/gamepad/controller-input/controller-runtime'
 import { WheelOverlay } from '../src/gamepad/wheel/WheelOverlay'
 import { useWheelController } from '../src/gamepad/wheel/use-wheel-controller'
@@ -269,6 +270,7 @@ export default function RootLayout() {
             <Stack.Screen name="h" options={{ headerShown: false }} />
           </Stack>
         </View>
+        <ActionHintBar />
         <ControllerConnectionNotice />
       </ControllerProvider>
     </RpcClientProvider>

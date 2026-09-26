@@ -38,7 +38,7 @@
 
   **Verify:** `pnpm --dir mobile test src/gamepad/wheel/experiments`
 
-- [ ] **LOOP-T5 - Action hints**
+- [x] **LOOP-T5 - Action hints**
 
   Derive the current surface's available actions from the focus registry and the
   PRD binding table, and render them. No hand-written hint table.
