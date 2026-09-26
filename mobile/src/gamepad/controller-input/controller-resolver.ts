@@ -1,7 +1,7 @@
 import { CHORD_BUTTON, PRD_CONTROLLER_BINDINGS } from './controller-bindings'
 import type { ControllerIntent } from './controller-intent'
 import type { ControllerAxis, ControllerButton, ControllerSample } from './controller-sample'
-import { EXPERIMENTAL_DPAD_BINDINGS } from './experimental-dpad-bindings'
+import { DPAD_NAVIGATION_BINDINGS } from './dpad-navigation-bindings'
 
 /**
  * Samples in, intents out. Pure and edge-aware: a button produces one intent when it goes down,
@@ -20,8 +20,12 @@ export type ControllerPolicy = {
   readonly triggerDeadZone: number
   /** False when the pad reports L2/R2 only as buttons, which fixes scroll velocity at full. */
   readonly triggersAnalog: boolean
-  /** CTRL-R2 is an experiment and ships disabled. */
-  readonly experimentalDpad: boolean
+  /**
+   * List movement, contract as of `004` LOOP-R2. Off, a controller-only user cannot open any
+   * host but the first — see `dpad-navigation-bindings.ts` for why that stopped being an
+   * experiment. Still a flag, because a pad with no D-pad exists and this is how it says so.
+   */
+  readonly dpadNavigation: boolean
 }
 
 /** Floors, used when a pad declares no flat zone at all rather than a considered default. */
@@ -29,7 +33,7 @@ export const DEFAULT_CONTROLLER_POLICY: ControllerPolicy = {
   stickDeadZone: 0.15,
   triggerDeadZone: 0.1,
   triggersAnalog: true,
-  experimentalDpad: false
+  dpadNavigation: true
 }
 
 function pressure(sample: ControllerSample, button: ControllerButton): number {
@@ -106,8 +110,8 @@ export function resolveControllerIntents(
     }
   }
 
-  if (policy.experimentalDpad) {
-    for (const binding of EXPERIMENTAL_DPAD_BINDINGS) {
+  if (policy.dpadNavigation) {
+    for (const binding of DPAD_NAVIGATION_BINDINGS) {
       if (!wentDown(previous, next, binding.button)) {
         continue
       }

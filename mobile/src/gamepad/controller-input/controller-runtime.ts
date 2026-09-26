@@ -35,7 +35,7 @@ export function policyForControllers(
     stickDeadZone: stick > 0 ? stick : DEFAULT_CONTROLLER_POLICY.stickDeadZone,
     triggerDeadZone: trigger > 0 ? trigger : DEFAULT_CONTROLLER_POLICY.triggerDeadZone,
     triggersAnalog: controllers.length === 0 || triggersAreAnalog(controllers),
-    experimentalDpad: DEFAULT_CONTROLLER_POLICY.experimentalDpad
+    dpadNavigation: DEFAULT_CONTROLLER_POLICY.dpadNavigation
   }
 }
 

@@ -82,7 +82,7 @@ const GEOMETRY_MATH = new Set(['atan2', 'cos', 'sin', 'PI'])
 const GEOMETRY_WORD = /angle|radian|degree/i
 
 const PRD_SET = 'PRD_CONTROLLER_BINDINGS'
-const PROVISIONAL_SET = 'EXPERIMENTAL_DPAD_BINDINGS'
+const PROVISIONAL_SET = 'DPAD_NAVIGATION_BINDINGS'
 
 /** An object literal shaped like a wheel preset (`002/tech.md` §1, §5). */
 const PRESET_MARKERS = ['presetId', 'segments']
@@ -317,8 +317,12 @@ export function wheelGeometryViolations(path: string, source: string): string[] 
 }
 
 /**
- * CTRL-R1 is the PRD contract and CTRL-R2 is an experiment. A test that reaches both proves
- * neither, and a module that declares both makes the split a naming convention.
+ * Two binding sets with different provenance: the PRD's own table, and the D-pad set that `004`
+ * promoted by a recorded decision. A test that reaches both proves neither, and a module that
+ * declares both makes the split a naming convention.
+ *
+ * The rule outlived the experiment it was written for. What it protects now is that a mapping
+ * test says which table it is testing, which matters more once both are contract, not less.
  */
 export function mappingSetViolations(path: string, source: string): string[] {
   const referenced = new Set<string>()
@@ -365,7 +369,7 @@ export function mappingModuleViolations(path: string, source: string): string[] 
   const specifiers = moduleSpecifiers(path, source)
   const touchesContract = specifiers.some((specifier) => specifier.includes('controller-bindings'))
   const touchesExperiment = specifiers.some((specifier) =>
-    specifier.includes('experimental-dpad-bindings')
+    specifier.includes('dpad-navigation-bindings')
   )
   return touchesContract && touchesExperiment
     ? [`imports both binding modules — ${MAPPING_SET_RULE}`]
@@ -562,14 +566,14 @@ describe('Controller boundary', () => {
     expect(
       mappingModuleViolations(
         contractTest,
-        "import { PRD_CONTROLLER_BINDINGS } from './controller-bindings'\nimport { EXPERIMENTAL_DPAD_BINDINGS } from './experimental-dpad-bindings'"
+        "import { PRD_CONTROLLER_BINDINGS } from './controller-bindings'\nimport { DPAD_NAVIGATION_BINDINGS } from './dpad-navigation-bindings'"
       )
     ).toEqual([`imports both binding modules — ${MAPPING_SET_RULE}`])
     // The resolver is not a test and may compose both behind the experiment flag.
     expect(
       mappingModuleViolations(
         join(controllerInputRoot, 'controller-resolver.ts'),
-        "import { PRD_CONTROLLER_BINDINGS } from './controller-bindings'\nimport { EXPERIMENTAL_DPAD_BINDINGS } from './experimental-dpad-bindings'"
+        "import { PRD_CONTROLLER_BINDINGS } from './controller-bindings'\nimport { DPAD_NAVIGATION_BINDINGS } from './dpad-navigation-bindings'"
       )
     ).toEqual([])
   })

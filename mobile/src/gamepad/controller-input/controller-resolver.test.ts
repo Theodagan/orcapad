@@ -143,27 +143,31 @@ describe('sticks (CTRL-AC5)', () => {
   })
 })
 
-describe('the D-pad experiment (CTRL-AC7)', () => {
-  it('stays silent while the experiment is off, which is the default', () => {
-    expect(DEFAULT_CONTROLLER_POLICY.experimentalDpad).toBe(false)
-    expect(resolve(idle, sample({ 'dpad-up': 1 }))).toEqual([])
-  })
+describe('D-pad navigation (CTRL-AC7, promoted by 004 LOOP-R2)', () => {
+  // Was an experiment, defaulting off. `004`'s reachability audit showed that with it off a
+  // controller-only user cannot open any host but the first — the product not working, rather
+  // than an experiment not proving out. Promoted by a recorded decision.
+  it('moves selection by default now', () => {
+    expect(DEFAULT_CONTROLLER_POLICY.dpadNavigation).toBe(true)
 
-  it('moves selection and focus when enabled', () => {
-    const on = { experimentalDpad: true }
-
-    expect(resolve(idle, sample({ 'dpad-up': 1 }), on)).toEqual([
+    expect(resolve(idle, sample({ 'dpad-up': 1 }))).toEqual([
       { kind: 'move-selection', direction: 'up' }
     ])
-    expect(resolve(idle, sample({ 'dpad-right': 1 }), on)).toEqual([
+    expect(resolve(idle, sample({ 'dpad-right': 1 }))).toEqual([
       { kind: 'move-horizontal', direction: 'right' }
     ])
   })
 
+  // Still a flag: a pad without a D-pad exists, and this is how the policy says so.
+  it('stays silent for a pad that has no D-pad', () => {
+    expect(resolve(idle, sample({ 'dpad-up': 1 }), { dpadNavigation: false })).toEqual([])
+  })
+
   it('does not disturb the accepted mapping either way', () => {
-    expect(resolve(idle, sample({ a: 1 }), { experimentalDpad: true })).toEqual([
+    expect(resolve(idle, sample({ a: 1 }), { dpadNavigation: false })).toEqual([
       { kind: 'confirm' }
     ])
+    expect(resolve(idle, sample({ a: 1 }))).toEqual([{ kind: 'confirm' }])
   })
 })
 

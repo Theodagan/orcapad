@@ -10,7 +10,7 @@
 
   **Verify:** `pnpm --dir mobile test src/gamepad/loop`
 
-- [ ] **LOOP-T2 - Selection movement as contract**
+- [x] **LOOP-T2 - Selection movement as contract**
 
   Split `dpadNavigation` from `experimentalDpad` and default it on. Record the
   PRD position change as a decision, gated the way WHEEL-T9 gates a promotion.
