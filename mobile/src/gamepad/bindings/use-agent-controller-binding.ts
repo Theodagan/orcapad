@@ -1,6 +1,8 @@
 import { useMemo, useRef } from 'react'
 import { nextScrollOffset } from './controller-scroll-offset'
 import { resolveAgentIntervention, type InterventionSurface } from './agent-intervention'
+import type { WheelActionBinding } from '../wheel/wheel-registry'
+import { agentReplyActions } from '../wheel/experiments/agent-reply-actions'
 import { focusTargetFor, type IntentHandlerEntry } from './surface-binding'
 import type { DictationTextTarget } from '../focus/focus-target'
 import { useSurfaceBinding } from './use-surface-binding'
@@ -30,12 +32,20 @@ export type AgentControllerBindingOptions = InterventionSurface & {
    * recording with nowhere to put the words leaves a mic running for nothing (`003` §6).
    */
   readonly textTarget?: DictationTextTarget
+  /**
+   * The chat's own send. With it, `004` LOOP-R3's second path exists: a few replies committable
+   * from the wheel when dictation is not available, which is otherwise a controller-only user
+   * with nothing to say.
+   */
+  readonly onSendText?: (text: string) => void
+  readonly canSend?: boolean
   /** The transcript's tail-follow release; scrolling up must not snap back to the newest message. */
   readonly onDetachFromTail: () => void
 }
 
 export function useAgentControllerBinding(options: AgentControllerBindingOptions): void {
   const { sessionId, canStop, onStop, scrollTo, onDetachFromTail, textTarget } = options
+  const { onSendText, canSend } = options
   const offsetRef = useRef(0)
 
   const { ask, permission, question, onRespondPermission, onCancelAsk, onCancelPrompt } = options
@@ -80,13 +90,25 @@ export function useAgentControllerBinding(options: AgentControllerBindingOptions
       entries.push(['back', intervention.reject])
     }
 
-    // No wheel actions: everything the agent view can do is either an answer to a prompt that is
-    // already on screen, or a stop — which WHEEL-R7 keeps off a trial wheel entirely.
+    // The only wheel actions here are replies. A stop stays off the wheel entirely (WHEEL-R7).
+    const wheelActions: readonly WheelActionBinding[] =
+      onSendText === undefined ? [] : agentReplyActions(onSendText, canSend === true)
+
     return {
       focusTarget: focusTargetFor(`agent:${sessionId}`, entries, textTarget),
-      wheelActions: []
+      wheelActions
     }
-  }, [sessionId, canStop, onStop, intervention, scrollTo, onDetachFromTail, textTarget])
+  }, [
+    sessionId,
+    canStop,
+    onStop,
+    intervention,
+    scrollTo,
+    onDetachFromTail,
+    textTarget,
+    onSendText,
+    canSend
+  ])
 
   useSurfaceBinding(binding)
 }

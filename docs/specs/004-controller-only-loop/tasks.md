@@ -29,7 +29,7 @@
 
   **Verify:** `pnpm --dir mobile test src/gamepad/bindings/agent-prompt-selection.test.ts src/session/MobileNativeChatQuestion.test.tsx`
 
-- [ ] **LOOP-T4 - Text without a keyboard**
+- [x] **LOOP-T4 - Text without a keyboard**
 
   Register canned replies as non-contractual wheel actions on the agent view,
   sending through the existing send callback.
@@ -47,7 +47,7 @@
 
   **Verify:** `pnpm --dir mobile test src/gamepad/controller-input/action-hints.test.ts`
 
-- [ ] **LOOP-T6 - Close the audit**
+- [x] **LOOP-T6 - Close the audit**
 
   Every step in `LOOP-T1` reachable, with the audit a gate rather than a report.
 

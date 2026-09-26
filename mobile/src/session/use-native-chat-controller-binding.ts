@@ -20,12 +20,22 @@ export type NativeChatControllerBindingOptions<T> = InterventionSurface & {
   /** The composer, when it can take text. Null while it is locked or absent. */
   readonly composerText?: string
   readonly onComposerTextChange?: (text: string) => void
+  /** The chat's existing send; a canned reply goes out the same way a typed one does. */
+  readonly onSend?: (text: string) => Promise<boolean>
+  readonly canSend?: boolean
 }
 
 export function useNativeChatControllerBinding<T>(
   options: NativeChatControllerBindingOptions<T>
 ): void {
-  const { listRef, detachFromTail, composerText, onComposerTextChange, ...rest } = options
+  const { listRef, detachFromTail, composerText, onComposerTextChange, onSend, ...rest } = options
+
+  const sendText = useCallback(
+    (text: string) => {
+      void onSend?.(text)
+    },
+    [onSend]
+  )
 
   // Declared, not re-routed: the existing dictation router still decides where a transcript goes
   // (BIND-R6). This says the composer is a destination, which is what lets `R3` start at all, and
@@ -53,6 +63,7 @@ export function useNativeChatControllerBinding<T>(
     canStop: rest.canStop === true,
     scrollTo,
     onDetachFromTail: detachFromTail,
-    textTarget
+    textTarget,
+    onSendText: onSend === undefined ? undefined : sendText
   })
 }

@@ -225,7 +225,13 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
     recordScrollMetrics
   } = useMobileNativeChatTailFollow<NativeChatMessage>({ hasItems: data.length > 0 })
 
-  useNativeChatControllerBinding({ ...props, sessionId: sendSurfaceId, listRef, detachFromTail })
+  useNativeChatControllerBinding({
+    ...props,
+    sessionId: sendSurfaceId,
+    canSend: inputLockReason == null,
+    listRef,
+    detachFromTail
+  })
 
   const handleSend = useCallback(
     async (text: string): Promise<boolean> => {

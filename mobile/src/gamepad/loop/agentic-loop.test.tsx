@@ -139,7 +139,10 @@ function agentCapability(): SurfaceCapability {
       onDetachFromTail: vi.fn(),
       // A prompt is on screen: this is the state the loop's answer step happens in.
       question: { prompt: { itemId: 'q1', expectedRevision: 1 } },
-      onCancelPrompt: vi.fn()
+      onCancelPrompt: vi.fn(),
+      // Dictation is the primary path; this is the one that works without it.
+      onSendText: vi.fn(),
+      canSend: true
     })
     return null
   })
@@ -195,14 +198,6 @@ function loopCapabilities(): ReadonlyMap<LoopStepId, SurfaceCapability> {
   ])
 }
 
-/**
- * The steps nothing can carry yet. This shrinks as `004` lands and LOOP-T6 deletes it; until
- * then it is a ratchet, so a step cannot quietly join the list.
- *
- * `prompt` and `answer` are the two breaks `product.md` opens with.
- */
-const KNOWN_UNREACHABLE: readonly string[] = ['prompt (get a prompt to the agent) on agent']
-
 describe('the agentic loop', () => {
   it('describes a cycle, not a list of surfaces', () => {
     expect(AGENTIC_LOOP.map((step) => step.id)).toEqual([
@@ -215,14 +210,16 @@ describe('the agentic loop', () => {
     ])
   })
 
-  it('names exactly the steps that are still unreachable', () => {
-    expect([...unreachableSteps(loopCapabilities())].sort()).toEqual([...KNOWN_UNREACHABLE].sort())
+  // LOOP-T6. This began as a baseline of two known breaks and is now a gate: the loop closes,
+  // and a step that stops being reachable fails here rather than on a device.
+  it('closes — every step is reachable with a controller alone', () => {
+    expect(unreachableSteps(loopCapabilities())).toEqual([])
   })
 
   it('carries the steps that do work', () => {
     const unreachable = new Set(unreachableSteps(loopCapabilities()))
 
-    for (const id of ['observe', 'interrupt', 'answer', 'approve', 'read']) {
+    for (const id of ['observe', 'prompt', 'interrupt', 'answer', 'approve', 'read']) {
       expect(
         [...unreachable].some((entry) => entry.startsWith(id)),
         id
@@ -243,6 +240,6 @@ describe('the agentic loop', () => {
     const capabilities = new Map(loopCapabilities())
     capabilities.set('prompt', onlyDictation)
 
-    expect(unreachableSteps(capabilities)).not.toContain(KNOWN_UNREACHABLE[0])
+    expect(unreachableSteps(capabilities)).toEqual([])
   })
 })
