@@ -139,6 +139,9 @@ docs/**
 # Device evidence records the specs treat as normative (001 CTRL-T1/CTRL-T8).
 !docs/evidence/
 !docs/evidence/**
+# Product-decision records the wheel promotion gate reads (002 WHEEL-T9).
+!docs/decisions/
+!docs/decisions/**
 # The fork's product definition and architecture decision, cited by every spec above.
 !docs/PRD.md
 !docs/architecture.md

@@ -229,7 +229,7 @@
 
   **Verify:** `pnpm --dir mobile test src/gamepad/bindings`
 
-- [ ] **BIND-T10 - Device validation**
+- [~] **BIND-T10 - Device validation — SCHEMA DONE, RUN OUTSTANDING**
 
   On a controller-capable Android device, record pairing navigation,
   workspace/session cycling, agent `A/B/X`, dictation target selection,
@@ -237,5 +237,16 @@
   Add a schema test covering both platforms and every required surface.
 
   **Needs:** BIND-T9, WHEEL-T7
+
+  The schema, validator and gate are implemented and tested; the run itself needs
+  a device and a person. `iOS` is deliberately not a validated platform — `001`
+  defers it — so "both platforms" reads as the one this fork targets.
+
+  A record must cover all eight bound surfaces, each with what the controller did
+  **and** what touch still does: BIND-AC10 is half the claim, and a record
+  proving only the controller proves half of it. A failure is evidence too, as
+  long as it is described. `terminalWebViewConsumedInput` is required, because it
+  is the CTRL-T4 checkpoint BIND-T6 made safe either way but which nobody has yet
+  answered.
 
   **Verify:** `pnpm --dir mobile test src/gamepad/bindings/controller-binding-evidence.test.ts`

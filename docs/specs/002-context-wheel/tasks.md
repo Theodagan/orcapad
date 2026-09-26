@@ -87,7 +87,7 @@
 
   **Verify:** `pnpm --dir mobile test src/gamepad/wheel/experiments`
 
-- [ ] **WHEEL-T8 - Device trials**
+- [~] **WHEEL-T8 - Device trials — SCHEMA DONE, RUN OUTSTANDING**
 
   Run smoke and existing-action presets on a controller-capable Android device
   with Bluetooth controller. Record the complete `WheelTrialRecord` fields under
@@ -96,9 +96,20 @@
 
   **Needs:** WHEEL-T6, WHEEL-T7
 
+  The schema, validator and gate are implemented and tested; only the run is
+  outstanding, because it needs a controller-capable device and a person to drive
+  the presets. This is the position CTRL-T8 already takes.
+
+  The validator refuses more than missing fields: a trial with no samples
+  measured nothing, a failure cannot outnumber the openings, and a trial that saw
+  a wrong commit or a failed cancel cannot be called a `candidate` — which is the
+  one judgement a record could otherwise smuggle past WHEEL-R7. Records go in
+  `docs/evidence/context-wheel/`; the coverage check for a smoke and a
+  real-action preset turns on with the first one.
+
   **Verify:** `pnpm --dir mobile test src/gamepad/wheel/wheel-trial-records.test.ts`
 
-- [ ] **WHEEL-T9 - Human assignment gate**
+- [x] **WHEEL-T9 - Human assignment gate**
 
   Present trial records and preset diffs for a product decision. A later change
   may promote a preset only after explicit approval; this MVP specification does
@@ -106,5 +117,15 @@
   record for any product-default preset.
 
   **Needs:** WHEEL-T8
+
+  The gate is live now and passes because nothing is contractual — which is the
+  state `002` says this specification ends in. It reads the experiment tree's
+  source for any preset that stopped carrying `contractual: false`, and fails
+  unless `docs/decisions/context-wheel/` holds a record naming that preset, the
+  trial behind it, and the person who accepted it. An incomplete decision does
+  not launder a preset through.
+
+  This is the lock, not the promotion. `candidate` is the best a trial can say on
+  its own; a machine reading good numbers is not a person deciding to ship them.
 
   **Verify:** `pnpm --dir mobile test src/gamepad/wheel/wheel-product-default-gate.test.ts`
