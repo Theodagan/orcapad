@@ -333,6 +333,9 @@ export const TerminalWebView = forwardRef<TerminalWebViewHandle, Props>(function
       cancelSelect() {
         postMessage({ type: 'cancel-select' })
       },
+      scrollLines(lines: number) {
+        postMessage({ type: 'scroll-lines', lines })
+      },
       doSelectAll() {
         postMessage({ type: 'do-select-all' })
       },

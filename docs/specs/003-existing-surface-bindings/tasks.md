@@ -127,7 +127,7 @@
 
   **Verify:** `pnpm --dir mobile test src/hooks/use-mobile-dictation-source.test.ts src/hooks/mobile-dictation-desktop-start.test.ts src/terminal/terminal-live-dictation-routing.test.ts`
 
-- [ ] **BIND-T6 - Terminal binding**
+- [x] **BIND-T6 - Terminal binding**
 
   Bind analog scroll, existing control keys, quick commands, text/dictation
   target, and path opening to `TerminalPaneView` and existing terminal modules.
@@ -135,6 +135,27 @@
   terminal protocol.
 
   **Needs:** CTRL-T5, BIND-T3, BIND-T5
+
+  The scrollback had no RN-callable entry — it is driven by touch and wheel
+  inside the WebView — so a `scroll-lines` **view** command was added beside
+  `resize` and `clear`. It adds no opcode, capability, snapshot or viewport
+  claim, and it reuses `clampNormalScrollLines`, the same clamp the touch path
+  uses, so a held trigger stops at both ends of the scrollback.
+
+  The CTRL-T1/T4 interception question is resolved by making either answer safe
+  rather than by guessing: if the focused WebView already consumed the event the
+  binding defers, because acting too would scroll twice; if it did not, the
+  binding is the only thing that will act. BIND-T10 records which world the
+  device is in.
+
+  Control keys and quick commands are wheel actions, since a controller has no
+  way to pick from a list without the experimental D-pad. Quick commands are
+  registered **disabled** — arbitrary shell is exactly what WHEEL-R7 keeps out of
+  a trial — so they render and cancel rather than disappearing (`002` §6).
+
+  The WebView payload hash was re-pinned. Every inline script in the emitted
+  document was parsed after the edit, so "the document still runs" is checked
+  rather than asserted.
 
   **Verify:** `pnpm --dir mobile test src/terminal/terminal-webview-scroll-routing.test.ts src/terminal/terminal-accessory-keys.test.ts src/terminal/quick-commands.test.ts src/session/mobile-terminal-stream-subscribe.test.ts`
 

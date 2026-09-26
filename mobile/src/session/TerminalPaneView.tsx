@@ -1,5 +1,10 @@
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
+import type { ControllerInterception } from '../gamepad/controller-input/native-controller-reader'
+import {
+  useTerminalControllerBinding,
+  type TerminalWheelAction
+} from '../gamepad/bindings/use-terminal-controller-binding'
 import { TerminalWebView } from '../terminal/TerminalWebView'
 import type {
   MobileTerminalTheme,
@@ -28,7 +33,14 @@ type TerminalPaneViewProps = {
   onFileTap: (handle: string, pathText: string, line: number | null, column: number | null) => void
   onOpenUrl: (handle: string, url: string) => void
   onTextScaleChange: (scale: number) => void
+  /** Control keys and quick commands a wheel preset may name (BIND-R10). */
+  controllerActions?: readonly TerminalWheelAction[]
+  /** CTRL-T4's WebView checkpoint, so controller scroll never doubles the WebView's own. */
+  interception?: ControllerInterception | null
 }
+
+/** One controller sample is a fraction of a screen, not a page. */
+const LINES_PER_SCROLL_SAMPLE = 3
 
 export function TerminalPaneView({
   handle,
@@ -49,14 +61,39 @@ export function TerminalPaneView({
   onTerminalTap,
   onFileTap,
   onOpenUrl,
-  onTextScaleChange
+  onTextScaleChange,
+  controllerActions,
+  interception
 }: TerminalPaneViewProps) {
+  // The pane keeps its own copy of the handle purely so the controller can reach the scrollback;
+  // `onRef` still hands the same ref upward exactly as before.
+  const webViewRef = useRef<TerminalWebViewHandle | null>(null)
   const setRef = useCallback(
     (ref: TerminalWebViewHandle | null) => {
+      webViewRef.current = ref
       onRef(handle, ref)
     },
     [handle, onRef]
   )
+
+  const scrollLines = useCallback((lines: number) => {
+    webViewRef.current?.scrollLines(lines)
+  }, [])
+
+  const sendBytes = useCallback(
+    (bytes: string) => onTerminalInput(handle, bytes),
+    [handle, onTerminalInput]
+  )
+
+  useTerminalControllerBinding({
+    handle,
+    linesPerScroll: LINES_PER_SCROLL_SAMPLE,
+    scrollLines,
+    onSend: sendBytes,
+    onBack: () => onTerminalTap(handle),
+    actions: controllerActions ?? [],
+    interception: interception ?? null
+  })
 
   return (
     <View

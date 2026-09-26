@@ -26,3 +26,9 @@ export type TerminalWebViewCommand =
   | { type: 'cancel-select'; id?: number }
   | { type: 'do-select-all'; id?: number }
   | { type: 'set-theme'; id?: number; terminalTheme?: RuntimeMobileTerminalTheme }
+  /**
+   * Scroll the local scrollback by whole lines. A view command beside `resize` and `clear`, not
+   * a stream one: it adds no opcode, no capability and no viewport claim (`003` §7). It exists
+   * because a controller has no wheel or finger to drive the WebView's own scrolling with.
+   */
+  | { type: 'scroll-lines'; id?: number; lines: number }

@@ -6,8 +6,11 @@ import { XTERM_HTML } from './terminal-webview-html'
 // uncovered region ships silently. A diff here means the emitted WebView source changed —
 // update these values only when that change is deliberate, and only after checking the
 // document still runs. Refactors that merely move slice boundaries must leave them alone.
-const EXPECTED_SHA256 = '25b800f342c972f0b8eaba54367bd8b02b7518e9ea6a25e04ab89b3a2ad7d21b'
-const EXPECTED_LENGTH = 730472
+// Re-pinned in BIND-T6: the `scroll-lines` branch in host-message-router.ts, which is the only
+// way a controller can move the local scrollback. Every inline script in the emitted document
+// was parsed after the edit, so "still runs" is checked rather than assumed.
+const EXPECTED_SHA256 = '705116d10f30ab3ecaa81d71f045c937f894f74398d51d0a045b8f702dedf4fe'
+const EXPECTED_LENGTH = 730870
 
 describe('terminal WebView payload', () => {
   it('composes the expected document', () => {

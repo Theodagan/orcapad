@@ -94,6 +94,8 @@ export type TerminalWebViewHandle = {
   measureFitDimensions: (containerHeight?: number) => Promise<{ cols: number; rows: number } | null>
   resetZoom: () => void
   cancelSelect: () => void
+  /** Whole-line scrollback movement for controller scroll; clamped inside the WebView. */
+  scrollLines: (lines: number) => void
   doSelectAll: () => void
   // Why: lets callers await the WebView-side `init` rAF chain (term.open
   // → renderService population → first paint) so a follow-up measure

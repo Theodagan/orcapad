@@ -159,6 +159,13 @@ export const TERMINAL_HTML_HOST_MESSAGE_ROUTER = `  ${TERMINAL_REFLOW_JS}
       }
     } else if (msg.type === 'measure') {
       measureFitDimensions(msg.containerHeight);
+    } else if (msg.type === 'scroll-lines') {
+      // Controller scroll (BIND-R3). Reuses the clamp the touch path uses, so it stops at both
+      // ends of the scrollback and cannot walk off the alternate screen.
+      if (term) {
+        var wantedLines = clampNormalScrollLines(msg.lines);
+        if (wantedLines !== 0) { term.scrollLines(wantedLines); updateScrollIndicator(true); }
+      }
     } else if (msg.type === 'reset-zoom') {
       applyFitScale('reset-zoom-msg');
     } else if (msg.type === 'set-theme') {
