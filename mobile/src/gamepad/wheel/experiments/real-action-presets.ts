@@ -1,6 +1,7 @@
 import { loadPreset, type WheelPresetDefinition } from '../wheel-preset'
 import { EXPLORER_WHEEL_ACTION_IDS } from '../../bindings/file-explorer-row-action'
 import { HOME_WHEEL_ACTION_IDS } from '../../bindings/home-wheel-actions'
+import { AGENT_REPLY_IDS } from './agent-reply-actions'
 
 /**
  * Presets bound to actions Orca Mobile already performs, rather than to the diagnostics next
@@ -23,6 +24,7 @@ import { HOME_WHEEL_ACTION_IDS } from '../../bindings/home-wheel-actions'
 const FULL_TURN = 6.283185307179586
 const BOUNDARY_OVERLAP = 0.001
 const TRIAD_HALF_WIDTH = FULL_TURN / 6 + BOUNDARY_OVERLAP
+const QUAD_HALF_WIDTH = FULL_TURN / 8 + BOUNDARY_OVERLAP
 
 const REAL_ACTION_TRIAL = {
   targetDevice: 'any controller-capable Android device',
@@ -64,6 +66,49 @@ export const REAL_ACTION_PRESETS: Readonly<Record<string, WheelPresetDefinition>
         centerAngle: (FULL_TURN * 2) / 3,
         halfWidth: TRIAD_HALF_WIDTH,
         bindingId: EXPLORER_WHEEL_ACTION_IDS.collapseAll
+      }
+    ]
+  }),
+
+  /**
+   * `004` LOOP-R3's second path to text, and why the loop closes without a keyboard. Four
+   * segments, the easy case the smoke trials already showed works — this is the preset a
+   * controller-only session depends on, so it should be usable on the first try.
+   */
+  'agent-replies': loadPreset({
+    presetId: 'agent-replies',
+    label: 'Replies',
+    wheel: 2,
+    contractual: false,
+    trial: { trialId: 'agent-replies', ...REAL_ACTION_TRIAL },
+    segments: [
+      {
+        id: 'continue',
+        label: 'Continue',
+        centerAngle: 0,
+        halfWidth: QUAD_HALF_WIDTH,
+        bindingId: AGENT_REPLY_IDS.continue
+      },
+      {
+        id: 'yes',
+        label: 'Yes',
+        centerAngle: FULL_TURN / 4,
+        halfWidth: QUAD_HALF_WIDTH,
+        bindingId: AGENT_REPLY_IDS.yes
+      },
+      {
+        id: 'explain',
+        label: 'Explain',
+        centerAngle: FULL_TURN / 2,
+        halfWidth: QUAD_HALF_WIDTH,
+        bindingId: AGENT_REPLY_IDS.explain
+      },
+      {
+        id: 'no',
+        label: 'No',
+        centerAngle: (FULL_TURN * 3) / 4,
+        halfWidth: QUAD_HALF_WIDTH,
+        bindingId: AGENT_REPLY_IDS.no
       }
     ]
   }),

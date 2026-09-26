@@ -17,5 +17,8 @@ import { SMOKE_PRESETS } from './smoke-presets'
  */
 export const ACTIVE_WHEEL_TRIAL: Readonly<Partial<Record<WheelId, WheelPresetDefinition>>> = {
   1: SMOKE_PRESETS['smoke-hex'],
-  2: REAL_ACTION_PRESETS['explorer-actions']
+  // The replies, because `004` makes them the path a controller-only session depends on when
+  // dictation is not there. Off the chat they resolve unavailable, which is the mostly-disabled
+  // wheel question worth watching in the same session.
+  2: REAL_ACTION_PRESETS['agent-replies']
 }

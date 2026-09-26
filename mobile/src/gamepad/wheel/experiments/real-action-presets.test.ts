@@ -4,6 +4,7 @@ import {
   explorerWheelActions
 } from '../../bindings/file-explorer-row-action'
 import { HOME_WHEEL_ACTION_IDS, homeWheelActions } from '../../bindings/home-wheel-actions'
+import { AGENT_REPLY_IDS, agentReplyActions } from './agent-reply-actions'
 import { dispatchWheelOutcome } from '../wheel-dispatcher'
 import { selectSegment } from '../wheel-geometry'
 import { resolveSegments, validatePreset, type WheelPresetDefinition } from '../wheel-preset'
@@ -17,7 +18,8 @@ const presets = Object.entries(REAL_ACTION_PRESETS)
 /** Every id any surface in `003` registers. A preset may name these and nothing else. */
 const REGISTERED_IDS = new Set<string>([
   ...Object.values(EXPLORER_WHEEL_ACTION_IDS),
-  ...Object.values(HOME_WHEEL_ACTION_IDS)
+  ...Object.values(HOME_WHEEL_ACTION_IDS),
+  ...Object.values(AGENT_REPLY_IDS)
 ])
 
 function vectorAt(angle: number): { readonly x: number; readonly y: number } {
@@ -188,5 +190,38 @@ describe('a real-action commit', () => {
 
     expect(outcome).toEqual({ kind: 'cancel' })
     expect(explorer.previewSelected).not.toHaveBeenCalled()
+  })
+})
+
+describe('the replies preset', () => {
+  // `004` LOOP-R3: this is the preset a controller-only session leans on when dictation is not
+  // available, so it has to reach the chat's own send and nothing else.
+  it('commits a reply through the agent view\u2019s send', () => {
+    const registry = createWheelRegistry()
+    const send = vi.fn()
+    for (const action of agentReplyActions(send, true)) {
+      registry.register(action)
+    }
+
+    const { outcome, segments } = commitSegment(
+      REAL_ACTION_PRESETS['agent-replies'],
+      registry,
+      'continue'
+    )
+
+    expect(outcome.kind).toBe('commit')
+    dispatchWheelOutcome(outcome, segments, (id) => void registry.lookup(id)?.run())
+    expect(send).toHaveBeenCalledWith('Continue.')
+  })
+
+  it('cancels while the composer cannot send', () => {
+    const registry = createWheelRegistry()
+    for (const action of agentReplyActions(vi.fn(), false)) {
+      registry.register(action)
+    }
+
+    const { outcome } = commitSegment(REAL_ACTION_PRESETS['agent-replies'], registry, 'continue')
+
+    expect(outcome).toEqual({ kind: 'cancel' })
   })
 })
