@@ -208,13 +208,24 @@
 
   **Verify:** `pnpm --dir mobile test src/home/mobile-home-connection-state.test.ts src/notifications/push-registration.test.ts src/notifications/push-dismissal-reconciliation.test.ts src/notifications/notification-routing.test.ts`
 
-- [ ] **BIND-T9 - Controller/touch equivalence suite**
+- [x] **BIND-T9 - Controller/touch equivalence suite**
 
   For each binding, drive controller and touch entry points through the same
   authoritative action spy and assert one effect. Cover unmount cleanup and
   unavailable targets.
 
   **Needs:** BIND-T1, BIND-T2, BIND-T3, BIND-T4, BIND-T5, BIND-T6, BIND-T7, BIND-T8
+
+  Seven surfaces, one spy each, reached twice — once the way a thumb reaches it
+  and once the way a controller does — asserting the same function with the same
+  arguments. The shape is the point: every binding was written to invoke the
+  surface's existing callback rather than re-derive it, and the only way that
+  claim rots is a future edit routing one somewhere else. Two tests asserting
+  "it works" would not catch that; one spy reached twice does.
+
+  Plus `003` §10's other two: unmount drops both focus and wheel registrations,
+  and an unavailable target (empty list, disabled action, unstoppable turn) does
+  nothing rather than something.
 
   **Verify:** `pnpm --dir mobile test src/gamepad/bindings`
 
