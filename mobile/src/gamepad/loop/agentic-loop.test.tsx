@@ -9,6 +9,7 @@ import { createWheelRegistry } from '../wheel/wheel-registry'
 import { useAgentControllerBinding } from '../bindings/use-agent-controller-binding'
 import { useFileExplorerControllerBinding } from '../bindings/use-file-explorer-controller-binding'
 import { useWorkspaceControllerBinding } from '../bindings/use-workspace-controller-binding'
+import { usePromptOptionBinding } from '../bindings/use-prompt-option-binding'
 import {
   AGENTIC_LOOP,
   unreachableSteps,
@@ -162,6 +163,24 @@ function filesCapability(): SurfaceCapability {
   })
 }
 
+/**
+ * Answering moved to the prompt card in LOOP-T3, because the card is the only thing that knows
+ * what is selected. The audit follows the capability rather than assuming which surface holds it.
+ */
+function promptCapability(): SurfaceCapability {
+  return capabilityOf(() => {
+    usePromptOptionBinding({
+      promptKey: 'ask:0',
+      optionCount: 3,
+      onMove: vi.fn(),
+      onChoose: vi.fn(),
+      onAdvance: vi.fn(),
+      onCancel: vi.fn()
+    })
+    return null
+  })
+}
+
 function loopCapabilities(): ReadonlyMap<LoopStepId, SurfaceCapability> {
   const workspaces = workspaceCapability()
   const agent = agentCapability()
@@ -170,7 +189,7 @@ function loopCapabilities(): ReadonlyMap<LoopStepId, SurfaceCapability> {
     ['observe', workspaces],
     ['prompt', agent],
     ['interrupt', agent],
-    ['answer', agent],
+    ['answer', promptCapability()],
     ['approve', agent],
     ['read', files]
   ])
@@ -182,10 +201,7 @@ function loopCapabilities(): ReadonlyMap<LoopStepId, SurfaceCapability> {
  *
  * `prompt` and `answer` are the two breaks `product.md` opens with.
  */
-const KNOWN_UNREACHABLE: readonly string[] = [
-  'prompt (get a prompt to the agent) on agent',
-  'answer (answer a question from the agent) on agent'
-]
+const KNOWN_UNREACHABLE: readonly string[] = ['prompt (get a prompt to the agent) on agent']
 
 describe('the agentic loop', () => {
   it('describes a cycle, not a list of surfaces', () => {
@@ -206,7 +222,7 @@ describe('the agentic loop', () => {
   it('carries the steps that do work', () => {
     const unreachable = new Set(unreachableSteps(loopCapabilities()))
 
-    for (const id of ['observe', 'interrupt', 'approve', 'read']) {
+    for (const id of ['observe', 'interrupt', 'answer', 'approve', 'read']) {
       expect(
         [...unreachable].some((entry) => entry.startsWith(id)),
         id

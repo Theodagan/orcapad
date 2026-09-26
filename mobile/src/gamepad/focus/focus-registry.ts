@@ -25,23 +25,28 @@ export function createFocusRegistry(): FocusRegistry {
   const targets = new Map<string, FocusTarget>()
   let activeId: string | null = null
 
-  function newestId(): string | null {
-    let newest: string | null = null
-    for (const id of targets.keys()) {
-      newest = id
+  /** The most specific mounted target; the newest of them where several tie. */
+  function preferredId(): string | null {
+    let preferred: string | null = null
+    let best = Number.NEGATIVE_INFINITY
+    for (const [id, target] of targets) {
+      const priority = target.priority ?? 0
+      if (priority >= best) {
+        preferred = id
+        best = priority
+      }
     }
-    return newest
+    return preferred
   }
 
   function register(target: FocusTarget): () => void {
-    // A newly mounted target takes focus; a re-render replacing an existing one does not. Inner
-    // surfaces mount after the routes that contain them, so this is what lets an agent view
-    // answer for its own intents rather than the session around it — and the "not on re-render"
-    // half is what stops an unrelated surface stealing focus every time its props change.
+    // A new mount re-decides who has focus; a re-render replacing an existing entry does not,
+    // or an unrelated surface would steal focus every time its props changed. The decision is by
+    // declared priority rather than by arrival, because arrival order is the reverse of nesting.
     const isNewMount = !targets.has(target.id)
     targets.set(target.id, target)
     if (activeId === null || isNewMount) {
-      activeId = target.id
+      activeId = preferredId()
     }
     return () => {
       // A re-render replaces the entry under the same id; only delete the one we registered.
@@ -50,7 +55,7 @@ export function createFocusRegistry(): FocusRegistry {
       }
       targets.delete(target.id)
       if (activeId === target.id) {
-        activeId = newestId()
+        activeId = preferredId()
       }
     }
   }

@@ -19,7 +19,7 @@
 
   **Verify:** `pnpm --dir mobile test src/gamepad/controller-input/controller-resolver.test.ts src/gamepad/loop`
 
-- [ ] **LOOP-T3 - Answering an agent**
+- [x] **LOOP-T3 - Answering an agent**
 
   Give the ask and question cards their own focus targets: `move-selection`
   changes the highlighted option, `confirm` submits it through the existing

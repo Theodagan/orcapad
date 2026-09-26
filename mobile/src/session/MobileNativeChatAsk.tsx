@@ -1,7 +1,10 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { Check } from 'lucide-react-native'
 import type { AskAnswerSelection, AskPrompt } from '../../../src/shared/native-chat-ask'
+import { cursorForQuestion, movePromptCursor } from '../gamepad/bindings/agent-prompt-selection'
+import { usePromptOptionBinding } from '../gamepad/bindings/use-prompt-option-binding'
+import { useControllerBinding } from '../gamepad/controller-provider'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 
 type Props = {
@@ -95,6 +98,33 @@ export function MobileNativeChatAsk({ prompt, onAnswer, onCancel }: Props): Reac
     }
   }
 
+  // Controller edge (`004` LOOP-T3). Every call below is one this card's own buttons make, so
+  // the pad answers the prompt the same way a thumb does.
+  const { connected: controllerConnected } = useControllerBinding()
+  const [cursor, setCursor] = useState(0)
+  const currentOptionCount = prompt.questions[index]?.options.length ?? 0
+  usePromptOptionBinding({
+    promptKey: `ask:${index}`,
+    optionCount: currentOptionCount,
+    onMove: (direction) =>
+      setCursor((held) => movePromptCursor(held, currentOptionCount, direction)),
+    onChoose: () => toggle(index, cursor, prompt.questions[index]?.multiSelect === true),
+    onAdvance: canAdvance ? () => void advance() : undefined,
+    onRetreat: index > 0 ? () => setIndex((i) => Math.max(i - 1, 0)) : undefined,
+    onCancel: () => {
+      if (!submittingRef.current && onCancel) {
+        void onCancel()
+      }
+    }
+  })
+
+  // Follow the answer already given rather than snapping to the top: the user is reviewing a
+  // choice they made, and hiding it would be the wrong help.
+  useEffect(() => {
+    setCursor(cursorForQuestion(selections[index] ?? []))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index])
+
   const q = prompt.questions[index]!
   const otherSelected = (selections[index] ?? []).includes(OTHER)
 
@@ -133,6 +163,7 @@ export function MobileNativeChatAsk({ prompt, onAnswer, onCancel }: Props): Reac
             label={opt.label}
             description={opt.description}
             selected={(selections[index] ?? []).includes(optIndex)}
+            cursored={controllerConnected && optIndex === cursor}
             multi={q.multiSelect}
             onPress={() => toggle(index, optIndex, q.multiSelect)}
           />
@@ -199,17 +230,23 @@ function OptionRow({
   label,
   description,
   selected,
+  cursored = false,
   multi,
   onPress
 }: {
   label: string
   description?: string
   selected: boolean
+  /** Controller cursor: the option `A` would choose. Absent for touch. */
+  cursored?: boolean
   multi?: boolean
   onPress: () => void
 }): React.JSX.Element {
   return (
-    <Pressable style={[styles.option, selected && styles.optionSelected]} onPress={onPress}>
+    <Pressable
+      style={[styles.option, selected && styles.optionSelected, cursored && styles.optionCursored]}
+      onPress={onPress}
+    >
       {/* Multi-select reads as a checkbox (square); single-select as a radio (circle). */}
       <View
         style={[
@@ -290,6 +327,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     marginBottom: spacing.xs
+  },
+  // Where the pad is, distinct from what is chosen: the two are different questions and a user
+  // moving through options needs to see both at once.
+  optionCursored: {
+    borderColor: colors.accentBlue
   },
   optionSelected: {
     borderColor: colors.statusGreen
