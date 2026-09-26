@@ -187,13 +187,24 @@
 
   **Verify:** `pnpm --dir mobile test src/files/MobileFileExplorerPanel.test.ts src/files/MobileFilePreviewScreen.test.ts src/files/file-list-fallback.test.ts src/session/mobile-diff-hunks.test.ts src/session/mobile-diff-lines.test.ts`
 
-- [ ] **BIND-T8 - Notification and root regression**
+- [x] **BIND-T8 - Notification and root regression**
 
   Prove controller integration leaves the existing home route, push
   registration, catch-up, dismissal, and notification navigation ownership
   unchanged. Add no controller dashboard.
 
   **Needs:** BIND-T1, BIND-T2, BIND-T3, BIND-T4
+
+  Written as a source ratchet rather than behaviour tests. The upstream
+  behaviour already has suites — the verify command runs four of them — so the
+  thing actually missing was a check that a future binding cannot quietly take
+  one of these over. A behaviour test would pass just as happily against a
+  controller-owned reimplementation.
+
+  It asserts the controller tree reaches none of the nine notification owners and
+  never imports the SDK; that the shell still wires every one of them; that the
+  home route is still `MobileHomeScreen`; and that no controller-owned route
+  exists.
 
   **Verify:** `pnpm --dir mobile test src/home/mobile-home-connection-state.test.ts src/notifications/push-registration.test.ts src/notifications/push-dismissal-reconciliation.test.ts src/notifications/notification-routing.test.ts`
 
