@@ -124,3 +124,58 @@ segments unusable has done its job.
 The one class of result that is a real defect rather than a layout finding:
 anything in section 2 above being non-zero, or `B` navigating twice. Those are
 mechanism failures, and they belong in an issue rather than in a preset edit.
+
+---
+
+# Appendix: the controller-only run (`004` LOOP-T7)
+
+Everything above validates that each surface works. This validates the thing the
+product is actually for, and it has one rule: **do not touch the screen.**
+
+Put the phone in a stand if that helps you keep to it. Reaching for the glass
+once is the finding — note where and why, because that is the gap.
+
+## The task
+
+Pick something real and small. "Add a test for X and show me the diff" is a good
+shape: it needs a prompt, usually produces a question, involves a tool call, and
+ends in something to read.
+
+1. **Open a workspace.** D-pad to it, `A`. If you have more than one host, pick
+   the second one — that path did not exist before `004`.
+2. **Prompt the agent.** `R3` and speak, or open the right-stick wheel and commit
+   a reply. Both paths should work; try the wheel even if dictation does, because
+   it is the one that works when dictation does not.
+3. **Answer what it asks.** D-pad up/down to move the cursor, `A` to choose,
+   D-pad right for Next or Send, `B` to dismiss. The cursor is outlined in blue;
+   the chosen option is filled.
+4. **Approve a tool call.** `A` allows, `B` dismisses.
+5. **Read the result.** `LB`/`RB` to the diff or file tab, `L2`/`R2` to scroll.
+6. **Stop something on purpose.** `X` mid-turn, so you have seen it work when you
+   need it rather than when you are testing it.
+
+## What to write down
+
+Beyond the BIND-T10 columns:
+
+- **Where you reached for the screen.** The most valuable line in the record.
+- **Whether the hint bar told you what you needed**, or whether you guessed. If
+  you guessed right, the hints are incomplete; if you guessed wrong, they are
+  misleading, which is worse.
+- **How the mostly-disabled wheel felt** off the chat screen — informative, or
+  broken?
+- **Whether `A` ever did something you did not intend.** Particularly on a prompt
+  card, where a cursor and a selection are different things.
+
+## Filing it
+
+Use the BIND-T10 schema with `touch: 'not used'` in every observation. A run that
+needed the screen is still evidence — record what it needed and why, and leave
+`worked: false` with the reason.
+
+## The decision this run ratifies
+
+`docs/decisions/controller-contract/001-dpad-navigation-is-contract.md` changed a
+PRD position on evidence from a static audit. This run is where it earns a human
+yes: if the task completes without the screen, the change did its job. If
+navigation still feels wrong, the decision is reversible and the record says so.
