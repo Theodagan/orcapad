@@ -8,6 +8,8 @@ import {
   Image as ImageIcon
 } from 'lucide-react-native'
 import { triggerSelection } from '../platform/haptics'
+import { ControllerFocusRing } from '../gamepad/focus/ControllerFocusRing'
+import { useNativeFocus } from '../gamepad/focus/native-focus'
 import { colors, spacing } from '../theme/mobile-theme'
 import { type FileExplorerRow, isMarkdownPath, type TreeNode } from './file-tree'
 import { fileExplorerStyles as styles } from './mobile-file-explorer-styles'
@@ -101,13 +103,14 @@ function TreeRow(props: {
   const isImage = item.kind === 'binary' && previewable
   const disabled = item.kind === 'binary' && !previewable
   const markdown = item.kind === 'text' && isMarkdownPath(item.relativePath)
+  const focusRef = useNativeFocus(selected)
 
   return (
     <Pressable
+      ref={focusRef}
       style={({ pressed }) => [
         styles.row,
         { paddingLeft: spacing.lg + item.depth * 18 },
-        selected && styles.rowSelected,
         pressed && !disabled && styles.rowPressed,
         disabled && styles.rowDisabled
       ]}
@@ -152,6 +155,7 @@ function TreeRow(props: {
         </Text>
         {disabled ? <Text style={styles.rowMeta}>Unavailable on mobile</Text> : null}
       </View>
+      {selected ? <ControllerFocusRing /> : null}
     </Pressable>
   )
 }

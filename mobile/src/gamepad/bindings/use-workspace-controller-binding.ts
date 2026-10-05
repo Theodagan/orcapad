@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useControllerBinding } from '../controller-provider'
-import { nextScrollOffset } from './controller-scroll-offset'
+import {
+  createScrollIntegrator,
+  LIST_SCROLL_MINIMUM_FIRST_STEP_POINTS,
+  LIST_SCROLL_POINTS_PER_SECOND_AT_FULL_PRESSURE
+} from './controller-scroll-rate'
 import { nextSelectedId, selectedItem } from './list-selection'
 import { flattenSectionOrder, type OrderedSection } from './workspace-list-order'
 import { focusTargetFor, type IntentHandlerEntry } from './surface-binding'
@@ -23,16 +27,28 @@ export type WorkspaceControllerBindingOptions<T> = {
   readonly idOf: (item: T) => string
   readonly onOpen: (item: T) => void
   readonly onBack: () => void
-  readonly scrollTo: (offset: number) => void
+  /** Moves the list from where it really is; the screen wires it to the list's own offset. */
+  readonly scrollBy: (delta: number) => void
 }
 
 export function useWorkspaceControllerBinding<T>(
   options: WorkspaceControllerBindingOptions<T>
 ): string | null {
-  const { sections, idOf, onOpen, onBack, scrollTo } = options
+  const { sections, idOf, onOpen, onBack } = options
+  const scrollByRef = useRef(options.scrollBy)
+  useLayoutEffect(() => {
+    scrollByRef.current = options.scrollBy
+  })
+  const integrator = useMemo(
+    () =>
+      createScrollIntegrator({
+        unitsPerSecond: LIST_SCROLL_POINTS_PER_SECOND_AT_FULL_PRESSURE,
+        minimumFirstStep: LIST_SCROLL_MINIMUM_FIRST_STEP_POINTS
+      }),
+    []
+  )
   const { connected } = useControllerBinding()
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const offsetRef = useRef(0)
 
   const order = useMemo(() => flattenSectionOrder(sections), [sections])
   const firstId = order[0] === undefined ? null : idOf(order[0])
@@ -63,8 +79,10 @@ export function useWorkspaceControllerBinding<T>(
           if (intent.kind !== 'scroll') {
             return
           }
-          offsetRef.current = nextScrollOffset(offsetRef.current, intent.direction, intent.velocity)
-          scrollTo(offsetRef.current)
+          const delta = integrator.step(intent)
+          if (delta !== 0) {
+            scrollByRef.current(delta)
+          }
         }
       ],
       [
@@ -89,7 +107,7 @@ export function useWorkspaceControllerBinding<T>(
     // No wheel action yet: every workspace action worth naming is either destructive or belongs
     // to a surface `003` has not bound, and WHEEL-R7 keeps trials away from both.
     return { focusTarget: focusTargetFor('workspace-list', entries), wheelActions: [] }
-  }, [order, idOf, selectedId, onOpen, onBack, scrollTo])
+  }, [order, idOf, selectedId, onOpen, onBack, integrator])
 
   useSurfaceBinding(binding)
   return selectedId

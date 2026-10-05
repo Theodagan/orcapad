@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import type { FlatList, NativeScrollEvent, NativeSyntheticEvent } from 'react-native'
+import { createScrollTracker } from '../gamepad/bindings/controller-scroll-tracker'
 
 /** Distance from the bottom, in points, still treated as "at the tail". */
 const AT_TAIL_SLOP = 80
@@ -27,6 +28,10 @@ export type MobileNativeChatTailFollow<TItem> = {
   /** Leave the tail deliberately, e.g. before prepending older history. */
   detachFromTail: () => void
   recordScrollMetrics: (event: NativeScrollEvent) => void
+  /** The list's own height, from its layout, so a controller scroll knows where the bottom is. */
+  recordViewportHeight: (height: number) => void
+  /** Controller scroll: a signed distance from where the transcript really is. Leaves and rejoins the tail. */
+  scrollBy: (delta: number) => void
 }
 
 /** Sole owner of transcript scroll position.
@@ -80,14 +85,21 @@ export function useMobileNativeChatTailFollow<TItem>(args: {
     listRef.current?.scrollToEnd({ animated: false })
   }, [hasItems])
 
+  const scrollTracker = useMemo(
+    () =>
+      createScrollTracker((offset) => listRef.current?.scrollToOffset({ animated: false, offset })),
+    []
+  )
+
   const pinToTailAfterContentResize = useCallback(
     (_width: number, height: number) => {
+      scrollTracker.record({ contentHeight: height })
       if (!followingRef.current || !hasItems) {
         return
       }
       listRef.current?.scrollToOffset({ animated: false, offset: height })
     },
-    [hasItems]
+    [hasItems, scrollTracker]
   )
 
   const clearUserScrollSettle = useCallback(() => {
@@ -98,8 +110,20 @@ export function useMobileNativeChatTailFollow<TItem>(args: {
   }, [])
 
   const recordScrollMetrics = useCallback(
-    (event: NativeScrollEvent) => setAtTail(isAtTail(event)),
-    [setAtTail]
+    (event: NativeScrollEvent) => {
+      scrollTracker.record({
+        offset: event.contentOffset.y,
+        contentHeight: event.contentSize.height,
+        viewportHeight: event.layoutMeasurement.height
+      })
+      setAtTail(isAtTail(event))
+    },
+    [scrollTracker, setAtTail]
+  )
+
+  const recordViewportHeight = useCallback(
+    (height: number) => scrollTracker.record({ viewportHeight: height }),
+    [scrollTracker]
   )
 
   const jumpToTail = useCallback(() => {
@@ -166,6 +190,25 @@ export function useMobileNativeChatTailFollow<TItem>(args: {
     setFollowing(false)
   }, [clearUserScrollSettle, setAtTail, setFollowing])
 
+  const scrollBy = useCallback(
+    (delta: number) => {
+      if (!hasItems) {
+        return
+      }
+      // Going up leaves the tail, or the next token would snap the view back to the newest line.
+      if (delta < 0) {
+        detachFromTail()
+      }
+      const step = scrollTracker.by(delta)
+      // Reaching the bottom again resumes following, as a finger lifting there does.
+      if (delta > 0 && step.atEnd) {
+        setAtTail(true)
+        setFollowing(true)
+      }
+    },
+    [hasItems, detachFromTail, scrollTracker, setAtTail, setFollowing]
+  )
+
   useEffect(() => clearUserScrollSettle, [clearUserScrollSettle])
 
   return {
@@ -179,6 +222,8 @@ export function useMobileNativeChatTailFollow<TItem>(args: {
     beginMomentum,
     endMomentum,
     detachFromTail,
-    recordScrollMetrics
+    recordScrollMetrics,
+    recordViewportHeight,
+    scrollBy
   }
 }

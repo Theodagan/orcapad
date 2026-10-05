@@ -1,12 +1,17 @@
 import { CHORD_BUTTON, PRD_CONTROLLER_BINDINGS } from './controller-bindings'
+import { buttonIntent } from './binding-intent'
 import type { ControllerIntent } from './controller-intent'
-import type { ControllerAxis, ControllerButton, ControllerSample } from './controller-sample'
+import { neutralSample, type ControllerSample } from './controller-sample'
+import { createDpadRepeater } from './dpad-repeat'
 import { DPAD_NAVIGATION_BINDINGS } from './dpad-navigation-bindings'
+import { axisOf, isDown, outsideDeadZone, wentDown } from './sample-edges'
+import { createTapTracker } from './tap-tracker'
 
 /**
- * Samples in, intents out. Pure and edge-aware: a button produces one intent when it goes down,
- * while a trigger or stick produces one per sample for as long as it is held, because scrolling
- * and wheel motion are continuous and a press is not.
+ * Samples in, intents out. A button produces one intent when it goes down (or, for a tap binding,
+ * when it comes up alone). A trigger produces a scroll per sample for as long as it is held, and
+ * says how much time that sample stands for, because how often samples arrive is the device's
+ * business and a held trigger can send none at all.
  *
  * Dead zones come from the device rather than from a constant here — `ControllerPolicy.deadZone`
  * is filled from each pad's declared `MotionRange.flat`. Crossing the dead zone passes the
@@ -26,6 +31,9 @@ export type ControllerPolicy = {
    * experiment. Still a flag, because a pad with no D-pad exists and this is how it says so.
    */
   readonly dpadNavigation: boolean
+  /** A held D-pad direction waits this long, then repeats at the interval. */
+  readonly dpadRepeatDelayMs: number
+  readonly dpadRepeatIntervalMs: number
 }
 
 /** Floors, used when a pad declares no flat zone at all rather than a considered default. */
@@ -33,29 +41,21 @@ export const DEFAULT_CONTROLLER_POLICY: ControllerPolicy = {
   stickDeadZone: 0.15,
   triggerDeadZone: 0.1,
   triggersAnalog: true,
-  dpadNavigation: true
+  dpadNavigation: true,
+  dpadRepeatDelayMs: 350,
+  dpadRepeatIntervalMs: 90
 }
 
-function pressure(sample: ControllerSample, button: ControllerButton): number {
-  return sample.buttons.get(button) ?? 0
+/** What the layer above knows that a sample cannot say. */
+export type ResolveContext = {
+  /** An open wheel owns the pad: a press made now must not act once the wheel closes. */
+  readonly captured: boolean
 }
 
-function axis(sample: ControllerSample, name: ControllerAxis): number {
-  return sample.axes.get(name) ?? 0
-}
-
-function isDown(sample: ControllerSample, button: ControllerButton): boolean {
-  return pressure(sample, button) > 0.5
-}
-
-/** A press, not a hold: the transition is the event, so a held button does not repeat. */
-function wentDown(
-  previous: ControllerSample,
-  next: ControllerSample,
-  button: ControllerButton
-): boolean {
-  return !isDown(previous, button) && isDown(next, button)
-}
+/** The first sample of a hold stands for one nominal frame; later ones for the real gap. */
+const SCROLL_FIRST_STEP_MS = 16
+/** A stalled JavaScript thread must not turn into a jump. */
+const SCROLL_MAX_STEP_MS = 50
 
 export function resolveControllerIntents(
   previous: ControllerSample,
@@ -70,42 +70,59 @@ export function resolveControllerIntents(
 
   for (const binding of PRD_CONTROLLER_BINDINGS) {
     if (binding.kind === 'button') {
+      if (binding.timing === 'tap') {
+        continue
+      }
       // The chord is read from the current sample, so releasing Y restores the plain action on
       // the very next press rather than leaving a mode behind (CTRL-R4).
       const chordMatches = binding.chord === null ? !chordHeld : isDown(next, binding.chord)
       if (!chordMatches || !wentDown(previous, next, binding.button)) {
         continue
       }
-      if (binding.intent === 'cycle-tab' || binding.intent === 'cycle-workspace') {
-        if (binding.direction === 'previous' || binding.direction === 'next') {
-          intents.push({ kind: binding.intent, direction: binding.direction })
-        }
-        continue
+      const intent = buttonIntent(binding)
+      if (intent !== null) {
+        intents.push(intent)
       }
-      intents.push({ kind: binding.intent })
       continue
     }
 
     if (binding.kind === 'trigger') {
-      const value = axis(next, binding.axis)
-      if (value > policy.triggerDeadZone) {
-        intents.push({
-          kind: 'scroll',
-          direction: binding.direction,
-          velocity: policy.triggersAnalog ? value : 1
-        })
+      const value = axisOf(next, binding.axis)
+      if (value <= policy.triggerDeadZone) {
+        continue
       }
+      const wasHeld = axisOf(previous, binding.axis) > policy.triggerDeadZone
+      intents.push({
+        kind: 'scroll',
+        direction: binding.direction,
+        velocity: policy.triggersAnalog ? value : 1,
+        elapsedMs: wasHeld
+          ? Math.min(Math.max(next.sampledAt - previous.sampledAt, 0), SCROLL_MAX_STEP_MS)
+          : SCROLL_FIRST_STEP_MS,
+        begins: !wasHeld
+      })
       continue
     }
 
     if (binding.kind === 'stick') {
       const [horizontal, vertical] = binding.axes
-      const x = axis(next, horizontal)
-      const y = axis(next, vertical)
-      // Squared on both sides: same predicate as comparing the magnitude, without a square
-      // root on every sample of every stick.
-      if (x * x + y * y > policy.stickDeadZone * policy.stickDeadZone) {
-        intents.push({ kind: 'wheel-motion', wheel: binding.wheel, x, y })
+      const x = axisOf(next, horizontal)
+      const y = axisOf(next, vertical)
+      const out = outsideDeadZone(x, y, policy.stickDeadZone)
+      const wasOut = outsideDeadZone(
+        axisOf(previous, horizontal),
+        axisOf(previous, vertical),
+        policy.stickDeadZone
+      )
+      if (out) {
+        // Only a stick that moved: a held one is a held wheel, not a stream of new gestures.
+        if (!wasOut || x !== axisOf(previous, horizontal) || y !== axisOf(previous, vertical)) {
+          intents.push({ kind: 'wheel-motion', wheel: binding.wheel, x, y })
+        }
+      } else if (wasOut) {
+        // Release as a true centre: the wheel's own dead zone may be narrower than the pad's, and
+        // a wheel that never hears the stick return would stay open.
+        intents.push({ kind: 'wheel-motion', wheel: binding.wheel, x: 0, y: 0 })
       }
     }
   }
@@ -130,21 +147,31 @@ export function resolveControllerIntents(
   return intents
 }
 
+export type ControllerResolver = (
+  sample: ControllerSample,
+  context?: ResolveContext
+) => readonly ControllerIntent[]
+
 /**
- * The stateful form the provider mounts. It holds only the previous sample, which is what makes
- * an edge detectable; everything else is in the pure resolver above.
+ * The stateful form the provider mounts. It holds the previous sample, which is what makes an
+ * edge detectable, and the two rules that need a memory of their own: a tap's release and a
+ * D-pad hold. Everything else is the pure resolver above.
  */
 export function createControllerIntentResolver(
   policy: ControllerPolicy = DEFAULT_CONTROLLER_POLICY
-): (sample: ControllerSample) => readonly ControllerIntent[] {
-  let previous: ControllerSample = {
-    connected: false,
-    buttons: new Map(),
-    axes: new Map(),
-    sampledAt: 0
-  }
-  return (sample) => {
-    const intents = resolveControllerIntents(previous, sample, policy)
+): ControllerResolver {
+  let previous = neutralSample(0)
+  const taps = createTapTracker()
+  const repeat = createDpadRepeater({
+    delayMs: policy.dpadRepeatDelayMs,
+    intervalMs: policy.dpadRepeatIntervalMs
+  })
+  return (sample, context = { captured: false }) => {
+    const intents = [
+      ...resolveControllerIntents(previous, sample, policy),
+      ...taps(previous, sample, context.captured),
+      ...(policy.dpadNavigation ? repeat(previous, sample, context.captured) : [])
+    ]
     previous = sample
     return intents
   }

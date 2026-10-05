@@ -55,15 +55,23 @@ Wheel assignments and segment contents remain deliberately open for UX iteration
 | R2 (analog) | Scroll down — current pane |
 | LB / RB | Previous / next tab — current project |
 | Y + LB/RB (hold) | Previous / next worktree or project |
-| Left stick (motion) | Open Wheel 1 — assignment TBD |
-| Right stick (motion) | Open Wheel 2 — assignment TBD |
+| Left stick (motion) | Open Wheel 1 — experiment preset: back to menu, new worktree |
+| Right stick (motion) | Open Wheel 2 — experiment preset: close, stop, launch agent, open web page |
 | A | Confirm — commits held wheel direction, or general confirm |
 | B | Reject / back |
-| X | Stop / interrupt — kills in-flight agent turn or tool call, any pane |
-| R3 | Toggle dictation |
+| X | Switch zone — agent, shortcuts, header, panels |
+| Y (tap) | Toggle dictation |
+| R3 | Unassigned |
 | L3 | Unassigned |
 
-This mapping is the initial controller contract. The wheel contents are the primary area of UX experimentation.
+This mapping is the controller contract. The wheel contents are the primary area of UX experimentation.
+
+Amended by the usability pass (`docs/specs/005-controller-usability/`), on the product
+owner's instruction after the first device session. Each change is recorded under
+`docs/decisions/controller-contract/`: `X` was Stop and became the zone switch (002), dictation
+moved from `R3` to a tap of `Y` (003), an open wheel now captures all input (004), and the right
+wheel's canned replies were replaced by agent actions (006). While a wheel is open, all of this
+yields to it.
 
 ## 5. Information surface
 

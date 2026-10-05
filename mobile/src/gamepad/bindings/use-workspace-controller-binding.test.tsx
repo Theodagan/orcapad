@@ -50,7 +50,7 @@ function mount(rows: Sections = sections) {
   const { reader, publish } = fakeReader()
   const onOpen = vi.fn()
   const onBack = vi.fn()
-  const scrollTo = vi.fn()
+  const scrollBy = vi.fn()
   let dispatch: (intent: ControllerIntent) => boolean = () => false
   let selected: string | null = null
 
@@ -60,7 +60,7 @@ function mount(rows: Sections = sections) {
       idOf,
       onOpen,
       onBack,
-      scrollTo
+      scrollBy
     })
     dispatch = useController().dispatchIntent
     return null
@@ -81,7 +81,7 @@ function mount(rows: Sections = sections) {
     selected: () => selected,
     onOpen,
     onBack,
-    scrollTo
+    scrollBy
   }
 }
 

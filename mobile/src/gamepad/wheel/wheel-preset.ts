@@ -1,4 +1,4 @@
-import type { WheelActionBindingId, WheelRegistry } from './wheel-registry'
+import { isMenuBinding, type WheelActionBindingId, type WheelRegistry } from './wheel-registry'
 import type { WheelId, WheelSegment } from './wheel-segment'
 
 /**
@@ -74,7 +74,9 @@ export function resolveSegments(
       centerAngle: segment.centerAngle,
       halfWidth: segment.halfWidth,
       availability: binding?.availability ?? 'unavailable',
-      bindingId: segment.bindingId
+      bindingId: segment.bindingId,
+      // Only a registered menu opens a second wheel; a preset cannot make an action into one.
+      ...(binding !== null && isMenuBinding(binding) ? { opens: true } : {})
     }
   })
 }

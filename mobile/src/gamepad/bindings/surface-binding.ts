@@ -1,6 +1,6 @@
 import type { ControllerIntent, ControllerIntentKind } from '../controller-input/controller-intent'
-import type { DictationTextTarget, FocusTarget } from '../focus/focus-target'
-import type { WheelActionBinding } from '../wheel/wheel-registry'
+import type { FocusTarget } from '../focus/focus-target'
+import type { WheelBinding } from '../wheel/wheel-registry'
 
 /**
  * What an existing surface contributes to the controller layer (`003` §1): where its intents go,
@@ -13,7 +13,7 @@ import type { WheelActionBinding } from '../wheel/wheel-registry'
 export type SurfaceBinding = {
   readonly focusTarget: FocusTarget
   /** BIND-R10: stable ids a preset may name. Position and wheel side are never decided here. */
-  readonly wheelActions: readonly WheelActionBinding[]
+  readonly wheelActions: readonly WheelBinding[]
 }
 
 /**
@@ -31,16 +31,11 @@ export type IntentHandlerEntry = readonly [ControllerIntentKind, (intent: Contro
  * obvious way to get it wrong: a handler nothing accepts is silently dead, and a kind accepted
  * with no handler swallows the intent from anything else that might have wanted it.
  */
-export function focusTargetFor(
-  id: string,
-  entries: readonly IntentHandlerEntry[],
-  textTarget?: DictationTextTarget
-): FocusTarget {
+export function focusTargetFor(id: string, entries: readonly IntentHandlerEntry[]): FocusTarget {
   const handlers = new Map(entries)
   return {
     id,
     accepts: new Set(handlers.keys()),
-    handle: (intent) => handlers.get(intent.kind)?.(intent),
-    ...(textTarget === undefined ? {} : { textTarget })
+    handle: (intent) => handlers.get(intent.kind)?.(intent)
   }
 }

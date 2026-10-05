@@ -179,3 +179,87 @@ needed the screen is still evidence — record what it needed and why, and leave
 PRD position on evidence from a static audit. This run is where it earns a human
 yes: if the task completes without the screen, the change did its job. If
 navigation still feels wrong, the decision is reversible and the record says so.
+
+---
+
+# Appendix: the usability pass (`005`)
+
+`005` answers the first device session, which called the app "nowhere near a usable
+experience". Everything in it is proved through the composed screen with a fake pad, and
+none of it has been seen on a real one. This is the run that ratifies it or sends it back.
+
+## Before you start
+
+Rebuild. The native module gained two calls since the last build, and a stale APK would
+validate the old behaviour:
+
+- `setInputCaptured` keeps an open wheel from letting Android's focus move beneath it
+  (it compiles, and has never run on a device);
+- `requestNativeFocus` moves Android's own focus onto the element under the cursor.
+
+```bash
+pnpm --dir mobile apk:android --abi arm64-v8a
+adb install -r mobile/android/app/build/outputs/apk/release/app-release.apk
+adb logcat -s OrcaGamepad
+```
+
+Both calls compile under `./gradlew :orca-gamepad:compileDebugKotlin`. If the full build still fails in `OrcaGamepadModule.kt`, that is the finding: nothing below can run.
+
+## What to check
+
+Do these with the pad, and note every time you reach for the screen.
+
+1. **Held scroll.** Hold `R2` for a second in each of: a terminal at a shell prompt with
+   scrollback; a full-screen program in the alternate screen (`less`, `vim`); a program with
+   mouse tracking on; an agent chat transcript; a long file list. Scrolling must continue the
+   whole second and stop at both ends. Note whether `L2`/`R2` log as an axis or as buttons.
+2. **The cursor is visible.** Walk the D-pad over the header, the tabs, the shortcut keys, the
+   file explorer, the workspace list, the host list and an agent's question. The ring must be
+   obvious at arm's length on the Retroid's screen, on a dark background. Note anything
+   where you had to look for it.
+3. **Android's focus agrees.** Where the cursor is, Android's own focus highlight should be
+   on the same element. A second highlight somewhere else is a finding. In the agent zone
+   Android's highlight may wander on a D-pad press; record how visible it is.
+4. **Zones.** Press `X`: agent, shortcuts, header (and panels when one is open). The zone's
+   border and its name in the hint bar must make it unmistakable where you are. `B` in a row
+   zone returns to the agent. Open the files panel with `A` on its header button: the cursor
+   must move into the panel, and `B` must close it and return to the agent.
+5. **The agent zone.** In a terminal agent with a menu, the D-pad moves it, `A` is Enter and
+   `B` is Escape. In a chat, the D-pad scrolls, `A` answers a permission, and `A` sends a
+   draft once there is one.
+6. **Dictation.** Tap `Y`: it starts. Tap `Y` again: it stops. `Y` held with `L1`/`R1` must
+   not toggle it. `R3` must do nothing. With nowhere for the words to go, the refusal must be
+   visible. After dictating into a chat, `A` should send it.
+7. **Tabs.** `L1`/`R1` cycle the tabs from every zone, wrap, and do nothing with one tab.
+8. **Left wheel.** Two segments. Back to menu lands on this host's workspace list; New
+   worktree opens the new-worktree form.
+9. **Right wheel.** Four segments. Launch agent opens a second wheel of the agents the
+   new-tab drawer offers; Open web page opens one of the worktree's open ports and "Enter
+   URL…". `B` steps back a level. Stop interrupts the turn; Close closes the agent's tab.
+   These two are destructive: try them on something you can afford to lose.
+10. **Capture.** Open a wheel and try everything else: the other stick, both triggers, the
+    D-pad, `L1`/`R1`, `X`, `Y`, and a finger on the screen. Nothing underneath may react and
+    Android's focus highlight must not move. Press a button while it is open, then close it:
+    the button must not act. Unplug or switch off the pad with a wheel open: it must close.
+
+## What to write down
+
+Beyond the BIND-T10 columns:
+
+- **Where you reached for the screen**, and why. This is still the most useful line.
+- **Whether the zone you were in was ever unclear.** If it was, the border is too quiet.
+- **Whether a native highlight and the ring ever disagreed**, and where.
+- **Whether the wheel's destructive segments felt safe**: did you ever land on Stop or
+  Close by accident?
+- **How long a `Y` tap took to start dictation**, since a tap is only known on release.
+
+## Filing it
+
+BIND-T10 schema with `touch: 'not used'` in every observation. A step that needed the screen
+is evidence too: record what it needed and leave `worked: false` with the reason.
+
+## The decisions this run ratifies
+
+`docs/decisions/controller-contract/` 002 through 006 each changed a position on the product
+owner's instruction. If a step above feels wrong on the device, the decision behind it is the
+thing to reopen, and each record says what reversing it would cost.

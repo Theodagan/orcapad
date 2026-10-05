@@ -13,6 +13,9 @@ const terminalInputSource = readMobileSessionRouteSource(
   '../session/use-mobile-session-terminal-input.ts'
 )
 const commandDockSource = readMobileSessionRouteSource('../session/MobileSessionCommandDock.tsx')
+const accessoryKeysSource = readMobileSessionRouteSource(
+  '../session/MobileSessionAccessoryKeys.tsx'
+)
 
 function sourceSlice(source: string, anchorStart: string, anchorEnd: string): string {
   const start = source.indexOf(anchorStart)
@@ -124,7 +127,7 @@ describe('session route offline-compose wiring', () => {
 
   it('keeps the live/buffered mode toggle reachable offline', () => {
     const modeToggle = sourceSlice(
-      commandDockSource,
+      accessoryKeysSource,
       'liveInputEnabled && styles.accessoryKeyActive',
       'onPress={toggleLiveInput}'
     )

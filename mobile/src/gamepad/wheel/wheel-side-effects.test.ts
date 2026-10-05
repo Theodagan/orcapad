@@ -88,28 +88,28 @@ describe('only a commit can produce an invocation', () => {
     const { invoked, state } = drive([up, deadArc])
 
     expect(invoked).toEqual([])
-    expect(state).toEqual(CLOSED_WHEEL)
+    expect(state.kind).toBe('closed')
   })
 
   it('returning to centre runs nothing and closes', () => {
     const { invoked, state } = drive([up, centred])
 
     expect(invoked).toEqual([])
-    expect(state).toEqual(CLOSED_WHEEL)
+    expect(state.kind).toBe('closed')
   })
 
   it('B runs nothing and closes', () => {
     const { invoked, state } = drive([up, { kind: 'back' }])
 
     expect(invoked).toEqual([])
-    expect(state).toEqual(CLOSED_WHEEL)
+    expect(state.kind).toBe('closed')
   })
 
   it('a controller disconnect runs nothing and closes', () => {
     const { invoked, state } = drive([up, { kind: 'disconnect' }])
 
     expect(invoked).toEqual([])
-    expect(state).toEqual(CLOSED_WHEEL)
+    expect(state.kind).toBe('closed')
   })
 
   it('A on an unavailable lock runs nothing', () => {
@@ -135,7 +135,7 @@ describe('only a commit can produce an invocation', () => {
     }
 
     expect(invoked).toEqual([])
-    expect(state).toEqual(CLOSED_WHEEL)
+    expect(state.kind).toBe('closed')
   })
 
   it('A on an empty preset runs nothing', () => {
@@ -154,7 +154,7 @@ describe('only a commit can produce an invocation', () => {
     const { invoked, state } = drive([up, confirm])
 
     expect(invoked).toEqual(['binding.north'])
-    expect(state).toEqual(CLOSED_WHEEL)
+    expect(state.kind).toBe('closed')
   })
 
   it('commits an unknown availability, which is offered rather than refused', () => {
@@ -164,8 +164,9 @@ describe('only a commit can produce an invocation', () => {
   })
 
   it('invokes once per commit, and each gesture commits its own segment', () => {
-    // north committed and closed, then a fresh gesture that ends on east.
-    expect(drive([up, confirm, up, right, confirm]).invoked).toEqual([
+    // north committed and closed; the stick must come back to centre before a fresh gesture that
+    // ends on east, or a held stick would reopen the wheel the instant it closed.
+    expect(drive([up, confirm, centred, up, right, confirm]).invoked).toEqual([
       'binding.north',
       'binding.east'
     ])
@@ -174,11 +175,41 @@ describe('only a commit can produce an invocation', () => {
   it('does not invoke again for samples that arrive after a commit closed the wheel', () => {
     expect(drive([up, confirm, right, up, centred]).invoked).toEqual(['binding.north'])
   })
+
+  it('does not reopen from a stick that is still held out after a commit or a B', () => {
+    for (const leave of [confirm, { kind: 'back' } as const]) {
+      const { state } = drive([up, leave, right, up, deadArc])
+
+      expect(state.kind).toBe('closed')
+    }
+  })
+
+  it('opening a second wheel runs nothing, and neither does stepping back out of it', () => {
+    const opener: WheelSegment = { ...segment('launch', 0), opens: true, bindingId: 'agent.launch' }
+    const menu = preset({
+      segmentsFor: (wheel: WheelId, path?: readonly string[]) =>
+        wheel === 1 ? ((path ?? []).length === 0 ? [opener] : wheelOne) : wheelTwo
+    })
+
+    const descended = drive([up, confirm], menu)
+    expect(descended.invoked).toEqual([])
+    expect(descended.state).toMatchObject({ kind: 'open', path: ['agent.launch'] })
+
+    // B inside the menu goes back to the parent wheel, running nothing; the next B closes.
+    const outcomes = drive([up, confirm, { kind: 'back' }], menu)
+    expect(outcomes.invoked).toEqual([])
+    expect(outcomes.state).toMatchObject({ kind: 'open', path: [] })
+    expect(drive([up, confirm, { kind: 'back' }, { kind: 'back' }], menu).state.kind).toBe('closed')
+  })
 })
 
 describe('an action that throws', () => {
   it('leaves the wheel closed, because it was closed before the action ran', () => {
-    const outcome = reduceWheel({ kind: 'open', wheel: 1, locked: 'north' }, confirm, preset())
+    const outcome = reduceWheel(
+      { kind: 'open', wheel: 1, path: [], locked: 'north' },
+      confirm,
+      preset()
+    )
     const state = stateAfter(outcome)
     const exploding = vi.fn(() => {
       throw new Error('the surface will report this')
@@ -188,7 +219,7 @@ describe('an action that throws', () => {
       'the surface will report this'
     )
     // §6: error reporting belongs to the surface that owns the action; the wheel is already shut.
-    expect(state).toEqual(CLOSED_WHEEL)
+    expect(state.kind).toBe('closed')
     expect(exploding).toHaveBeenCalledTimes(1)
   })
 })

@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useControllerBinding } from '../controller-provider'
-import { nextScrollOffset } from './controller-scroll-offset'
+import {
+  createScrollIntegrator,
+  LIST_SCROLL_MINIMUM_FIRST_STEP_POINTS,
+  LIST_SCROLL_POINTS_PER_SECOND_AT_FULL_PRESSURE
+} from './controller-scroll-rate'
 import { nextSelectedId, selectedItem } from './list-selection'
 import {
   explorerWheelActions,
@@ -8,7 +12,9 @@ import {
   type ExplorerRow,
   type RowAction
 } from './file-explorer-row-action'
-import { focusTargetFor, type IntentHandlerEntry } from './surface-binding'
+import { FOCUS_PRIORITY } from '../focus/focus-zones'
+import { useZoneFocused } from '../zones/use-zone-focused'
+import { focusTargetFor, type IntentHandlerEntry, type SurfaceBinding } from './surface-binding'
 import { useSurfaceBinding } from './use-surface-binding'
 
 /**
@@ -19,7 +25,11 @@ import { useSurfaceBinding } from './use-surface-binding'
  * Hierarchy is on the horizontal provisional axis: right opens a folder, left closes it, and on a
  * file left steps out to its parent. That is conventional tree behaviour and it is the one thing
  * `A` alone cannot express, since `A` on a folder has to mean toggle.
+ *
+ * Returns the id the pad's cursor is on while the pad is pointed at the panel, else null.
  */
+
+const FILE_EXPLORER_TARGET_ID = 'file-explorer'
 
 export type FileExplorerControllerBindingOptions<T extends ExplorerRow> = {
   /** The flattened rows the list renders, so selection follows what is expanded (BIND-R7). */
@@ -32,7 +42,8 @@ export type FileExplorerControllerBindingOptions<T extends ExplorerRow> = {
   readonly onRetryDirectory: (row: T) => void
   readonly onCollapseAll: () => void
   readonly onBack: () => void
-  readonly scrollTo: (offset: number) => void
+  /** Moves the list from where it really is; the panel wires it to the list's own offset. */
+  readonly scrollBy: (delta: number) => void
 }
 
 export function useFileExplorerControllerBinding<T extends ExplorerRow>(
@@ -47,19 +58,30 @@ export function useFileExplorerControllerBinding<T extends ExplorerRow>(
     onPreviewFile,
     onRetryDirectory,
     onCollapseAll,
-    onBack,
-    scrollTo
+    onBack
   } = options
-  const { connected } = useControllerBinding()
+  const scrollByRef = useRef(options.scrollBy)
+  useLayoutEffect(() => {
+    scrollByRef.current = options.scrollBy
+  })
+  const integrator = useMemo(
+    () =>
+      createScrollIntegrator({
+        unitsPerSecond: LIST_SCROLL_POINTS_PER_SECOND_AT_FULL_PRESSURE,
+        minimumFirstStep: LIST_SCROLL_MINIMUM_FIRST_STEP_POINTS
+      }),
+    []
+  )
+  const { connected, activateFocusTarget } = useControllerBinding()
+  const zoneFocused = useZoneFocused('panels')
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const offsetRef = useRef(0)
 
   const firstId = rows[0] === undefined ? null : idOf(rows[0])
   useEffect(() => {
     setSelectedId((current) => (connected ? (current ?? firstId) : null))
   }, [connected, firstId])
 
-  const binding = useMemo(() => {
+  const binding = useMemo<SurfaceBinding>(() => {
     const current = (): T | null => selectedItem(rows, idOf, selectedId)
 
     const activate = (row: T | null): void => {
@@ -85,8 +107,10 @@ export function useFileExplorerControllerBinding<T extends ExplorerRow>(
           if (intent.kind !== 'scroll') {
             return
           }
-          offsetRef.current = nextScrollOffset(offsetRef.current, intent.direction, intent.velocity)
-          scrollTo(offsetRef.current)
+          const delta = integrator.step(intent)
+          if (delta !== 0) {
+            scrollByRef.current(delta)
+          }
         }
       ],
       [
@@ -130,7 +154,18 @@ export function useFileExplorerControllerBinding<T extends ExplorerRow>(
     ]
 
     return {
-      focusTarget: focusTargetFor('file-explorer', entries),
+      // A docked panel is a zone of the session screen; as a full-screen route it is the only one.
+      focusTarget: {
+        ...focusTargetFor(FILE_EXPLORER_TARGET_ID, entries),
+        zone: 'panels',
+        priority: FOCUS_PRIORITY.surface,
+        labels: {
+          confirm: 'Open',
+          back: 'Close',
+          'move-selection': 'Move',
+          'move-horizontal': 'Fold / Unfold'
+        }
+      },
       wheelActions: explorerWheelActions({
         hasSelection: current() !== null,
         previewSelected: () => {
@@ -159,9 +194,19 @@ export function useFileExplorerControllerBinding<T extends ExplorerRow>(
     onRetryDirectory,
     onCollapseAll,
     onBack,
-    scrollTo
+    integrator
   ])
 
   useSurfaceBinding(binding)
-  return selectedId
+
+  // Opening the panel is how the pad gets here, so it arrives with the pad rather than leaving
+  // the buttons on the header it was opened from. Declared after the registration it activates.
+  useEffect(() => {
+    if (connected) {
+      activateFocusTarget(FILE_EXPLORER_TARGET_ID)
+    }
+  }, [connected, activateFocusTarget])
+
+  // The cursor is drawn only while the pad is pointed here; elsewhere a ring would lie.
+  return zoneFocused ? selectedId : null
 }

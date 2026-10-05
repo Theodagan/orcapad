@@ -3,6 +3,8 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { Check } from 'lucide-react-native'
 import type { AskAnswerSelection, AskPrompt } from '../../../src/shared/native-chat-ask'
 import { cursorForQuestion, movePromptCursor } from '../gamepad/bindings/agent-prompt-selection'
+import { ControllerFocusRing } from '../gamepad/focus/ControllerFocusRing'
+import { useNativeFocus } from '../gamepad/focus/native-focus'
 import { usePromptOptionBinding } from '../gamepad/bindings/use-prompt-option-binding'
 import { useControllerBinding } from '../gamepad/controller-provider'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
@@ -242,9 +244,11 @@ function OptionRow({
   multi?: boolean
   onPress: () => void
 }): React.JSX.Element {
+  const focusRef = useNativeFocus(cursored)
   return (
     <Pressable
-      style={[styles.option, selected && styles.optionSelected, cursored && styles.optionCursored]}
+      ref={focusRef}
+      style={[styles.option, selected && styles.optionSelected]}
       onPress={onPress}
     >
       {/* Multi-select reads as a checkbox (square); single-select as a radio (circle). */}
@@ -265,6 +269,7 @@ function OptionRow({
           </Text>
         ) : null}
       </View>
+      {cursored ? <ControllerFocusRing radius={radii.card} /> : null}
     </Pressable>
   )
 }
@@ -327,11 +332,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderSubtle,
     marginBottom: spacing.xs
-  },
-  // Where the pad is, distinct from what is chosen: the two are different questions and a user
-  // moving through options needs to see both at once.
-  optionCursored: {
-    borderColor: colors.accentBlue
   },
   optionSelected: {
     borderColor: colors.statusGreen

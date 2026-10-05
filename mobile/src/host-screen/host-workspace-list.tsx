@@ -8,8 +8,11 @@ import { MobileRepoIcon } from '../components/MobileRepoIcon'
 import { MobileSearchField } from '../components/MobileSearchField'
 import { NewWorkspaceFab, FAB_SIZE } from '../components/NewWorkspaceFab'
 import { WorktreeListRow } from '../components/WorktreeListRow'
+import { useControllerListScroll } from '../gamepad/bindings/use-controller-list-scroll'
+import { useSelectionReveal } from '../gamepad/bindings/use-selection-reveal'
 import { useWorkspaceControllerBinding } from '../gamepad/bindings/use-workspace-controller-binding'
 import { colors, spacing } from '../theme/mobile-theme'
+import type { Worktree } from '../worktree/workspace-list-types'
 import { getWorktreeRowIdentity } from '../worktree/worktree-host-row-identity'
 import { HostWorkspaceListStates } from '../worktree/host-workspace-list-states'
 import { getWorktreeStatus } from '../worktree/workspace-list-sections'
@@ -17,7 +20,8 @@ import { repoColor } from '../worktree/repo-color'
 import { hostScreenStyles as styles } from './host-screen-styles'
 import type { HostScreenController } from './use-host-screen-controller'
 
-const worktreeIdOf = (item: { worktreeId: string }): string => item.worktreeId
+// The list's own row key: a pinned workspace also sits under its repo, and the cursor must be on one.
+const rowKeyOf = (item: Worktree): string => item.sectionListKey ?? getWorktreeRowIdentity(item)
 
 export function HostWorkspaceList({ controller }: { controller: HostScreenController }) {
   const {
@@ -46,7 +50,7 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
   } = controller
   const { rawSections, sections, uniqueRepoColors } = sectionsResult
 
-  const scrollWorkspaceList = useCallback(
+  const scrollWorkspaceListTo = useCallback(
     (offset: number) => {
       activeWorktreeScroll.sectionListRef.current
         ?.getScrollResponder()
@@ -54,15 +58,42 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
     },
     [activeWorktreeScroll.sectionListRef]
   )
+  const listScroll = useControllerListScroll(scrollWorkspaceListTo)
 
   // The controller's view of this list: the order it renders, the activation its rows use, and a
   // selected id it draws. No parallel catalog and no second ordering (BIND-R1, BIND-AC4).
   const selectedWorktreeId = useWorkspaceControllerBinding({
     sections,
-    idOf: worktreeIdOf,
+    idOf: rowKeyOf,
     onOpen: actions.openWorktreeSession,
     onBack: router.back,
-    scrollTo: scrollWorkspaceList
+    scrollBy: listScroll.scrollBy
+  })
+
+  // The cursor follows the list and the list follows the cursor: a selection that scrolls out of
+  // view is brought back, centred, without touching the desktop-active row's own scroll.
+  const scrollToWorktree = useCallback(
+    (worktreeId: string) => {
+      for (const [sectionIndex, section] of sections.entries()) {
+        const itemIndex = section.data.findIndex((item) => rowKeyOf(item) === worktreeId)
+        if (itemIndex !== -1) {
+          activeWorktreeScroll.sectionListRef.current?.scrollToLocation({
+            sectionIndex,
+            itemIndex,
+            viewPosition: 0.5,
+            animated: false
+          })
+          return
+        }
+      }
+    },
+    [sections, activeWorktreeScroll.sectionListRef]
+  )
+  const reveal = useSelectionReveal({
+    selectedId: selectedWorktreeId,
+    idOf: rowKeyOf,
+    scrollToId: scrollToWorktree,
+    scrollToOffset: scrollWorkspaceListTo
   })
 
   return (
@@ -123,14 +154,21 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
 
       {sections.length > 0 && (
         <SectionList
+          {...listScroll.handlers}
           ref={activeWorktreeScroll.sectionListRef}
           sections={sections}
-          keyExtractor={(w) => w.sectionListKey ?? getWorktreeRowIdentity(w)}
+          keyExtractor={rowKeyOf}
           stickySectionHeadersEnabled={false}
           // Why: keep the search IME up while tapping clear / scrolling results.
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-          onScrollToIndexFailed={activeWorktreeScroll.onScrollToIndexFailed}
+          viewabilityConfig={reveal.viewabilityConfig}
+          onViewableItemsChanged={reveal.onViewableItemsChanged}
+          onScrollToIndexFailed={(info) => {
+            if (!reveal.onScrollToIndexFailed(info)) {
+              activeWorktreeScroll.onScrollToIndexFailed(info)
+            }
+          }}
           // Why: edge-to-edge under the system nav bar; insets.bottom keeps the last row above it.
           contentContainerStyle={[
             styles.list,
@@ -190,7 +228,7 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
           renderItem={({ item }) => (
             <WorktreeListRow
               item={item}
-              selected={worktreeIdOf(item) === selectedWorktreeId}
+              selected={rowKeyOf(item) === selectedWorktreeId}
               isReadOnly={isReadOnly}
               now={now}
               status={getWorktreeStatus(item)}

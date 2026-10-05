@@ -5,6 +5,8 @@ import { verdictDisplayLabel } from '../transport/connection-health'
 import { mobileConnectionPathLabel } from '../transport/mobile-connection-path-label'
 import type { MobileConnectionPath } from '../transport/stable-logical-rpc-client'
 import type { ConnectionState, HostCatalogEntry, HostProfile } from '../transport/types'
+import { ControllerFocusRing } from '../gamepad/focus/ControllerFocusRing'
+import { useNativeFocus } from '../gamepad/focus/native-focus'
 import { colors, radii, spacing } from '../theme/mobile-theme'
 import { homeHostWorktreeSummary, type HostWorktreeInfo } from '../worktree/home-worktree-info'
 import { StatusDot } from './StatusDot'
@@ -24,6 +26,7 @@ export function MobileHostCard(props: {
   onLongPress: () => void
   onOpenActions: () => void
 }) {
+  const focusRef = useNativeFocus(props.selected === true)
   const credentialUnavailable = props.credentialStatus === 'temporarily-unavailable'
   const credentialMissing = props.credentialStatus === 'missing'
   const connected = props.state === 'connected' && !credentialUnavailable && !credentialMissing
@@ -64,8 +67,9 @@ export function MobileHostCard(props: {
     .filter(Boolean)
     .join(', ')
   return (
-    <View style={[styles.card, props.selected === true && styles.cardSelected]}>
+    <View style={styles.card}>
       <Pressable
+        ref={focusRef}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         style={({ pressed }) => [styles.cardMain, pressed && styles.cardPressed]}
@@ -123,6 +127,7 @@ export function MobileHostCard(props: {
       >
         <MoreVertical size={18} color={colors.textSecondary} />
       </Pressable>
+      {props.selected === true ? <ControllerFocusRing radius={radii.card} /> : null}
     </View>
   )
 }
@@ -137,9 +142,6 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSubtle,
     overflow: 'hidden'
   },
-  // Same accent the wheel uses for a locked segment, so "what the controller is on" reads the
-  // same way everywhere in the fork.
-  cardSelected: { borderColor: colors.accentBlue },
   cardMain: {
     flex: 1,
     minWidth: 0,

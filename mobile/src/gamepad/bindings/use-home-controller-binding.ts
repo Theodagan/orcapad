@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useControllerBinding } from '../controller-provider'
-import { nextScrollOffset } from './controller-scroll-offset'
+import {
+  createScrollIntegrator,
+  LIST_SCROLL_MINIMUM_FIRST_STEP_POINTS,
+  LIST_SCROLL_POINTS_PER_SECOND_AT_FULL_PRESSURE
+} from './controller-scroll-rate'
 import { homeWheelActions } from './home-wheel-actions'
 import { nextSelectedId, selectedItem } from './list-selection'
 import { focusTargetFor, type IntentHandlerEntry } from './surface-binding'
@@ -22,16 +26,28 @@ export type HomeControllerBindingOptions<T extends { readonly id: string }> = {
   readonly hosts: readonly T[]
   readonly onOpen: (host: T) => void
   readonly onPairDesktop: () => void
-  readonly scrollTo: (offset: number) => void
+  /** Moves the list from where it really is; the screen wires it to the list's own offset. */
+  readonly scrollBy: (delta: number) => void
 }
 
 export function useHomeControllerBinding<T extends { readonly id: string }>(
   options: HomeControllerBindingOptions<T>
 ): string | null {
-  const { hosts, onOpen, onPairDesktop, scrollTo } = options
+  const { hosts, onOpen, onPairDesktop } = options
+  const scrollByRef = useRef(options.scrollBy)
+  useLayoutEffect(() => {
+    scrollByRef.current = options.scrollBy
+  })
+  const integrator = useMemo(
+    () =>
+      createScrollIntegrator({
+        unitsPerSecond: LIST_SCROLL_POINTS_PER_SECOND_AT_FULL_PRESSURE,
+        minimumFirstStep: LIST_SCROLL_MINIMUM_FIRST_STEP_POINTS
+      }),
+    []
+  )
   const { connected } = useControllerBinding()
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const offsetRef = useRef(0)
 
   const firstHostId = hosts[0]?.id ?? null
   useEffect(() => {
@@ -62,8 +78,10 @@ export function useHomeControllerBinding<T extends { readonly id: string }>(
           if (intent.kind !== 'scroll') {
             return
           }
-          offsetRef.current = nextScrollOffset(offsetRef.current, intent.direction, intent.velocity)
-          scrollTo(offsetRef.current)
+          const delta = integrator.step(intent)
+          if (delta !== 0) {
+            scrollByRef.current(delta)
+          }
         }
       ],
       [
@@ -83,7 +101,7 @@ export function useHomeControllerBinding<T extends { readonly id: string }>(
       // BIND-R10: an id a preset may name, declared next door so preset data never imports React.
       wheelActions: homeWheelActions(onPairDesktop)
     }
-  }, [hosts, selectedId, onOpen, onPairDesktop, scrollTo])
+  }, [hosts, selectedId, onOpen, onPairDesktop, integrator])
 
   useSurfaceBinding(binding)
   return selectedId

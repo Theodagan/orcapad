@@ -3,6 +3,7 @@ import { Alert, StyleSheet, type FlatList } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useOpenMobileAccounts } from '../accounts/use-open-mobile-accounts'
 import { getProvenCachedWorktrees } from '../cache/worktree-cache'
+import { useControllerListScroll } from '../gamepad/bindings/use-controller-list-scroll'
 import { useHomeControllerBinding } from '../gamepad/bindings/use-home-controller-binding'
 import { ActionSheetModal } from '../components/ActionSheetModal'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -78,9 +79,10 @@ export function MobileHomeScreen() {
     [data.primaryHost, openMobileTasks]
   )
 
-  const scrollHostList = useCallback((offset: number) => {
+  const scrollHostListTo = useCallback((offset: number) => {
     hostListRef.current?.scrollToOffset({ offset, animated: false })
   }, [])
+  const hostListScroll = useControllerListScroll(scrollHostListTo)
 
   const pairDesktop = useCallback(() => data.router.push('/pair-scan'), [data.router])
 
@@ -106,7 +108,7 @@ export function MobileHomeScreen() {
     hosts: data.sortedHostCatalog,
     onOpen: openHost,
     onPairDesktop: pairDesktop,
-    scrollTo: scrollHostList
+    scrollBy: hostListScroll.scrollBy
   })
 
   function openHostActions(host: HostCatalogEntry): void {
@@ -171,6 +173,7 @@ export function MobileHomeScreen() {
           hostStates={data.hostStates}
           isWideLayout={isWideLayout}
           listRef={hostListRef}
+          scrollHandlers={hostListScroll.handlers}
           selectedHostId={selectedHostId}
           stats={data.stats}
           worktreeInfo={data.worktreeInfo}

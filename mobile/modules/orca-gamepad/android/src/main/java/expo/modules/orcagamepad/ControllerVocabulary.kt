@@ -34,18 +34,25 @@ val BUTTON_BY_KEY_CODE: Map<Int, String> = mapOf(
 )
 
 /**
- * Buttons Android re-sends as something else when nobody consumes them: `BUTTON_A` arrives again
- * as `KEYCODE_DPAD_CENTER` and `BUTTON_B` as `KEYCODE_BACK`. That is documented fallback
- * behaviour for a gamepad button no view took, and it is why the tap consumes these two — once
- * `B` is bound to back, a single press would otherwise navigate twice: once through our intent
- * and once through the system's synthetic back.
+ * Buttons Android re-sends as something else when nobody consumes them. Measured on an Android 16
+ * emulator, not assumed: `BUTTON_A` and `BUTTON_X`, the thumb clicks and `BUTTON_START` arrive again
+ * as `KEYCODE_DPAD_CENTER` (a click on whatever holds native focus), `BUTTON_B` and `BUTTON_Y` as
+ * `KEYCODE_BACK`, and `BUTTON_SELECT` as `KEYCODE_MENU`. The tap consumes them so one press is one
+ * action: a bound `B` would otherwise navigate twice, and `X` pressed to switch zone would also
+ * click the focused button.
  *
- * Only these two. Every other pad button has no fallback to suppress, and consuming one would
- * take it away from a view that might want it.
+ * Only buttons with a fallback. The shoulder buttons and triggers have none, and consuming them
+ * would take them away from a view that might want them.
  */
 val FALLBACK_KEY_CODES: Set<Int> = setOf(
   KeyEvent.KEYCODE_BUTTON_A,
-  KeyEvent.KEYCODE_BUTTON_B
+  KeyEvent.KEYCODE_BUTTON_B,
+  KeyEvent.KEYCODE_BUTTON_X,
+  KeyEvent.KEYCODE_BUTTON_Y,
+  KeyEvent.KEYCODE_BUTTON_THUMBL,
+  KeyEvent.KEYCODE_BUTTON_THUMBR,
+  KeyEvent.KEYCODE_BUTTON_START,
+  KeyEvent.KEYCODE_BUTTON_SELECT
 )
 
 /** A pad with no trigger axis reports L2/R2 here instead; the axis is then digital. */

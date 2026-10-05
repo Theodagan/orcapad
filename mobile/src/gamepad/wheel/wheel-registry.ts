@@ -19,16 +19,41 @@ export type WheelActionBinding = {
   readonly run: () => void | Promise<void>
 }
 
+/** One choice in a second-level wheel. It exists only while that wheel is open. */
+export type WheelMenuEntry = {
+  readonly id: string
+  readonly label: string
+  readonly availability: SegmentAvailability
+  readonly run: () => void | Promise<void>
+}
+
+/**
+ * A binding that opens a second wheel. The list is built when the wheel opens rather than when the
+ * surface mounts, so the agents and ports it offers are the ones that are true now.
+ */
+export type WheelMenuBinding = {
+  readonly id: WheelActionBindingId
+  readonly label: string
+  readonly availability: SegmentAvailability
+  readonly menu: () => Promise<readonly WheelMenuEntry[]> | readonly WheelMenuEntry[]
+}
+
+export type WheelBinding = WheelActionBinding | WheelMenuBinding
+
+export function isMenuBinding(binding: WheelBinding): binding is WheelMenuBinding {
+  return 'menu' in binding
+}
+
 export type WheelRegistry = {
   /** Returns the unregister function; a surface calls it on unmount. */
-  readonly register: (binding: WheelActionBinding) => () => void
-  readonly lookup: (id: WheelActionBindingId) => WheelActionBinding | null
+  readonly register: (binding: WheelBinding) => () => void
+  readonly lookup: (id: WheelActionBindingId) => WheelBinding | null
   readonly ids: () => readonly WheelActionBindingId[]
   readonly subscribe: (listener: () => void) => () => void
 }
 
 export function createWheelRegistry(): WheelRegistry {
-  const bindings = new Map<WheelActionBindingId, WheelActionBinding>()
+  const bindings = new Map<WheelActionBindingId, WheelBinding>()
   const listeners = new Set<() => void>()
 
   function notify(): void {

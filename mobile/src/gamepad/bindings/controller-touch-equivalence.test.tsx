@@ -109,7 +109,7 @@ describe('controller and touch reach the same action', () => {
         hosts,
         onOpen,
         onPairDesktop: vi.fn(),
-        scrollTo: vi.fn()
+        scrollBy: vi.fn()
       })
       return null
     })
@@ -131,7 +131,7 @@ describe('controller and touch reach the same action', () => {
         idOf: (row) => row.worktreeId,
         onOpen,
         onBack: vi.fn(),
-        scrollTo: vi.fn()
+        scrollBy: vi.fn()
       })
       return null
     })
@@ -166,21 +166,20 @@ describe('controller and touch reach the same action', () => {
     expect(onSwitchTab.mock.calls[0]).toEqual(onSwitchTab.mock.calls[1])
   })
 
-  it('agent: X and the Stop button', () => {
+  it('agent: the wheel’s stop and the Stop button', () => {
     const onStop = vi.fn()
     const harness = mount(() => {
       useAgentControllerBinding({
         sessionId: 'wt-1',
         canStop: true,
         onStop,
-        scrollTo: vi.fn(),
-        onDetachFromTail: vi.fn()
+        scrollBy: vi.fn()
       })
       return null
     })
 
     onStop()
-    harness.press({ kind: 'stop' })
+    harness.registry.lookup('agent.stop')?.run()
 
     expect(onStop).toHaveBeenCalledTimes(2)
   })
@@ -199,7 +198,7 @@ describe('controller and touch reach the same action', () => {
         onRetryDirectory: vi.fn(),
         onCollapseAll: vi.fn(),
         onBack: vi.fn(),
-        scrollTo: vi.fn()
+        scrollBy: vi.fn()
       })
       return null
     })
@@ -212,25 +211,26 @@ describe('controller and touch reach the same action', () => {
     expect(onPreviewFile.mock.calls[0]).toEqual(onPreviewFile.mock.calls[1])
   })
 
-  it('terminal: a wheel control key and the accessory key row', () => {
-    const onSend = vi.fn()
+  it('terminal: a wheel control key, B and the accessory Esc key all send the same bytes', () => {
+    const sendKey = vi.fn()
     const harness = mount(() => {
       useTerminalControllerBinding({
         handle: 'h1',
-        linesPerScroll: 3,
+        enabled: true,
         scrollLines: vi.fn(),
-        onSend,
-        onBack: vi.fn(),
+        sendKey,
         actions: [{ id: 'terminal.escape', label: 'Esc', send: '\u001b', enabled: true }]
       })
       return null
     })
 
-    onSend('\u001b')
+    sendKey('\u001b') // the shortcut key row's Esc
     harness.registry.lookup('terminal.escape')?.run()
+    harness.press({ kind: 'back' })
 
-    expect(onSend).toHaveBeenCalledTimes(2)
-    expect(onSend.mock.calls[0]).toEqual(onSend.mock.calls[1])
+    expect(sendKey).toHaveBeenCalledTimes(3)
+    expect(sendKey.mock.calls[1]).toEqual(sendKey.mock.calls[0])
+    expect(sendKey.mock.calls[2]).toEqual(sendKey.mock.calls[0])
   })
 })
 
@@ -238,20 +238,19 @@ describe('an unmounted binding reaches nothing', () => {
   // `003` §10: unmount removes focus and wheel registrations. Every surface, one rule.
   it('drops focus and wheel actions for every binding', () => {
     const onOpen = vi.fn()
-    const onSend = vi.fn()
+    const sendKey = vi.fn()
     const harness = mount(() => {
       useHomeControllerBinding({
         hosts: [{ id: 'alpha' }],
         onOpen,
         onPairDesktop: vi.fn(),
-        scrollTo: vi.fn()
+        scrollBy: vi.fn()
       })
       useTerminalControllerBinding({
         handle: 'h1',
-        linesPerScroll: 3,
+        enabled: true,
         scrollLines: vi.fn(),
-        onSend,
-        onBack: vi.fn(),
+        sendKey,
         actions: [{ id: 'terminal.escape', label: 'Esc', send: '\u001b', enabled: true }]
       })
       return null
@@ -275,7 +274,7 @@ describe('an unavailable target does nothing rather than something', () => {
         hosts: [],
         onOpen,
         onPairDesktop: vi.fn(),
-        scrollTo: vi.fn()
+        scrollBy: vi.fn()
       })
       return null
     })
@@ -287,14 +286,13 @@ describe('an unavailable target does nothing rather than something', () => {
   })
 
   it('sends nothing from a disabled terminal action', () => {
-    const onSend = vi.fn()
+    const sendKey = vi.fn()
     const harness = mount(() => {
       useTerminalControllerBinding({
         handle: 'h1',
-        linesPerScroll: 3,
+        enabled: true,
         scrollLines: vi.fn(),
-        onSend,
-        onBack: vi.fn(),
+        sendKey,
         actions: [{ id: 'terminal.quick', label: 'Deploy', send: 'x\r', enabled: false }]
       })
       return null
@@ -302,24 +300,23 @@ describe('an unavailable target does nothing rather than something', () => {
 
     // The wheel refuses to commit an unavailable segment, so the action is never reached.
     expect(harness.registry.lookup('terminal.quick')?.availability).toBe('unavailable')
-    expect(onSend).not.toHaveBeenCalled()
+    expect(sendKey).not.toHaveBeenCalled()
   })
 
-  it('stops nothing when the agent view says the turn cannot be stopped', () => {
+  it('offers no stop when the agent view says the turn cannot be stopped', () => {
     const onStop = vi.fn()
     const harness = mount(() => {
       useAgentControllerBinding({
         sessionId: 'wt-1',
         canStop: false,
         onStop,
-        scrollTo: vi.fn(),
-        onDetachFromTail: vi.fn()
+        scrollBy: vi.fn()
       })
       return null
     })
 
-    harness.press({ kind: 'stop' })
-
+    // The wheel refuses to commit an unavailable segment, so the stop is never reached.
+    expect(harness.registry.lookup('agent.stop')?.availability).toBe('unavailable')
     expect(onStop).not.toHaveBeenCalled()
   })
 })

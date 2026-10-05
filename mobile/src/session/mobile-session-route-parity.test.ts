@@ -46,6 +46,7 @@ const SURFACE_EXPANSION_NAMES = new Set([
   'MobileSessionContentRow',
   'MobileSessionActiveContent',
   'MobileSessionCommandDock',
+  'MobileSessionAccessoryKeys',
   'MobileSessionSheets'
 ])
 const CONTENT_COMPONENT_NAMES = ['MarkdownReader', 'DiffLineRow', 'FileReader'] as const
@@ -63,13 +64,16 @@ const HOST_COMPONENT_NAMES = new Set([
 ])
 
 // Re-pinned in BIND-T5: `useDictationBinding` was added to useMobileSessionNativeChatDictation
-// so `R3` reaches the existing toggle. The diff against the previous pin was exactly that one
-// hook — nothing removed, callbacks and effects unchanged.
-const HEAD_MAIN_HOOK_SHA256 = '6422ec9ee9d49a5513ca0f9ed63196f4184d7ce045ad84f8c8606f5f41f66cc3'
-const HEAD_HOOK_BINDING_SHA256 = '2ff38d42b35127cea3d2aa1cdb13492e75f7c4397c1fa83fb1c9c6dbcc3072ca'
+// so dictation reaches the existing toggle. The diff against the previous pin was exactly that
+// one hook — nothing removed, callbacks and effects unchanged.
+// Re-pinned in 005: one more callback in that hook (`explainDictationUnavailable`, so a press with
+// nowhere for the words is refused out loud), and two toast strings with the `connected` checks
+// that choose between them. Effects, nested functions and every host element are unchanged.
+const HEAD_MAIN_HOOK_SHA256 = '9bd13cd9bd8e1f5c69b23841687781bd1ee98bdf8e5e81118f174666ecd3e7c7'
+const HEAD_HOOK_BINDING_SHA256 = 'eca65b095da992f8a9169e3d6a2c3e995b62af93cded89e451f22316b11c3a04'
 const HEAD_CALLBACK_IDENTITY_SHA256 =
-  '2a9e4825df007f6ef53b81aa5004991d6318eee7507b44d625c07e630be432eb'
-const HEAD_CALLBACK_BODY_SHA256 = '85c4f4605e66c45e2b6bc7de739cb3493d9e2d0db9c9242c379db8ed34a8cefe'
+  'd69eb72e69873a6444dc13b0c500b22bd79cb21607403e9b62f75006945ad498'
+const HEAD_CALLBACK_BODY_SHA256 = '6cd9096b01ab4ec9bccf780cb73f9dbaa04c422dad8e72dfb532e9a46dd8416d'
 const HEAD_EFFECT_SHA256 = '73d80845e0a4b6363cfb4bb55551af97965b1f676b97adf0b2a8504219b9a501'
 const HEAD_CONTENT_HOOK_SHA256 = '9c3b612fef3f370d66873aefdbe1d701f20cb64ded31fef5cc45fde6f8189581'
 const HEAD_NESTED_FUNCTION_SHA256 =
@@ -82,9 +86,17 @@ const HEAD_TIMER_CREATION_SHA256 =
   '1a31b625e2174c3db77272249843196d2b6b06ab1e654a96d8f7858e3082e66b'
 const HEAD_TIMER_CLEANUP_SHA256 = 'c73f1d1c2cc89642f3d727d6f3b6b81860a9d6f34234541a2065ec3d1a8cd116'
 const HEAD_RUNTIME_STRING_SHA256 =
-  '57ef354b97fb4fd3776fd1b09a34305d84022c04c43c6391bd130517bf6e37af'
-const HEAD_HOST_JSX_SHA256 = '390405926b1695fa3a33686f0bc192b432f5468d8576499d7cafbb4922defbb5'
-const HEAD_LEAF_JSX_SHA256 = '21dba981875e173f692590bf910d60964660c5f4cbb79f3a377c7e54f6a1f016'
+  '17cd6cdcfbd87ff113703b54ac06d6e6d2653ffb02f45e399402c77421ab3e1b'
+const HEAD_HOST_JSX_SHA256 = '5ff0f12acca5262f23ba07b7e579724f181e21b1c2e1961e5a5e20570bca8f76'
+// Re-pinned in 005: `controllerFocused` and `onControllerKey` on TerminalPaneView, which is how a
+// pane learns whether it is the one on screen. Then the controller zones: each header and shortcut
+// stop is a `ZoneItem` around the same host element, the `ControllerFocusRing` it shows when
+// focused, and a `ZoneFrame` per zone. The host elements are the same set; only their handlers
+// became named functions (same bodies) and their `key` moved up to the `ZoneItem`. Each also takes
+// `ref={focusRef}` so Android's focus can follow the cursor, and the shortcut row's scroll view and
+// keys take the strip-reveal props. The strings are the zone and stop ids. The shortcut row now
+// lives in MobileSessionAccessoryKeys, and the agent zone has a `ZoneFrame` of its own.
+const HEAD_LEAF_JSX_SHA256 = 'd4e6dc8fe03b7908109ebcb2482165019b2da330a7c8c8c36a85da964a7a52f6'
 const HEAD_STYLE_REFERENCE_SHA256 =
   '295a3501c2c6d7bea7c8bbf38b3f3534f01344cd7e1b91bb8e07c040821d596a'
 const HEAD_IDENTITY_FIELD_SHA256 =
@@ -475,10 +487,10 @@ describe('mobile session route extraction parity', () => {
     const contentBindings = CONTENT_COMPONENT_NAMES.flatMap(
       (name) => readHookFacts(name, definitions).bindings
     )
-    expect(main.hooks).toHaveLength(270)
+    expect(main.hooks).toHaveLength(271)
     expect(hash(main.hooks)).toBe(HEAD_MAIN_HOOK_SHA256)
     expect(hash(main.bindings)).toBe(HEAD_HOOK_BINDING_SHA256)
-    expect(main.callbacks).toHaveLength(77)
+    expect(main.callbacks).toHaveLength(78)
     expect(hash(main.callbacks)).toBe(HEAD_CALLBACK_IDENTITY_SHA256)
     expect(hash(main.callbackBodies)).toBe(HEAD_CALLBACK_BODY_SHA256)
     expect(main.effects).toHaveLength(24)
@@ -520,12 +532,12 @@ describe('mobile session route extraction parity', () => {
 
   it('preserves runtime strings, styles, and the expanded JSX tree', () => {
     const strings = readRuntimeStrings()
-    expect(strings).toHaveLength(546)
+    expect(strings).toHaveLength(584)
     expect(hash(strings)).toBe(HEAD_RUNTIME_STRING_SHA256)
     const jsx = readJsxFacts(readDefinitions())
     expect(jsx.host).toHaveLength(124)
     expect(hash(jsx.host)).toBe(HEAD_HOST_JSX_SHA256)
-    expect(jsx.leaf).toHaveLength(61)
+    expect(jsx.leaf).toHaveLength(88)
     expect(hash(jsx.leaf)).toBe(HEAD_LEAF_JSX_SHA256)
     expect(jsx.styleReferences).toHaveLength(172)
     expect(hash(jsx.styleReferences)).toBe(HEAD_STYLE_REFERENCE_SHA256)

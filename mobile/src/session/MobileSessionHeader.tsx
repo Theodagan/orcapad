@@ -18,6 +18,9 @@ import {
   getMobileSessionTabTitle,
   resolveMobileTerminalTabAgentId
 } from './mobile-terminal-tab-agent'
+import { ControllerFocusRing } from '../gamepad/focus/ControllerFocusRing'
+import { ZoneFrame } from '../gamepad/zones/ZoneFrame'
+import { ZoneItem } from '../gamepad/zones/ZoneItem'
 import { colors } from '../theme/mobile-theme'
 import { QuickCommandsTabButton } from './QuickCommandsTabButton'
 import { styles } from './mobile-session-styles'
@@ -58,62 +61,128 @@ export function MobileSessionHeader({ controller }: { controller: MobileSessionC
     handlePanelTap,
     showHeaderMoreButton
   } = controller
+  const reconnectHost = (): void => {
+    if (hostId) {
+      void forceReconnectHost(hostId)
+    }
+  }
+  const openNewTab = (): void => {
+    setCreateError('')
+    setShowCreateTabDrawer(true)
+  }
+  const openQuickCommands = (): void => {
+    if (quickCommandsSupported === true) {
+      setShowQuickCommands(true)
+      return
+    }
+    showToast(
+      quickCommandsSupported === false
+        ? 'Desktop update required for quick commands'
+        : 'Checking desktop capabilities — try again in a moment',
+      1600
+    )
+  }
+  const newTabDisabled =
+    creating || creatingBrowser || creatingMarkdown || connState !== 'connected'
+
   return (
     <SafeAreaView style={styles.sessionChrome} edges={['top']}>
       <View style={styles.sessionTopBar}>
-        <Pressable
-          style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-          onPress={requestLeaveSession}
-          hitSlop={8}
-          accessibilityLabel="Back to worktrees"
-        >
-          <ChevronLeft size={22} color={colors.textSecondary} strokeWidth={2.2} />
-        </Pressable>
+        <ZoneItem zone="header" id="back" order={0} onActivate={requestLeaveSession}>
+          {({ focused, focusRef }) => (
+            <Pressable
+              ref={focusRef}
+              style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
+              onPress={requestLeaveSession}
+              hitSlop={8}
+              accessibilityLabel="Back to worktrees"
+            >
+              <ChevronLeft size={22} color={colors.textSecondary} strokeWidth={2.2} />
+              {focused ? <ControllerFocusRing radius={8} /> : null}
+            </Pressable>
+          )}
+        </ZoneItem>
 
         <View style={styles.sessionTitleBlock}>
           <Text style={styles.sessionTitle} numberOfLines={1}>
             {worktreeName || 'Terminal'}
           </Text>
-          <Pressable
-            style={styles.sessionMetaRow}
+          <ZoneItem
+            zone="header"
+            id="reconnect"
+            order={1}
             disabled={!showConnectionRetry}
-            onPress={() => {
-              if (hostId) {
-                void forceReconnectHost(hostId)
-              }
-            }}
-            accessibilityRole={showConnectionRetry ? 'button' : undefined}
-            accessibilityLabel={showConnectionRetry ? 'Reconnect to desktop' : undefined}
+            onActivate={reconnectHost}
           >
-            <StatusDot state={connState} />
-            <Text style={styles.sessionMetaText} numberOfLines={1}>
-              {terminalSummary}
-            </Text>
-          </Pressable>
+            {({ focused, focusRef }) => (
+              <Pressable
+                ref={focusRef}
+                style={styles.sessionMetaRow}
+                disabled={!showConnectionRetry}
+                onPress={reconnectHost}
+                accessibilityRole={showConnectionRetry ? 'button' : undefined}
+                accessibilityLabel={showConnectionRetry ? 'Reconnect to desktop' : undefined}
+              >
+                <StatusDot state={connState} />
+                <Text style={styles.sessionMetaText} numberOfLines={1}>
+                  {terminalSummary}
+                </Text>
+                {focused ? <ControllerFocusRing radius={8} /> : null}
+              </Pressable>
+            )}
+          </ZoneItem>
         </View>
         {!isFloatingWorkspaceRoute && (
-          <MobileSessionHeaderIconButton
-            active={activePanel === 'files'}
-            accessibilityLabel="Open file explorer"
-            icon={Folder}
-            onPress={() => handlePanelTap('files')}
-          />
+          <ZoneItem zone="header" id="files" order={2} onActivate={() => handlePanelTap('files')}>
+            {({ focused, focusRef }) => (
+              <MobileSessionHeaderIconButton
+                active={activePanel === 'files'}
+                accessibilityLabel="Open file explorer"
+                icon={Folder}
+                focused={focused}
+                focusRef={focusRef}
+                onPress={() => handlePanelTap('files')}
+              />
+            )}
+          </ZoneItem>
         )}
         {!isFolderWorkspaceRoute && !isFloatingWorkspaceRoute && (
-          <MobileSessionHeaderIconButton
-            active={activePanel === 'sourceControl'}
-            accessibilityLabel="Open source control"
-            icon={GitBranch}
-            onPress={() => handlePanelTap('sourceControl')}
-          />
+          <ZoneItem
+            zone="header"
+            id="source-control"
+            order={3}
+            onActivate={() => handlePanelTap('sourceControl')}
+          >
+            {({ focused, focusRef }) => (
+              <MobileSessionHeaderIconButton
+                active={activePanel === 'sourceControl'}
+                accessibilityLabel="Open source control"
+                icon={GitBranch}
+                focused={focused}
+                focusRef={focusRef}
+                onPress={() => handlePanelTap('sourceControl')}
+              />
+            )}
+          </ZoneItem>
         )}
         {showHeaderMoreButton ? (
-          <MobileSessionHeaderIconButton
-            active={activePanel === 'pr'}
-            accessibilityLabel="More session actions"
-            icon={MoreHorizontal}
-            onPress={() => setShowHeaderMoreActions(true)}
-          />
+          <ZoneItem
+            zone="header"
+            id="more"
+            order={4}
+            onActivate={() => setShowHeaderMoreActions(true)}
+          >
+            {({ focused, focusRef }) => (
+              <MobileSessionHeaderIconButton
+                active={activePanel === 'pr'}
+                accessibilityLabel="More session actions"
+                icon={MoreHorizontal}
+                focused={focused}
+                focusRef={focusRef}
+                onPress={() => setShowHeaderMoreActions(true)}
+              />
+            )}
+          </ZoneItem>
         ) : null}
       </View>
 
@@ -140,85 +209,116 @@ export function MobileSessionHeader({ controller }: { controller: MobileSessionC
               scrollActiveTabIntoView(activeSessionTabIdRef.current, false)
             }}
           >
-            {visibleTabs.map((t) => (
-              <Pressable
+            {visibleTabs.map((t, index) => (
+              <ZoneItem
                 key={t.id}
-                style={[styles.tab, t.id === activeSessionTabId && styles.tabActive]}
-                onLayout={(e) => {
-                  const { x, width } = e.nativeEvent.layout
-                  tabLayoutsRef.current.set(t.id, { x, width })
-                  if (t.id === activeSessionTabIdRef.current) {
-                    scrollActiveTabIntoView(t.id, false)
-                  }
-                }}
-                onPress={() => switchSessionTab(t)}
-                onLongPress={() => {
-                  triggerMediumImpact()
-                  openSessionTabActionSheetAfterKeyboardDismiss(t)
-                }}
-                delayLongPress={400}
+                zone="header"
+                id={`tab:${t.id}`}
+                row={1}
+                order={index}
+                home={t.id === activeSessionTabId}
+                onActivate={() => switchSessionTab(t)}
+                onReveal={() => scrollActiveTabIntoView(t.id, true)}
               >
-                <View style={styles.tabLabelRow}>
-                  {t.type === 'browser' && (
-                    <Globe size={13} color={colors.textSecondary} strokeWidth={2.1} />
-                  )}
-                  {t.type === 'markdown' && (
-                    <FileText size={13} color={colors.textSecondary} strokeWidth={2.1} />
-                  )}
-                  {t.type === 'file' && (
-                    <File size={13} color={colors.textSecondary} strokeWidth={2.1} />
-                  )}
-                  {t.type === 'agent-session' && <MobileAgentIcon agentId={t.agent} size={13} />}
-                  {t.type === 'terminal' &&
-                    (() => {
-                      const agentId = resolveMobileTerminalTabAgentId(t)
-                      return agentId ? <MobileAgentIcon agentId={agentId} size={13} /> : null
-                    })()}
-                  <Text
-                    style={[styles.tabText, t.id === activeSessionTabId && styles.tabTextActive]}
-                    numberOfLines={1}
+                {({ focused, focusRef }) => (
+                  <Pressable
+                    ref={focusRef}
+                    style={[styles.tab, t.id === activeSessionTabId && styles.tabActive]}
+                    onLayout={(e) => {
+                      const { x, width } = e.nativeEvent.layout
+                      tabLayoutsRef.current.set(t.id, { x, width })
+                      if (t.id === activeSessionTabIdRef.current) {
+                        scrollActiveTabIntoView(t.id, false)
+                      }
+                    }}
+                    onPress={() => switchSessionTab(t)}
+                    onLongPress={() => {
+                      triggerMediumImpact()
+                      openSessionTabActionSheetAfterKeyboardDismiss(t)
+                    }}
+                    delayLongPress={400}
                   >
-                    {getMobileSessionTabTitle(t)}
-                  </Text>
-                </View>
-              </Pressable>
+                    <View style={styles.tabLabelRow}>
+                      {t.type === 'browser' && (
+                        <Globe size={13} color={colors.textSecondary} strokeWidth={2.1} />
+                      )}
+                      {t.type === 'markdown' && (
+                        <FileText size={13} color={colors.textSecondary} strokeWidth={2.1} />
+                      )}
+                      {t.type === 'file' && (
+                        <File size={13} color={colors.textSecondary} strokeWidth={2.1} />
+                      )}
+                      {t.type === 'agent-session' && (
+                        <MobileAgentIcon agentId={t.agent} size={13} />
+                      )}
+                      {t.type === 'terminal' &&
+                        (() => {
+                          const agentId = resolveMobileTerminalTabAgentId(t)
+                          return agentId ? <MobileAgentIcon agentId={agentId} size={13} /> : null
+                        })()}
+                      <Text
+                        style={[
+                          styles.tabText,
+                          t.id === activeSessionTabId && styles.tabTextActive
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {getMobileSessionTabTitle(t)}
+                      </Text>
+                    </View>
+                    {focused ? <ControllerFocusRing radius={8} /> : null}
+                  </Pressable>
+                )}
+              </ZoneItem>
             ))}
           </ScrollView>
           {/* Why: pinned outside the scroll strip so the new-agent button stays reachable however far the tabs scroll. */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.newTerminalButton,
-              pressed && styles.newTerminalButtonPressed,
-              (creating || creatingBrowser || creatingMarkdown || connState !== 'connected') &&
-                styles.newTerminalButtonDisabled
-            ]}
-            disabled={creating || creatingBrowser || creatingMarkdown || connState !== 'connected'}
-            onPress={() => {
-              setCreateError('')
-              setShowCreateTabDrawer(true)
-            }}
-            accessibilityLabel="New tab"
+          <ZoneItem
+            zone="header"
+            id="new-tab"
+            row={1}
+            order={visibleTabs.length}
+            disabled={newTabDisabled}
+            onActivate={openNewTab}
           >
-            <Plus size={16} color={colors.textSecondary} strokeWidth={2.2} />
-          </Pressable>
+            {({ focused, focusRef }) => (
+              <Pressable
+                ref={focusRef}
+                style={({ pressed }) => [
+                  styles.newTerminalButton,
+                  pressed && styles.newTerminalButtonPressed,
+                  newTabDisabled && styles.newTerminalButtonDisabled
+                ]}
+                disabled={newTabDisabled}
+                onPress={openNewTab}
+                accessibilityLabel="New tab"
+              >
+                <Plus size={16} color={colors.textSecondary} strokeWidth={2.2} />
+                {focused ? <ControllerFocusRing radius={8} /> : null}
+              </Pressable>
+            )}
+          </ZoneItem>
           {/* Why: stable placement matters, while old hosts must stay gated because they strip agentPrompt. */}
-          <QuickCommandsTabButton
-            disabled={creating || creatingBrowser || creatingMarkdown || connState !== 'connected'}
-            onPress={() => {
-              if (quickCommandsSupported === true) {
-                setShowQuickCommands(true)
-                return
-              }
-              showToast(
-                quickCommandsSupported === false
-                  ? 'Desktop update required for quick commands'
-                  : 'Checking desktop capabilities — try again in a moment',
-                1600
-              )
-            }}
-          />
+          <ZoneItem
+            zone="header"
+            id="quick-commands"
+            row={1}
+            order={visibleTabs.length + 1}
+            disabled={newTabDisabled}
+            onActivate={openQuickCommands}
+          >
+            {({ focused, focusRef }) => (
+              <QuickCommandsTabButton
+                disabled={newTabDisabled}
+                focused={focused}
+                focusRef={focusRef}
+                onPress={openQuickCommands}
+              />
+            )}
+          </ZoneItem>
         </View>
       )}
+      <ZoneFrame zone="header" />
     </SafeAreaView>
   )
 }

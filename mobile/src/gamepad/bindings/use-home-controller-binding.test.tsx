@@ -46,7 +46,7 @@ type Harness = {
   registry: ReturnType<typeof createWheelRegistry>
   onOpen: ReturnType<typeof vi.fn>
   onPairDesktop: ReturnType<typeof vi.fn>
-  scrollTo: ReturnType<typeof vi.fn>
+  scrollBy: ReturnType<typeof vi.fn>
 }
 
 function mount(): Harness {
@@ -54,12 +54,12 @@ function mount(): Harness {
   const registry = createWheelRegistry()
   const onOpen = vi.fn()
   const onPairDesktop = vi.fn()
-  const scrollTo = vi.fn()
+  const scrollBy = vi.fn()
   let dispatch: (intent: ControllerIntent) => boolean = () => false
   let selected: string | null = null
 
   function Home(): ReactNode {
-    selected = useHomeControllerBinding({ hosts, onOpen, onPairDesktop, scrollTo })
+    selected = useHomeControllerBinding({ hosts, onOpen, onPairDesktop, scrollBy })
     dispatch = useController().dispatchIntent
     return null
   }
@@ -86,7 +86,7 @@ function mount(): Harness {
     registry,
     onOpen,
     onPairDesktop,
-    scrollTo
+    scrollBy
   }
 }
 
@@ -132,16 +132,22 @@ describe('home controller binding', () => {
     expect(home.onOpen).toHaveBeenCalledWith({ id: 'beta' })
   })
 
-  it('scrolls the list it was given, accumulating while the trigger is held', () => {
+  it('scrolls the list it was given, by a distance that comes from pressure and time', () => {
     const home = mount()
 
-    home.dispatch({ kind: 'scroll', direction: 'down', velocity: 1 })
-    home.dispatch({ kind: 'scroll', direction: 'down', velocity: 1 })
+    for (let at = 0; at < 1000; at += 16) {
+      home.dispatch({
+        kind: 'scroll',
+        direction: 'down',
+        velocity: 1,
+        elapsedMs: 16,
+        begins: at === 0
+      })
+    }
 
-    expect(home.scrollTo).toHaveBeenCalledTimes(2)
-    const [first] = home.scrollTo.mock.calls[0] ?? []
-    const [second] = home.scrollTo.mock.calls[1] ?? []
-    expect(second).toBeGreaterThan(first)
+    const total = home.scrollBy.mock.calls.reduce((sum, [delta]) => sum + delta, 0)
+    expect(total).toBeGreaterThan(850)
+    expect(total).toBeLessThan(950)
   })
 
   // BIND-R10 plus `003` §10: the action exists exactly as long as the surface does.

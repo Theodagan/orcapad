@@ -222,15 +222,15 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
     beginMomentum,
     endMomentum,
     detachFromTail,
-    recordScrollMetrics
+    recordScrollMetrics,
+    recordViewportHeight,
+    scrollBy
   } = useMobileNativeChatTailFollow<NativeChatMessage>({ hasItems: data.length > 0 })
 
   useNativeChatControllerBinding({
     ...props,
     sessionId: sendSurfaceId,
-    canSend: inputLockReason == null,
-    listRef,
-    detachFromTail
+    scrollBy
   })
 
   const handleSend = useCallback(
@@ -327,7 +327,10 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
               onMomentumScrollEnd={endMomentum}
               scrollEventThrottle={32}
               onContentSizeChange={pinToTailAfterContentResize}
-              onLayout={pinToTail}
+              onLayout={(event) => {
+                recordViewportHeight(event.nativeEvent.layout.height)
+                pinToTail()
+              }}
               ListHeaderComponent={
                 hasMore ? (
                   <Pressable

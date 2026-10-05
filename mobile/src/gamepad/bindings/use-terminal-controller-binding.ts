@@ -1,19 +1,22 @@
-import { useMemo } from 'react'
-import type { ControllerInterception } from '../controller-input/native-controller-reader'
-import type { DictationTextTarget } from '../focus/focus-target'
+import { useLayoutEffect, useMemo, useRef } from 'react'
+import { TERMINAL_ACCESSORY_KEY_DEFINITIONS } from '../../terminal/terminal-key-definitions'
+import { FOCUS_PRIORITY } from '../focus/focus-zones'
+import { AGENT_WHEEL_ACTION_IDS } from './agent-wheel-action-ids'
 import type { WheelActionBinding } from '../wheel/wheel-registry'
-import { shouldDeferToFocusedView } from './terminal-interception'
-import { focusTargetFor, type IntentHandlerEntry } from './surface-binding'
+import { createScrollIntegrator } from './controller-scroll-rate'
+import { focusTargetFor, type IntentHandlerEntry, type SurfaceBinding } from './surface-binding'
 import { useSurfaceBinding } from './use-surface-binding'
 
 /**
- * The terminal's controller edge. Scrolling moves the existing local scrollback, control keys and
- * quick commands go out through the pane's existing input callback, and a tapped path still opens
- * through the existing file callback (`003` §7). Nothing here decodes a stream or claims a
- * viewport.
+ * The terminal's controller edge. Scrolling moves whatever owns scroll in the terminal's current
+ * mode, and the WebView decides which that is (`005` USE-R3): xterm's own scrollback, or arrow
+ * keys and wheel reports for a full-screen TUI, exactly as touch does. The D-pad, `A` and `B`
+ * are the arrow keys, Enter and Escape, so an agent waiting on a menu can be driven (USE-R6).
+ * Nothing here decodes a stream or claims a viewport.
  *
- * Scroll is in whole lines rather than pixels: the WebView clamps by line at both ends of the
- * scrollback, so asking in its own unit is what keeps a held trigger from drifting past the end.
+ * Keys go out through the same raw path the shortcut keys use, not through the gesture gate that
+ * touch scrolling goes through: that gate exists to stop a stray swipe typing into a shell, and
+ * it silently drops Enter and Escape, which is what an agent menu needs.
  */
 
 /** A control key or quick command the pane can already send, named so a preset can reach it. */
@@ -29,24 +32,59 @@ export type TerminalWheelAction = {
   readonly enabled: boolean
 }
 
+/** Full trigger pressure scrolls this many rows a second. A device trial tunes it, not taste. */
+export const TERMINAL_LINES_PER_SECOND_AT_FULL_PRESSURE = 40
+
 export type TerminalControllerBindingOptions = {
   readonly handle: string
-  /** Lines per scroll sample; the pane decides, because it knows its own row height. */
-  readonly linesPerScroll: number
+  /**
+   * False for a pane nobody is looking at (another tab's, or one covered by the native chat): it
+   * registers nothing, neither focus nor wheel actions, so it can never answer for the visible one.
+   */
+  readonly enabled: boolean
+  /** Signed rows; the WebView routes them by the terminal's mode. */
   readonly scrollLines: (lines: number) => void
-  readonly onSend: (bytes: string) => void
-  readonly onBack: () => void
+  /** Sends bytes to the agent exactly as a shortcut key does. */
+  readonly sendKey: (bytes: string) => void
+  /** Keep this array's identity stable: a new one re-registers the wheel actions. */
   readonly actions: readonly TerminalWheelAction[]
-  readonly textTarget?: DictationTextTarget
-  /** CTRL-T4's checkpoint, read per sample. Null wherever the native module is absent. */
-  readonly interception?: ControllerInterception | null
+}
+
+function keyBytes(id: string): string | null {
+  return TERMINAL_ACCESSORY_KEY_DEFINITIONS.find((key) => key.id === id)?.bytes ?? null
+}
+
+const KEYS = {
+  up: keyBytes('arrowUp'),
+  down: keyBytes('arrowDown'),
+  left: keyBytes('arrowLeft'),
+  right: keyBytes('arrowRight'),
+  enter: keyBytes('enter'),
+  escape: keyBytes('escape')
 }
 
 export function useTerminalControllerBinding(options: TerminalControllerBindingOptions): void {
-  const { handle, linesPerScroll, scrollLines, onSend, onBack, actions, textTarget, interception } =
-    options
+  const { handle, enabled, actions } = options
+  // Handlers read the latest callbacks, so the binding does not change identity when a caller's does.
+  const latest = useRef(options)
+  useLayoutEffect(() => {
+    latest.current = options
+  })
+  const integrator = useMemo(
+    () =>
+      createScrollIntegrator({
+        unitsPerSecond: TERMINAL_LINES_PER_SECOND_AT_FULL_PRESSURE,
+        minimumFirstStep: 1
+      }),
+    []
+  )
 
-  const binding = useMemo(() => {
+  const binding = useMemo<SurfaceBinding>(() => {
+    const send = (bytes: string | null): void => {
+      if (bytes !== null) {
+        latest.current.sendKey(bytes)
+      }
+    }
     const entries: IntentHandlerEntry[] = [
       [
         'scroll',
@@ -54,29 +92,66 @@ export function useTerminalControllerBinding(options: TerminalControllerBindingO
           if (intent.kind !== 'scroll') {
             return
           }
-          if (shouldDeferToFocusedView(interception ?? null)) {
-            // The WebView already took it; acting here would scroll twice.
-            return
+          const lines = integrator.step(intent)
+          if (lines !== 0) {
+            latest.current.scrollLines(lines)
           }
-          const lines = Math.max(1, Math.round(intent.velocity * linesPerScroll))
-          scrollLines(intent.direction === 'up' ? -lines : lines)
         }
       ],
-      ['back', onBack]
+      [
+        'move-selection',
+        (intent) => {
+          if (intent.kind === 'move-selection') {
+            send(intent.direction === 'up' ? KEYS.up : KEYS.down)
+          }
+        }
+      ],
+      [
+        'move-horizontal',
+        (intent) => {
+          if (intent.kind === 'move-horizontal') {
+            send(intent.direction === 'left' ? KEYS.left : KEYS.right)
+          }
+        }
+      ],
+      ['confirm', () => send(KEYS.enter)],
+      ['back', () => send(KEYS.escape)]
     ]
 
-    const wheelActions: readonly WheelActionBinding[] = actions.map((action) => ({
-      id: action.id,
-      label: action.label,
-      availability: action.enabled ? 'available' : 'unavailable',
-      run: () => onSend(action.send)
-    }))
+    // Stopping an agent in a terminal is the key every agent CLI answers to: Escape interrupts the
+    // turn. The chat has its own stop, and only one of the two is ever the surface on screen.
+    const stopAction: WheelActionBinding = {
+      id: AGENT_WHEEL_ACTION_IDS.stop,
+      label: 'Stop agent',
+      availability: 'available',
+      run: () => send(KEYS.escape)
+    }
+    const wheelActions: readonly WheelActionBinding[] = [
+      stopAction,
+      ...actions.map((action) => ({
+        id: action.id,
+        label: action.label,
+        availability: action.enabled ? ('available' as const) : ('unavailable' as const),
+        run: () => latest.current.sendKey(action.send)
+      }))
+    ]
 
     return {
-      focusTarget: focusTargetFor(`terminal:${handle}`, entries, textTarget),
+      focusTarget: {
+        ...focusTargetFor(`terminal:${handle}`, entries),
+        zone: 'agent',
+        priority: FOCUS_PRIORITY.surface,
+        labels: {
+          scroll: 'Scroll',
+          'move-selection': 'Arrows',
+          'move-horizontal': 'Arrows',
+          confirm: 'Enter',
+          back: 'Esc'
+        }
+      },
       wheelActions
     }
-  }, [handle, linesPerScroll, scrollLines, onSend, onBack, actions, textTarget, interception])
+  }, [handle, actions, integrator])
 
-  useSurfaceBinding(binding)
+  useSurfaceBinding(enabled ? binding : null)
 }

@@ -13,6 +13,8 @@ import { parseExecutionHostId, type ExecutionHostId } from '../../../src/shared/
 import type { RepoIcon } from '../../../src/shared/repo-icon'
 import type { AgentWorkingMode } from '../../../src/shared/agent-status-types'
 import type { RuntimeWorktreeAgentRow } from '../../../src/shared/runtime-types'
+import { ControllerFocusRing } from '../gamepad/focus/ControllerFocusRing'
+import { useNativeFocus } from '../gamepad/focus/native-focus'
 import { triggerMediumImpact } from '../platform/haptics'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import { AgentSpinner } from './AgentSpinner'
@@ -97,14 +99,15 @@ function WorktreeListRowComponent<T extends WorktreeListRowItem>({
   const metaText = isFolderWorkspace ? folderMeta : displayBranch(item.branch)
   const lineageDepth = Math.max(0, item.lineageDepth ?? 0)
   const lineageChildCount = item.lineageChildCount ?? 0
+  const focusRef = useNativeFocus(selected)
 
   return (
     <Pressable
+      ref={focusRef}
       style={({ pressed }) => [
         styles.worktreeRow,
         lineageDepth > 0 && { paddingLeft: spacing.lg + lineageDepth * 18 },
         item.isActive && styles.worktreeRowActive,
-        selected && styles.worktreeRowSelected,
         pressed && styles.worktreeRowPressed
       ]}
       disabled={isReadOnly}
@@ -229,6 +232,7 @@ function WorktreeListRowComponent<T extends WorktreeListRowItem>({
       {item.liveTerminalCount > 0 && (
         <Text style={styles.terminalCount}>{item.liveTerminalCount}</Text>
       )}
+      {selected ? <ControllerFocusRing /> : null}
     </Pressable>
   )
 }
@@ -248,12 +252,6 @@ const styles = StyleSheet.create({
   },
   worktreeRowPressed: {
     backgroundColor: colors.bgRaised
-  },
-  // Controller selection, in the same accent the wheel uses for a locked segment. Deliberately
-  // not the grey of `worktreeRowActive`: "where the pad is" and "what the desktop is on" have to
-  // stay tellable apart when they are different rows.
-  worktreeRowSelected: {
-    borderLeftColor: colors.accentBlue
   },
   // Highlight the worktree currently focused on the desktop, mirroring the
   // desktop sidebar's selected-card treatment (raised fill + left accent).

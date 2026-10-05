@@ -1,5 +1,6 @@
+import { FOCUS_PRIORITY } from '../focus/focus-zones'
 import { useMemo } from 'react'
-import { focusTargetFor, type IntentHandlerEntry } from './surface-binding'
+import { focusTargetFor, type IntentHandlerEntry, type SurfaceBinding } from './surface-binding'
 import { useSurfaceBinding } from './use-surface-binding'
 
 /**
@@ -28,7 +29,7 @@ export type PromptOptionBindingOptions = {
 export function usePromptOptionBinding(options: PromptOptionBindingOptions): void {
   const { promptKey, optionCount, onMove, onChoose, onAdvance, onRetreat, onCancel } = options
 
-  const binding = useMemo(() => {
+  const binding = useMemo<SurfaceBinding>(() => {
     const entries: IntentHandlerEntry[] = [
       [
         'move-selection',
@@ -65,7 +66,17 @@ export function usePromptOptionBinding(options: PromptOptionBindingOptions): voi
     return {
       // Above the chat view it sits inside: while a prompt is on screen it is what the buttons
       // are for.
-      focusTarget: { ...focusTargetFor(`prompt:${promptKey}`, entries), priority: 2 },
+      focusTarget: {
+        ...focusTargetFor(`prompt:${promptKey}`, entries),
+        zone: 'agent',
+        priority: FOCUS_PRIORITY.card,
+        labels: {
+          confirm: 'Choose',
+          'move-selection': 'Move',
+          'move-horizontal': 'Next / Back',
+          back: 'Dismiss'
+        }
+      },
       wheelActions: []
     }
   }, [promptKey, optionCount, onMove, onChoose, onAdvance, onRetreat, onCancel])

@@ -107,7 +107,7 @@ describe('smoke presets', () => {
     )
     expect(opened).toEqual({
       kind: 'state',
-      state: { kind: 'open', wheel: preset.wheel, locked: null }
+      state: { kind: 'open', wheel: preset.wheel, path: [], locked: null }
     })
     expect(
       reduceWheel(
@@ -115,7 +115,7 @@ describe('smoke presets', () => {
         { kind: 'confirm' },
         machine
       )
-    ).toEqual({ kind: 'cancel' })
+    ).toMatchObject({ kind: 'cancel' })
   })
 })
 
@@ -139,7 +139,7 @@ describe('smoke bindings under the wheel', () => {
   it('cancels on a refused binding and leaves it on the wheel', () => {
     const { registry, diagnostics, preset } = armed()
     const { outcome, segments } = pointAndConfirm(preset, registry, 'refused')
-    expect(outcome).toEqual({ kind: 'cancel' })
+    expect(outcome).toMatchObject({ kind: 'cancel' })
     dispatchWheelOutcome(outcome, segments, (id) => void registry.lookup(id)?.run())
     expect(diagnostics.runs()).toEqual([])
     expect(segments.map((segment) => segment.id)).toContain('refused')
@@ -158,7 +158,7 @@ describe('smoke bindings under the wheel', () => {
     const { registry, diagnostics, preset } = armed()
     const { outcome, segments } = pointAndConfirm(preset, registry, 'absent')
     expect(segments.find((segment) => segment.id === 'absent')?.availability).toBe('unavailable')
-    expect(outcome).toEqual({ kind: 'cancel' })
+    expect(outcome).toMatchObject({ kind: 'cancel' })
     expect(diagnostics.runs()).toEqual([])
   })
 })

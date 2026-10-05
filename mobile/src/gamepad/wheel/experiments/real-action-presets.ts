@@ -1,7 +1,8 @@
 import { loadPreset, type WheelPresetDefinition } from '../wheel-preset'
 import { EXPLORER_WHEEL_ACTION_IDS } from '../../bindings/file-explorer-row-action'
 import { HOME_WHEEL_ACTION_IDS } from '../../bindings/home-wheel-actions'
-import { AGENT_REPLY_IDS } from './agent-reply-actions'
+import { AGENT_WHEEL_ACTION_IDS } from '../../bindings/agent-wheel-action-ids'
+import { NAVIGATION_WHEEL_ACTION_IDS } from '../../bindings/navigation-wheel-actions'
 
 /**
  * Presets bound to actions Orca Mobile already performs, rather than to the diagnostics next
@@ -25,6 +26,8 @@ const FULL_TURN = 6.283185307179586
 const BOUNDARY_OVERLAP = 0.001
 const TRIAD_HALF_WIDTH = FULL_TURN / 6 + BOUNDARY_OVERLAP
 const QUAD_HALF_WIDTH = FULL_TURN / 8 + BOUNDARY_OVERLAP
+/** Two segments a long way apart: wide enough to hit, with dead arcs above and below to rest in. */
+const PAIR_HALF_WIDTH = FULL_TURN / 6
 
 const REAL_ACTION_TRIAL = {
   targetDevice: 'any controller-capable Android device',
@@ -34,7 +37,90 @@ const REAL_ACTION_TRIAL = {
     'Bound to existing surface actions through 003. Every segment is reversible; nothing here stops, closes, forgets or deletes.'
 } as const
 
+/**
+ * The agent wheel can stop and close what it points at, and a product decision asked for exactly
+ * that (`005` USE-R10), so it says so. WHEEL-R7 asked for this to be said before a trial runs.
+ */
+const AGENT_ACTION_TRIAL = {
+  targetDevice: 'any controller-capable Android device',
+  controller: 'any Android gamepad',
+  destructivePolicy: 'includes-destructive',
+  notes:
+    'Stop interrupts the agent and Close ends its tab; both were asked for by the product owner. Commit needs a lock and A, and B or centring cancels with no effect.'
+} as const
+
 export const REAL_ACTION_PRESETS: Readonly<Record<string, WheelPresetDefinition>> = {
+  /**
+   * The left wheel (`005` USE-R9): two choices, west and east, so there is nothing to mistake.
+   * West is "back", which is where a thumb expects it.
+   */
+  navigation: loadPreset({
+    presetId: 'navigation',
+    label: 'Navigation',
+    wheel: 1,
+    contractual: false,
+    trial: { trialId: 'navigation', ...REAL_ACTION_TRIAL },
+    segments: [
+      {
+        id: 'back-to-menu',
+        label: 'Back to menu',
+        centerAngle: (FULL_TURN * 3) / 4,
+        halfWidth: PAIR_HALF_WIDTH,
+        bindingId: NAVIGATION_WHEEL_ACTION_IDS.backToMenu
+      },
+      {
+        id: 'new-worktree',
+        label: 'New worktree',
+        centerAngle: FULL_TURN / 4,
+        halfWidth: PAIR_HALF_WIDTH,
+        bindingId: NAVIGATION_WHEEL_ACTION_IDS.newWorktree
+      }
+    ]
+  }),
+
+  /**
+   * The right wheel (`005` USE-R10). The two that are easy to regret, stop and close, sit south and
+   * west, away from the two that open another wheel. "Hand off" is not here: the mobile app has no
+   * agent-to-agent handoff to reuse, so it is out of scope.
+   */
+  'agent-actions': loadPreset({
+    presetId: 'agent-actions',
+    label: 'Agent',
+    wheel: 2,
+    contractual: false,
+    trial: { trialId: 'agent-actions', ...AGENT_ACTION_TRIAL },
+    segments: [
+      {
+        id: 'launch',
+        label: 'Launch agent',
+        centerAngle: 0,
+        halfWidth: QUAD_HALF_WIDTH,
+        bindingId: AGENT_WHEEL_ACTION_IDS.launch
+      },
+      {
+        id: 'web',
+        label: 'Open web page',
+        centerAngle: FULL_TURN / 4,
+        halfWidth: QUAD_HALF_WIDTH,
+        bindingId: AGENT_WHEEL_ACTION_IDS.web
+      },
+      {
+        id: 'stop',
+        label: 'Stop agent',
+        centerAngle: FULL_TURN / 2,
+        halfWidth: QUAD_HALF_WIDTH,
+        bindingId: AGENT_WHEEL_ACTION_IDS.stop
+      },
+      {
+        id: 'close',
+        label: 'Close agent',
+        centerAngle: (FULL_TURN * 3) / 4,
+        halfWidth: QUAD_HALF_WIDTH,
+        bindingId: AGENT_WHEEL_ACTION_IDS.close
+      }
+    ]
+  }),
+
   /**
    * For the file explorer. Three segments because that is how many non-destructive actions the
    * panel actually offers — padding it to four would mean inventing one.
@@ -66,49 +152,6 @@ export const REAL_ACTION_PRESETS: Readonly<Record<string, WheelPresetDefinition>
         centerAngle: (FULL_TURN * 2) / 3,
         halfWidth: TRIAD_HALF_WIDTH,
         bindingId: EXPLORER_WHEEL_ACTION_IDS.collapseAll
-      }
-    ]
-  }),
-
-  /**
-   * `004` LOOP-R3's second path to text, and why the loop closes without a keyboard. Four
-   * segments, the easy case the smoke trials already showed works — this is the preset a
-   * controller-only session depends on, so it should be usable on the first try.
-   */
-  'agent-replies': loadPreset({
-    presetId: 'agent-replies',
-    label: 'Replies',
-    wheel: 2,
-    contractual: false,
-    trial: { trialId: 'agent-replies', ...REAL_ACTION_TRIAL },
-    segments: [
-      {
-        id: 'continue',
-        label: 'Continue',
-        centerAngle: 0,
-        halfWidth: QUAD_HALF_WIDTH,
-        bindingId: AGENT_REPLY_IDS.continue
-      },
-      {
-        id: 'yes',
-        label: 'Yes',
-        centerAngle: FULL_TURN / 4,
-        halfWidth: QUAD_HALF_WIDTH,
-        bindingId: AGENT_REPLY_IDS.yes
-      },
-      {
-        id: 'explain',
-        label: 'Explain',
-        centerAngle: FULL_TURN / 2,
-        halfWidth: QUAD_HALF_WIDTH,
-        bindingId: AGENT_REPLY_IDS.explain
-      },
-      {
-        id: 'no',
-        label: 'No',
-        centerAngle: (FULL_TURN * 3) / 4,
-        halfWidth: QUAD_HALF_WIDTH,
-        bindingId: AGENT_REPLY_IDS.no
       }
     ]
   }),

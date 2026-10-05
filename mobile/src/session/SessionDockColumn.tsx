@@ -2,6 +2,7 @@ import { memo } from 'react'
 import { View, StyleSheet } from 'react-native'
 import { MobileSourceControlPanel } from '../source-control/MobileSourceControlPanel'
 import { MobileFileExplorerPanel } from '../files/MobileFileExplorerPanel'
+import { ZoneFrame } from '../gamepad/zones/ZoneFrame'
 import { mobilePrSidebarStyles } from '../components/pr-sidebar/mobile-pr-sidebar-styles'
 import { useMobileDockResize } from './use-mobile-dock-resize'
 import type { ActivePanel } from './session-panel-host'
@@ -49,6 +50,7 @@ export function SessionDockColumn({
         onFileOpenStart={onFileOpenStart}
         onOpenedFileDiff={onOpenedFileDiff}
       />
+      <ZoneFrame zone="panels" />
     </View>
   )
 }

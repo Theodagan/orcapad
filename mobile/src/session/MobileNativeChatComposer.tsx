@@ -11,6 +11,7 @@ import {
 } from 'react-native'
 import { ArrowUp, ImagePlus, Mic, Square, X } from 'lucide-react-native'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { useComposerSendBinding } from '../gamepad/bindings/use-composer-send-binding'
 import { getVerifiedNativeChatCommands } from '../../../src/shared/native-chat-agent-profiles'
 import { structuredSlashCommands } from '../../../src/shared/structured-agent-session-composer'
 import type { AgentSessionConversationCommand } from '../../../src/shared/agent-session-conversation-command'
@@ -210,6 +211,9 @@ export function MobileNativeChatComposer({
       setSending(false)
     }
   }
+
+  // `A` sends the draft (`005` USE-R3); the composer's own `canSend` decides whether it may.
+  useComposerSendBinding({ composerKey: sendSurfaceId, canSend, onSend: () => void handleSend() })
 
   return (
     <View>

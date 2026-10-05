@@ -20,7 +20,9 @@ import {
   type MobileDirEntry
 } from './file-tree'
 import type { RpcSuccess } from '../transport/types'
+import { useControllerListScroll } from '../gamepad/bindings/use-controller-list-scroll'
 import { useFileExplorerControllerBinding } from '../gamepad/bindings/use-file-explorer-controller-binding'
+import { useSelectionReveal } from '../gamepad/bindings/use-selection-reveal'
 import { colors } from '../theme/mobile-theme'
 import {
   beginDirectoryLoad,
@@ -295,9 +297,10 @@ export function MobileFileExplorerPanel(props: {
 
   const collapseAll = useCallback(() => setExpanded(() => new Set<string>()), [])
 
-  const scrollExplorer = useCallback((offset: number) => {
+  const scrollExplorerTo = useCallback((offset: number) => {
     listRef.current?.scrollToOffset({ offset, animated: false })
   }, [])
+  const listScroll = useControllerListScroll(scrollExplorerTo)
 
   // Controller navigation over the rows the panel is already rendering. Every action below is the
   // one the row's own press calls, so the readDir fallback, cache and preview routing are
@@ -313,7 +316,23 @@ export function MobileFileExplorerPanel(props: {
     onRetryDirectory: (row) => retryDirectory(row.relativePath),
     onCollapseAll: collapseAll,
     onBack: () => (onRequestClose === undefined ? router.back() : onRequestClose()),
-    scrollTo: scrollExplorer
+    scrollBy: listScroll.scrollBy
+  })
+
+  const scrollExplorerToRow = useCallback(
+    (id: string) => {
+      const index = rows.findIndex((row) => explorerRowId(row) === id)
+      if (index !== -1) {
+        listRef.current?.scrollToIndex({ index, viewPosition: 0.5, animated: false })
+      }
+    },
+    [rows]
+  )
+  const reveal = useSelectionReveal<FileExplorerRow>({
+    selectedId: selectedRowId,
+    idOf: explorerRowId,
+    scrollToId: scrollExplorerToRow,
+    scrollToOffset: scrollExplorerTo
   })
 
   const renderItem: ListRenderItem<FileExplorerRow> = ({ item }) => {
@@ -387,6 +406,8 @@ export function MobileFileExplorerPanel(props: {
     </View>
   ) : (
     <FlatList
+      {...listScroll.handlers}
+      {...reveal}
       ref={listRef}
       data={rows}
       renderItem={renderItem}
