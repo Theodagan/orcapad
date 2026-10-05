@@ -386,6 +386,8 @@ export function MountedBottomDrawer({
 
         <View
           ref={sheetFocusRef}
+          // Not flattened away: the pad's focus request needs a native view to start from.
+          collapsable={false}
           style={[styles.anchor, isWideLayout && styles.anchorWide]}
           pointerEvents="box-none"
         >

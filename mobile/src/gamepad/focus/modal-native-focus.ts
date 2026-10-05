@@ -9,9 +9,10 @@ import { useControllerBinding } from '../controller-provider'
  * holds it. This puts the first focusable thing in the sheet under the pad, after which the D-pad
  * walks the sheet, `A` presses what it is on, and `B` closes it, all natively.
  *
- * The ref goes on a view that contains the sheet's controls and not its backdrop, and focus goes to
- * the first control inside it: a container that took focus itself would leave the D-pad nowhere to
- * go, because everything it could reach is inside it.
+ * The ref goes on a view that holds the sheet's controls and not its backdrop, and that is not
+ * flattened away (`collapsable={false}`: a layout-only view has no native counterpart to focus).
+ * Focus goes to the first control inside it, because a container that took focus itself would leave
+ * the D-pad nowhere to go: everything it could reach is inside it.
  *
  * Only while a pad is attached, and a beat after the sheet appears: asking before the window has
  * been shown focuses nothing.

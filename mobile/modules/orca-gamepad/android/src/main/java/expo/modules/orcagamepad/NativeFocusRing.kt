@@ -25,6 +25,7 @@ object NativeFocusRing {
 
   private val watched = WeakHashMap<View, ViewTreeObserver.OnGlobalFocusChangeListener>()
   private val displaced = WeakHashMap<View, Drawable?>()
+  private val detachWatchers = WeakHashMap<View, View.OnAttachStateChangeListener>()
 
   /** Starts ringing focus changes in the window this view is in. Safe to call for every request. */
   fun watch(view: View) {
@@ -66,6 +67,21 @@ object NativeFocusRing {
   private fun ring(view: View) {
     if (!displaced.containsKey(view)) {
       displaced[view] = view.foreground
+    }
+    // React Native recycles the native views of what it unmounts. A view that leaves the window
+    // still ringed would come back as some other element carrying the ring, so the ring goes with it.
+    if (!detachWatchers.containsKey(view)) {
+      val watcher = object : View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(attached: View) {}
+
+        override fun onViewDetachedFromWindow(detached: View) {
+          release(detached)
+          detached.removeOnAttachStateChangeListener(this)
+          detachWatchers.remove(detached)
+        }
+      }
+      view.addOnAttachStateChangeListener(watcher)
+      detachWatchers[view] = watcher
     }
     val density = view.resources.displayMetrics.density
     view.foreground = GradientDrawable().apply {
