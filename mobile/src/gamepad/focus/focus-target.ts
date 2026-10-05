@@ -5,6 +5,13 @@ import type { FocusZone } from './focus-zones'
  * One mounted surface's controller edge. It references identity its surface already owns and
  * keeps no session or workspace record of its own (`000/tech.md` §2).
  */
+/**
+ * What a handler returns to say "not mine after all": the intent keeps falling through to the next
+ * target. A sentinel rather than `false`, because plenty of handlers are arrow functions that
+ * happen to return a boolean, and none of them is declining.
+ */
+export const DECLINED = 'declined' as const
+
 export type FocusTarget = {
   readonly id: string
   /**
@@ -16,7 +23,7 @@ export type FocusTarget = {
   /** Absent means the screen as a whole: heard from every zone, after the focused zone has had its turn. */
   readonly zone?: FocusZone
   readonly accepts: ReadonlySet<ControllerIntent['kind']>
-  readonly handle: (intent: ControllerIntent) => void
+  readonly handle: (intent: ControllerIntent) => void | typeof DECLINED
   /** Hint wording for the intents above; the hint bar falls back to a generic word. */
   readonly labels?: IntentLabels
 }

@@ -13,6 +13,7 @@ import {
   type RowAction
 } from './file-explorer-row-action'
 import { FOCUS_PRIORITY } from '../focus/focus-zones'
+import { useZoneFocused } from '../zones/use-zone-focused'
 import { focusTargetFor, type IntentHandlerEntry, type SurfaceBinding } from './surface-binding'
 import { useSurfaceBinding } from './use-surface-binding'
 
@@ -24,7 +25,11 @@ import { useSurfaceBinding } from './use-surface-binding'
  * Hierarchy is on the horizontal provisional axis: right opens a folder, left closes it, and on a
  * file left steps out to its parent. That is conventional tree behaviour and it is the one thing
  * `A` alone cannot express, since `A` on a folder has to mean toggle.
+ *
+ * Returns the id the pad's cursor is on while the pad is pointed at the panel, else null.
  */
+
+const FILE_EXPLORER_TARGET_ID = 'file-explorer'
 
 export type FileExplorerControllerBindingOptions<T extends ExplorerRow> = {
   /** The flattened rows the list renders, so selection follows what is expanded (BIND-R7). */
@@ -67,7 +72,8 @@ export function useFileExplorerControllerBinding<T extends ExplorerRow>(
       }),
     []
   )
-  const { connected } = useControllerBinding()
+  const { connected, activateFocusTarget } = useControllerBinding()
+  const zoneFocused = useZoneFocused('panels')
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const firstId = rows[0] === undefined ? null : idOf(rows[0])
@@ -150,7 +156,7 @@ export function useFileExplorerControllerBinding<T extends ExplorerRow>(
     return {
       // A docked panel is a zone of the session screen; as a full-screen route it is the only one.
       focusTarget: {
-        ...focusTargetFor('file-explorer', entries),
+        ...focusTargetFor(FILE_EXPLORER_TARGET_ID, entries),
         zone: 'panels',
         priority: FOCUS_PRIORITY.surface,
         labels: {
@@ -192,5 +198,15 @@ export function useFileExplorerControllerBinding<T extends ExplorerRow>(
   ])
 
   useSurfaceBinding(binding)
-  return selectedId
+
+  // Opening the panel is how the pad gets here, so it arrives with the pad rather than leaving
+  // the buttons on the header it was opened from. Declared after the registration it activates.
+  useEffect(() => {
+    if (connected) {
+      activateFocusTarget(FILE_EXPLORER_TARGET_ID)
+    }
+  }, [connected, activateFocusTarget])
+
+  // The cursor is drawn only while the pad is pointed here; elsewhere a ring would lie.
+  return zoneFocused ? selectedId : null
 }

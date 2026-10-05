@@ -2,6 +2,7 @@ import { memo, useCallback, type ReactElement, type RefObject } from 'react'
 import { FlatList, StyleSheet, View, type FlatListProps } from 'react-native'
 import type { ListRenderItemInfo } from 'react-native'
 import { MobileHostCard } from '../components/MobileHostCard'
+import { useSelectionReveal } from '../gamepad/bindings/use-selection-reveal'
 import type { HomeStatsSummary } from '../stats/home-stats-total'
 import { spacing } from '../theme/mobile-theme'
 import { classifyConnection } from '../transport/connection-health'
@@ -39,6 +40,18 @@ type MobileHomeHostListProps = {
 }
 
 export function MobileHomeHostList(props: MobileHomeHostListProps) {
+  const { hosts, listRef } = props
+  const reveal = useSelectionReveal<HostCatalogEntry>({
+    selectedId: props.selectedHostId ?? null,
+    idOf: (host) => host.id,
+    scrollToId: (id) => {
+      const index = hosts.findIndex((host) => host.id === id)
+      if (index !== -1) {
+        listRef?.current?.scrollToIndex({ index, viewPosition: 0.5, animated: false })
+      }
+    },
+    scrollToOffset: (offset) => listRef?.current?.scrollToOffset({ offset, animated: false })
+  })
   const renderHost = useCallback(
     ({ item }: ListRenderItemInfo<HostCatalogEntry>) => (
       <MobileHomeHostRow
@@ -78,6 +91,7 @@ export function MobileHomeHostList(props: MobileHomeHostListProps) {
   return (
     <FlatList
       {...props.scrollHandlers}
+      {...reveal}
       ref={props.listRef}
       data={props.hosts}
       keyExtractor={(host) => host.id}

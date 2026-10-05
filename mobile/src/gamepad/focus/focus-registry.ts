@@ -1,6 +1,6 @@
 import type { ControllerIntent, ControllerIntentKind } from '../controller-input/controller-intent'
 import type { IntentLabels } from '../controller-input/controller-intent'
-import type { FocusTarget } from './focus-target'
+import { DECLINED, type FocusTarget } from './focus-target'
 import { FOCUS_ZONES, ZONE_AGNOSTIC_INTENTS, type FocusZone } from './focus-zones'
 
 /**
@@ -191,7 +191,9 @@ export function createFocusRegistry(): FocusRegistry {
     const zone = focusedZone()
     for (const target of ranked(zone)) {
       if (target.accepts.has(intent.kind) && reaches(target, intent.kind, zone)) {
-        target.handle(intent)
+        if (target.handle(intent) === DECLINED) {
+          continue
+        }
         return true
       }
     }

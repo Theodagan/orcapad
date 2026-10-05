@@ -6,6 +6,19 @@ type FocusableNavigation = {
   readonly addListener: (event: 'focus' | 'blur', listener: () => void) => () => void
 }
 
+/** Reports each time the screen gains or loses the navigator's focus; the result stops watching. */
+function watchScreenFocus(
+  navigation: FocusableNavigation,
+  onChange: (focused: boolean) => void
+): () => void {
+  const stopFocus = navigation.addListener('focus', () => onChange(true))
+  const stopBlur = navigation.addListener('blur', () => onChange(false))
+  return () => {
+    stopFocus()
+    stopBlur()
+  }
+}
+
 /**
  * Tells the controller layer whether the screen it wraps is the one being looked at. A navigator
  * keeps the screens beneath the top one mounted, and with fall-through dispatch an intent nothing
@@ -26,12 +39,7 @@ export function NavigatorScreenGate({
 
   useEffect(() => {
     setFocused(navigation.isFocused())
-    const offFocus = navigation.addListener('focus', () => setFocused(true))
-    const offBlur = navigation.addListener('blur', () => setFocused(false))
-    return () => {
-      offFocus()
-      offBlur()
-    }
+    return watchScreenFocus(navigation, setFocused)
   }, [navigation])
 
   return <ControllerScreenGate active={focused}>{children}</ControllerScreenGate>

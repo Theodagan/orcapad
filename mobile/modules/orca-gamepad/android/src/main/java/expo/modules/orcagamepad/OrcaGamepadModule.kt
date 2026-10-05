@@ -9,7 +9,9 @@ import android.util.Log
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.View
 import android.view.Window
+import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
@@ -71,6 +73,15 @@ class OrcaGamepadModule : Module() {
       inputCaptured = captured
       true
     }
+
+    // Moves Android's input focus to the view with this React tag, so the platform's own focus
+    // highlight and scroll-into-view follow the controller's cursor (`005` USE-R6). React Native
+    // 0.83 only honours `View.focus()` behind a feature flag that is off, and its accessibility
+    // focus call announces without moving anything. Answers false for a view that cannot take
+    // focus, which is a normal outcome rather than an error.
+    AsyncFunction("requestNativeFocus") { viewTag: Int ->
+      appContext.findView<View>(viewTag)?.requestFocus() ?: false
+    }.runOnQueue(Queues.MAIN)
 
     OnDestroy {
       stopTap()

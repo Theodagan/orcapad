@@ -25,11 +25,12 @@ function fakeController(overrides: Record<string, unknown> = {}) {
   const handleCloseSessionTab = vi.fn()
   const handleCreateTerminal = vi.fn()
   const handleCreateBrowser = vi.fn()
+  const activeSessionTab: Tab = { id: 't1', type: 'agent-session' }
   const controller = {
     client: { sendRequest },
     worktreeId: 'repo-1::/work/tree',
     connState: 'connected',
-    activeSessionTab: { id: 't1', type: 'agent-session' } as Tab,
+    activeSessionTab,
     handleCloseSessionTab,
     handleCreateTerminal,
     handleCreateBrowser,
@@ -44,6 +45,8 @@ function fakeController(overrides: Record<string, unknown> = {}) {
   }
 }
 
+type FakeController = ReturnType<typeof fakeController>['controller']
+
 describe('session wheel actions', () => {
   let renderer: ReactTestRenderer | null = null
   afterEach(() => {
@@ -52,12 +55,11 @@ describe('session wheel actions', () => {
     loadOptions.mockReset()
   })
 
-  function mount(controller: object) {
+  function mount(controller: FakeController) {
     const registry = createWheelRegistry()
     function Harness(): ReactNode {
-      // SAFETY: the hook reads a handful of fields, all of which the fake supplies.
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: see above.
-      useSessionWheelActions(controller as MobileSessionController)
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook reads a handful of fields, all of which the fake supplies.
+      useSessionWheelActions(controller as unknown as MobileSessionController)
       return null
     }
     act(() => {

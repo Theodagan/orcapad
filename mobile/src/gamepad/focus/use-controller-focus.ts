@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { useControllerBinding } from '../controller-provider'
-import type { FocusTarget } from './focus-target'
+import { DECLINED, type FocusTarget } from './focus-target'
 import { useControllerScreenActive } from './screen-focus-gate'
 
 const NO_LABELS = ''
@@ -41,7 +41,11 @@ export function useControllerFocus(target: FocusTarget | null): void {
       priority,
       accepts: new Set(current.accepts),
       ...(labels === undefined ? {} : { labels }),
-      handle: (intent) => latest.current?.handle(intent)
+      handle: (intent) => {
+        const live = latest.current
+        // A press that outlives its target falls through to the next one rather than into the void.
+        return live === null ? DECLINED : live.handle(intent)
+      }
     })
   }, [registerFocusTarget, id, zone, priority, acceptsKey, labelsKey])
 }

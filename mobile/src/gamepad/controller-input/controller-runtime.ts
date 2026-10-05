@@ -1,4 +1,4 @@
-import { AppState } from 'react-native'
+import { AppState, findNodeHandle, Platform, type View } from 'react-native'
 import { orcaGamepad } from '../../../modules/orca-gamepad'
 import type { ControllerReader } from './controller-reader'
 import {
@@ -27,6 +27,31 @@ export type ControllerRuntime = {
   readonly resolve: ControllerResolver
   /** Stops the native layer forwarding controller keys beneath an open wheel. Inert without it. */
   readonly setCaptured: (captured: boolean) => void
+  /**
+   * Moves Android's own input focus onto a view, so the platform's focus highlight and
+   * scroll-into-view follow the pad's cursor. Best effort, and inert without the native call.
+   */
+  readonly requestNativeFocus: (node: View | null) => void
+}
+
+/**
+ * Not `View.focus()`, which React Native 0.83 honours only behind a feature flag that is off, and
+ * not `AccessibilityInfo.setAccessibilityFocus`, which announces without moving focus. A view
+ * that cannot take focus, a build older than this call, or another platform leaves focus where
+ * it was.
+ */
+function nativeFocusRequester(
+  module: NonNullable<typeof orcaGamepad>
+): ControllerRuntime['requestNativeFocus'] {
+  return (node) => {
+    if (Platform.OS !== 'android' || node === null || module.requestNativeFocus === undefined) {
+      return
+    }
+    const tag = findNodeHandle(node)
+    if (tag !== null) {
+      module.requestNativeFocus(tag).catch(() => {})
+    }
+  }
 }
 
 /** The device's own figure when it states one; the floor only covers a pad that declares none. */
@@ -46,7 +71,12 @@ export function policyForControllers(
 export function createControllerRuntime(): ControllerRuntime {
   const native = createNativeControllerReader()
   if (orcaGamepad === null) {
-    return { reader: native, resolve: createControllerIntentResolver(), setCaptured: () => {} }
+    return {
+      reader: native,
+      resolve: createControllerIntentResolver(),
+      setCaptured: () => {},
+      requestNativeFocus: () => {}
+    }
   }
   const module = orcaGamepad
 
@@ -67,6 +97,7 @@ export function createControllerRuntime(): ControllerRuntime {
     resolve: (sample, context) => resolve(sample, context),
     setCaptured: (captured) => {
       module.setInputCaptured(captured)
-    }
+    },
+    requestNativeFocus: nativeFocusRequester(module)
   }
 }

@@ -41,6 +41,11 @@ export type OrcaGamepadModule = {
    * open wheel owns the pad. Synchronous on purpose: it must land before the next event.
    */
   readonly setInputCaptured: (captured: boolean) => boolean
+  /**
+   * Moves Android's input focus to the view with this React tag; resolves false when it cannot
+   * take focus. Absent in a build older than the JavaScript, so callers treat it as optional.
+   */
+  readonly requestNativeFocus?: (viewTag: number) => Promise<boolean>
   readonly addListener: {
     (
       event: 'onControllerSample',

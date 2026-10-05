@@ -16,6 +16,7 @@ import { ControllerProvider } from '../src/gamepad/controller-provider'
 import { ControllerConnectionNotice } from '../src/gamepad/controller-connection/ControllerConnectionNotice'
 import { ActionHintBar } from '../src/gamepad/ActionHintBar'
 import { createControllerRuntime } from '../src/gamepad/controller-input/controller-runtime'
+import { useCancelWheelOnDisconnect } from '../src/gamepad/wheel/use-cancel-wheel-on-disconnect'
 import { WheelOverlay } from '../src/gamepad/wheel/WheelOverlay'
 import { useWheelController } from '../src/gamepad/wheel/use-wheel-controller'
 import { createWheelRegistry } from '../src/gamepad/wheel/wheel-registry'
@@ -74,6 +75,8 @@ export default function RootLayout() {
     // An open wheel owns the pad: Android must not also move its own focus underneath it.
     onOpenChange: controllerRuntime.setCaptured
   })
+  // A pad that drops mid-gesture must not leave an open wheel swallowing the screen.
+  useCancelWheelOnDisconnect(controllerRuntime.reader, wheel.cancel)
   const router = useRouter()
   const pathname = usePathname()
   const { hostId, worktreeId } = useGlobalSearchParams<{ hostId?: string; worktreeId?: string }>()
@@ -254,6 +257,7 @@ export default function RootLayout() {
         captured={wheel.isOpen}
         registerWheelAction={wheelRegistry.register}
         activeDictation={activeDictation}
+        requestNativeFocus={controllerRuntime.requestNativeFocus}
         wheelOverlay={<WheelOverlay controller={wheel} />}
       >
         <View style={styles.root} onLayout={onNavigatorLayout}>

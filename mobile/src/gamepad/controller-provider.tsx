@@ -18,6 +18,7 @@ import {
 import type { ControllerSample } from './controller-input/controller-sample'
 import type { ResolveContext } from './controller-input/controller-resolver'
 import { createFocusRegistry, type FocusRegistry, type FocusSnapshot } from './focus/focus-registry'
+import { createZoneItemStore, type ZoneItemStore } from './zones/zone-item-store'
 import type { FocusTarget } from './focus/focus-target'
 import type { WheelBinding } from './wheel/wheel-registry'
 import {
@@ -64,6 +65,10 @@ export type ControllerContextValue = {
   readonly focus: FocusReader
   /** The session's dictation, read-only, so the hint bar can say "Stop" while the microphone is live. */
   readonly dictation: DictationReader
+  /** Where the cursor is in the zones that are rows of buttons: the header and the shortcut keys. */
+  readonly zoneItems: ZoneItemStore
+  /** Moves Android's own focus onto the view the cursor is on; a no-op where there is none. */
+  readonly requestNativeFocus: (node: View | null) => void
 }
 
 const ControllerContext = createContext<ControllerContextValue | null>(null)
@@ -71,6 +76,7 @@ const ControllerContext = createContext<ControllerContextValue | null>(null)
 /** No wheel above: the surface still mounts, and its action simply has nowhere to be named. */
 const noWheelRegistration = (): (() => void) => () => {}
 const noDictationRegistration = (): (() => void) => () => {}
+const noNativeFocus = (): void => {}
 
 const INERT_SNAPSHOT: FocusSnapshot = {
   zones: [],
@@ -81,6 +87,13 @@ const INERT_SNAPSHOT: FocusSnapshot = {
 }
 
 const INERT_DICTATION: DictationReader = { subscribe: () => () => {}, current: () => null }
+
+const INERT_ZONE_ITEMS: ZoneItemStore = {
+  register: () => () => {},
+  isFocused: () => false,
+  selectedId: () => null,
+  subscribe: () => () => {}
+}
 
 const INERT_FOCUS: FocusReader = {
   subscribe: () => () => {},
@@ -114,7 +127,9 @@ const INERT_CONTROLLER: ControllerContextValue = {
   registerWheelAction: noWheelRegistration,
   registerActiveDictation: noDictationRegistration,
   focus: INERT_FOCUS,
-  dictation: INERT_DICTATION
+  dictation: INERT_DICTATION,
+  zoneItems: INERT_ZONE_ITEMS,
+  requestNativeFocus: () => {}
 }
 
 export function useControllerBinding(): ControllerContextValue {
@@ -159,6 +174,8 @@ export type ControllerProviderProps = {
    * dictation wherever focus is. Absent means no dictation layer, and `Y` is an ordinary intent.
    */
   readonly activeDictation?: ActiveDictationRegistry
+  /** The runtime's native focus request. Absent means the cursor is drawn but Android's focus stays put. */
+  readonly requestNativeFocus?: (node: View | null) => void
 }
 
 export function ControllerProvider({
@@ -169,7 +186,8 @@ export function ControllerProvider({
   intercept,
   captured,
   registerWheelAction,
-  activeDictation
+  activeDictation,
+  requestNativeFocus
 }: ControllerProviderProps): ReactNode {
   const activeReader = useMemo(() => reader ?? createAbsentControllerReader(), [reader])
   const registry = useMemo(() => createFocusRegistry(), [])
@@ -222,6 +240,8 @@ export function ControllerProvider({
     [registry]
   )
 
+  const zoneItems = useMemo(() => createZoneItemStore(registry), [registry])
+
   const dictation = useMemo<DictationReader>(
     () => activeDictation ?? INERT_DICTATION,
     [activeDictation]
@@ -237,9 +257,21 @@ export function ControllerProvider({
       registerWheelAction: registerWheelAction ?? noWheelRegistration,
       registerActiveDictation: activeDictation?.register ?? noDictationRegistration,
       focus,
-      dictation
+      dictation,
+      zoneItems,
+      requestNativeFocus: requestNativeFocus ?? noNativeFocus
     }),
-    [support, connected, registry, registerWheelAction, activeDictation, focus, dictation]
+    [
+      support,
+      connected,
+      registry,
+      registerWheelAction,
+      activeDictation,
+      focus,
+      dictation,
+      zoneItems,
+      requestNativeFocus
+    ]
   )
 
   return (

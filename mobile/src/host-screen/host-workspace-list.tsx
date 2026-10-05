@@ -9,6 +9,7 @@ import { MobileSearchField } from '../components/MobileSearchField'
 import { NewWorkspaceFab, FAB_SIZE } from '../components/NewWorkspaceFab'
 import { WorktreeListRow } from '../components/WorktreeListRow'
 import { useControllerListScroll } from '../gamepad/bindings/use-controller-list-scroll'
+import { useSelectionReveal } from '../gamepad/bindings/use-selection-reveal'
 import { useWorkspaceControllerBinding } from '../gamepad/bindings/use-workspace-controller-binding'
 import { colors, spacing } from '../theme/mobile-theme'
 import { getWorktreeRowIdentity } from '../worktree/worktree-host-row-identity'
@@ -65,6 +66,32 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
     onOpen: actions.openWorktreeSession,
     onBack: router.back,
     scrollBy: listScroll.scrollBy
+  })
+
+  // The cursor follows the list and the list follows the cursor: a selection that scrolls out of
+  // view is brought back, centred, without touching the desktop-active row's own scroll.
+  const scrollToWorktree = useCallback(
+    (worktreeId: string) => {
+      for (const [sectionIndex, section] of sections.entries()) {
+        const itemIndex = section.data.findIndex((item) => worktreeIdOf(item) === worktreeId)
+        if (itemIndex !== -1) {
+          activeWorktreeScroll.sectionListRef.current?.scrollToLocation({
+            sectionIndex,
+            itemIndex,
+            viewPosition: 0.5,
+            animated: false
+          })
+          return
+        }
+      }
+    },
+    [sections, activeWorktreeScroll.sectionListRef]
+  )
+  const reveal = useSelectionReveal({
+    selectedId: selectedWorktreeId,
+    idOf: worktreeIdOf,
+    scrollToId: scrollToWorktree,
+    scrollToOffset: scrollWorkspaceListTo
   })
 
   return (
@@ -133,7 +160,13 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
           // Why: keep the search IME up while tapping clear / scrolling results.
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-          onScrollToIndexFailed={activeWorktreeScroll.onScrollToIndexFailed}
+          viewabilityConfig={reveal.viewabilityConfig}
+          onViewableItemsChanged={reveal.onViewableItemsChanged}
+          onScrollToIndexFailed={(info) => {
+            if (!reveal.onScrollToIndexFailed(info)) {
+              activeWorktreeScroll.onScrollToIndexFailed(info)
+            }
+          }}
           // Why: edge-to-edge under the system nav bar; insets.bottom keeps the last row above it.
           contentContainerStyle={[
             styles.list,

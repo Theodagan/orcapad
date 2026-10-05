@@ -46,6 +46,7 @@ const SURFACE_EXPANSION_NAMES = new Set([
   'MobileSessionContentRow',
   'MobileSessionActiveContent',
   'MobileSessionCommandDock',
+  'MobileSessionAccessoryKeys',
   'MobileSessionSheets'
 ])
 const CONTENT_COMPONENT_NAMES = ['MarkdownReader', 'DiffLineRow', 'FileReader'] as const
@@ -85,11 +86,17 @@ const HEAD_TIMER_CREATION_SHA256 =
   '1a31b625e2174c3db77272249843196d2b6b06ab1e654a96d8f7858e3082e66b'
 const HEAD_TIMER_CLEANUP_SHA256 = 'c73f1d1c2cc89642f3d727d6f3b6b81860a9d6f34234541a2065ec3d1a8cd116'
 const HEAD_RUNTIME_STRING_SHA256 =
-  '9ca5b77bf086fbbe1e7d7552a9bbb2e0651042b44c4e3acc403788229599a49b'
-const HEAD_HOST_JSX_SHA256 = '390405926b1695fa3a33686f0bc192b432f5468d8576499d7cafbb4922defbb5'
-// Re-pinned in 005: the only difference is `controllerFocused` and `onControllerKey` on
-// TerminalPaneView, which is how a pane learns whether it is the one on screen.
-const HEAD_LEAF_JSX_SHA256 = 'fc0d83c7b8b5ce71f534143e53a5d33c5b063749f61baa3a91daca5255af29c8'
+  '17cd6cdcfbd87ff113703b54ac06d6e6d2653ffb02f45e399402c77421ab3e1b'
+const HEAD_HOST_JSX_SHA256 = '5ff0f12acca5262f23ba07b7e579724f181e21b1c2e1961e5a5e20570bca8f76'
+// Re-pinned in 005: `controllerFocused` and `onControllerKey` on TerminalPaneView, which is how a
+// pane learns whether it is the one on screen. Then the controller zones: each header and shortcut
+// stop is a `ZoneItem` around the same host element, the `ControllerFocusRing` it shows when
+// focused, and a `ZoneFrame` per zone. The host elements are the same set; only their handlers
+// became named functions (same bodies) and their `key` moved up to the `ZoneItem`. Each also takes
+// `ref={focusRef}` so Android's focus can follow the cursor, and the shortcut row's scroll view and
+// keys take the strip-reveal props. The strings are the zone and stop ids. The shortcut row now
+// lives in MobileSessionAccessoryKeys, and the agent zone has a `ZoneFrame` of its own.
+const HEAD_LEAF_JSX_SHA256 = 'd4e6dc8fe03b7908109ebcb2482165019b2da330a7c8c8c36a85da964a7a52f6'
 const HEAD_STYLE_REFERENCE_SHA256 =
   '295a3501c2c6d7bea7c8bbf38b3f3534f01344cd7e1b91bb8e07c040821d596a'
 const HEAD_IDENTITY_FIELD_SHA256 =
@@ -525,12 +532,12 @@ describe('mobile session route extraction parity', () => {
 
   it('preserves runtime strings, styles, and the expanded JSX tree', () => {
     const strings = readRuntimeStrings()
-    expect(strings).toHaveLength(550)
+    expect(strings).toHaveLength(584)
     expect(hash(strings)).toBe(HEAD_RUNTIME_STRING_SHA256)
     const jsx = readJsxFacts(readDefinitions())
     expect(jsx.host).toHaveLength(124)
     expect(hash(jsx.host)).toBe(HEAD_HOST_JSX_SHA256)
-    expect(jsx.leaf).toHaveLength(61)
+    expect(jsx.leaf).toHaveLength(88)
     expect(hash(jsx.leaf)).toBe(HEAD_LEAF_JSX_SHA256)
     expect(jsx.styleReferences).toHaveLength(172)
     expect(hash(jsx.styleReferences)).toBe(HEAD_STYLE_REFERENCE_SHA256)

@@ -13,52 +13,87 @@ const sourceFile = ts.createSourceFile(
   ts.ScriptKind.TSX
 )
 
-function findQuickCommandsTabButtons(): ts.JsxSelfClosingElement[] {
-  const matches: ts.JsxSelfClosingElement[] = []
-
+function findAll<T extends ts.Node>(matches: (node: ts.Node) => node is T): T[] {
+  const found: T[] = []
   function visit(node: ts.Node): void {
-    if (
-      ts.isJsxSelfClosingElement(node) &&
-      node.tagName.getText(sourceFile) === 'QuickCommandsTabButton'
-    ) {
-      matches.push(node)
+    if (matches(node)) {
+      found.push(node)
     }
     ts.forEachChild(node, visit)
   }
-
   visit(sourceFile)
-  return matches
+  return found
 }
 
-function getQuickCommandsTabSource(): string {
-  const start = source.indexOf('accessibilityLabel="New tab"')
-  expect(start).toBeGreaterThanOrEqual(0)
-  const end = source.indexOf('</SafeAreaView>', start)
-  expect(end).toBeGreaterThan(start)
-  return source.slice(start, end)
+function findQuickCommandsTabButtons(): ts.JsxSelfClosingElement[] {
+  return findAll(
+    (node): node is ts.JsxSelfClosingElement =>
+      ts.isJsxSelfClosingElement(node) &&
+      node.tagName.getText(sourceFile) === 'QuickCommandsTabButton'
+  )
+}
+
+function attributeText(element: ts.JsxSelfClosingElement | ts.JsxOpeningElement, name: string) {
+  const attribute = element.attributes.properties.find(
+    (property): property is ts.JsxAttribute =>
+      ts.isJsxAttribute(property) && property.name.getText(sourceFile) === name
+  )
+  return attribute?.initializer?.getText(sourceFile)
+}
+
+/** Everything between the button and the row of tabs it sits in, or null when it sits in none. */
+function nodesBetweenButtonAndTabBar(button: ts.Node): ts.Node[] | null {
+  const between: ts.Node[] = []
+  for (let current = button.parent; current !== undefined; current = current.parent) {
+    if (
+      ts.isJsxElement(current) &&
+      current.openingElement.tagName.getText(sourceFile) === 'View' &&
+      attributeText(current.openingElement, 'style') === '{styles.tabBar}'
+    ) {
+      return between
+    }
+    between.push(current)
+  }
+  return null
+}
+
+function isRenderGate(node: ts.Node): boolean {
+  return (
+    ts.isConditionalExpression(node) ||
+    (ts.isBinaryExpression(node) &&
+      [ts.SyntaxKind.AmpersandAmpersandToken, ts.SyntaxKind.BarBarToken].includes(
+        node.operatorToken.kind
+      ))
+  )
+}
+
+function declarationText(name: string): string {
+  const [declaration] = findAll(
+    (node): node is ts.VariableDeclaration =>
+      ts.isVariableDeclaration(node) && node.name.getText(sourceFile) === name
+  )
+  expect(declaration).toBeDefined()
+  return declaration.getText(sourceFile)
 }
 
 describe('quick-commands tab stability', () => {
   it('keeps the button mounted while preserving the capability gate', () => {
-    const tabSource = getQuickCommandsTabSource()
     const buttons = findQuickCommandsTabButtons()
-
     expect(buttons).toHaveLength(1)
-    const tabBar = buttons[0].parent
-    expect(ts.isJsxElement(tabBar)).toBe(true)
-    if (!ts.isJsxElement(tabBar)) {
-      return
-    }
-    expect(tabBar.openingElement.tagName.getText(sourceFile)).toBe('View')
-    const style = tabBar.openingElement.attributes.properties.find(
-      (attribute): attribute is ts.JsxAttribute =>
-        ts.isJsxAttribute(attribute) && attribute.name.getText(sourceFile) === 'style'
-    )
-    expect(style?.initializer?.getText(sourceFile)).toBe('{styles.tabBar}')
-    expect(tabSource).toContain('if (quickCommandsSupported === true)')
-    expect(tabSource).toContain('setShowQuickCommands(true)')
-    expect(tabSource).toContain('Desktop update required for quick commands')
-    expect(tabSource).toContain('Checking desktop capabilities — try again in a moment')
+
+    // Mounted unconditionally in the tab row: its place never shifts with the host's capability.
+    // The controller wraps it in a zone stop, which is not a condition.
+    const between = nodesBetweenButtonAndTabBar(buttons[0])
+    expect(between).not.toBeNull()
+    expect(between?.some(isRenderGate)).toBe(false)
+
+    // The gate lives in the one handler both a tap and the controller call.
+    expect(attributeText(buttons[0], 'onPress')).toBe('{openQuickCommands}')
+    const handler = declarationText('openQuickCommands')
+    expect(handler).toContain('if (quickCommandsSupported === true)')
+    expect(handler).toContain('setShowQuickCommands(true)')
+    expect(handler).toContain('Desktop update required for quick commands')
+    expect(handler).toContain('Checking desktop capabilities — try again in a moment')
   })
 
   it('only presents the sheet after support is confirmed', () => {

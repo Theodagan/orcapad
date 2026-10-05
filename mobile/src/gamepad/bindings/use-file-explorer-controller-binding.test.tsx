@@ -2,6 +2,7 @@ import { createElement, type ReactNode } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { describe, expect, it, vi } from 'vitest'
 import { ControllerProvider, useController } from '../controller-provider'
+import { useControllerFocus } from '../focus/use-controller-focus'
 import type { ControllerIntent } from '../controller-input/controller-intent'
 import type { ControllerReader } from '../controller-input/controller-reader'
 import { neutralSample, type ControllerSample } from '../controller-input/controller-sample'
@@ -46,7 +47,11 @@ function fakeReader(): { reader: ControllerReader; publish: (s: ControllerSample
   }
 }
 
-function mount(expandedIds: readonly string[] = ['src'], list: readonly Row[] = rows) {
+function mount(
+  expandedIds: readonly string[] = ['src'],
+  list: readonly Row[] = rows,
+  { besideHeader = false }: { besideHeader?: boolean } = {}
+) {
   const { reader, publish } = fakeReader()
   const registry = createWheelRegistry()
   const onToggleDirectory = vi.fn()
@@ -56,7 +61,19 @@ function mount(expandedIds: readonly string[] = ['src'], list: readonly Row[] = 
   const onBack = vi.fn()
   const scrollBy = vi.fn()
   let dispatch: (intent: ControllerIntent) => boolean = () => false
+  let focus: ReturnType<typeof useController>['focus'] | null = null
   let selected: string | null = null
+
+  /** The session header, which a docked panel sits beside. */
+  function Header(): ReactNode {
+    useControllerFocus({
+      id: 'header-stub',
+      zone: 'header',
+      accepts: new Set(['confirm']),
+      handle: vi.fn()
+    })
+    return null
+  }
 
   function Explorer(): ReactNode {
     selected = useFileExplorerControllerBinding({
@@ -71,7 +88,9 @@ function mount(expandedIds: readonly string[] = ['src'], list: readonly Row[] = 
       onBack,
       scrollBy
     })
-    dispatch = useController().dispatchIntent
+    const controller = useController()
+    dispatch = controller.dispatchIntent
+    focus = controller.focus
     return null
   }
 
@@ -81,7 +100,12 @@ function mount(expandedIds: readonly string[] = ['src'], list: readonly Row[] = 
       createElement(
         ControllerProvider,
         { reader, registerWheelAction: registry.register },
-        createElement(Explorer)
+        createElement(
+          'Fragment',
+          {},
+          besideHeader ? createElement(Header) : null,
+          createElement(Explorer)
+        )
       )
     )
   })
@@ -95,6 +119,8 @@ function mount(expandedIds: readonly string[] = ['src'], list: readonly Row[] = 
     dispatch: (intent: ControllerIntent) => act(() => void dispatch(intent)),
     connect: (connected: boolean) => act(() => publish({ ...neutralSample(0), connected })),
     selected: () => selected,
+    focusedZone: () => focus?.snapshot().focusedZone ?? null,
+    pointPadAt: (zone: 'header' | 'panels') => act(() => focus?.focusZone(zone)),
     onToggleDirectory,
     onPreviewFile,
     onRetryDirectory,
@@ -212,5 +238,27 @@ describe('file explorer controller binding', () => {
     explorer.dispatch({ kind: 'back' })
 
     expect(explorer.onBack).toHaveBeenCalledTimes(1)
+  })
+
+  describe('beside the rest of a session', () => {
+    it('takes the pad with it when the panel opens', () => {
+      const explorer = mount(['src'], rows, { besideHeader: true })
+      explorer.connect(true)
+
+      expect(explorer.focusedZone()).toBe('panels')
+      expect(explorer.selected()).toBe('src')
+    })
+
+    it('hides its cursor while the pad is pointed at another zone, and restores it on return', () => {
+      const explorer = mount(['src'], rows, { besideHeader: true })
+      explorer.connect(true)
+      explorer.dispatch({ kind: 'move-selection', direction: 'down' })
+
+      explorer.pointPadAt('header')
+      expect(explorer.selected()).toBeNull()
+
+      explorer.pointPadAt('panels')
+      expect(explorer.selected()).toBe('src/main.ts')
+    })
   })
 })

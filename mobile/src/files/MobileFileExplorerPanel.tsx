@@ -22,6 +22,7 @@ import {
 import type { RpcSuccess } from '../transport/types'
 import { useControllerListScroll } from '../gamepad/bindings/use-controller-list-scroll'
 import { useFileExplorerControllerBinding } from '../gamepad/bindings/use-file-explorer-controller-binding'
+import { useSelectionReveal } from '../gamepad/bindings/use-selection-reveal'
 import { colors } from '../theme/mobile-theme'
 import {
   beginDirectoryLoad,
@@ -318,6 +319,22 @@ export function MobileFileExplorerPanel(props: {
     scrollBy: listScroll.scrollBy
   })
 
+  const scrollExplorerToRow = useCallback(
+    (id: string) => {
+      const index = rows.findIndex((row) => explorerRowId(row) === id)
+      if (index !== -1) {
+        listRef.current?.scrollToIndex({ index, viewPosition: 0.5, animated: false })
+      }
+    },
+    [rows]
+  )
+  const reveal = useSelectionReveal<FileExplorerRow>({
+    selectedId: selectedRowId,
+    idOf: explorerRowId,
+    scrollToId: scrollExplorerToRow,
+    scrollToOffset: scrollExplorerTo
+  })
+
   const renderItem: ListRenderItem<FileExplorerRow> = ({ item }) => {
     return (
       <MobileFileExplorerRow
@@ -390,6 +407,7 @@ export function MobileFileExplorerPanel(props: {
   ) : (
     <FlatList
       {...listScroll.handlers}
+      {...reveal}
       ref={listRef}
       data={rows}
       renderItem={renderItem}

@@ -23,6 +23,7 @@ function bodyMarkup(): string {
 }
 
 type BufferState = { baseY: number; type: 'alternate' | 'normal'; viewportY: number }
+type TerminalModes = { mouseTrackingMode: string; applicationCursorKeysMode: boolean }
 type TerminalStub = ReturnType<typeof makeTerminal>
 type RegisteredWindowListener = {
   listener: EventListenerOrEventListenerObject
@@ -36,12 +37,19 @@ const ARROW_UP = `${ESC}[A`
 const APP_ARROW_UP = `${ESC}OA`
 
 function makeTerminal(buffer: BufferState, scrollLines: (lines: number) => void) {
+  const modes: TerminalModes = { mouseTrackingMode: 'none', applicationCursorKeysMode: false }
+  let element: HTMLElement | null = null
   const terminal = {
     cols: 40,
     rows: 24,
     options: { fontSize: 13 },
-    modes: { mouseTrackingMode: 'none' as string },
-    element: null as HTMLElement | null,
+    modes,
+    get element() {
+      return element
+    },
+    set element(surface: HTMLElement | null) {
+      element = surface
+    },
     _core: { _renderService: { dimensions: { css: { cell: { width: 8, height: 15 } } } } },
     buffer: {
       active: {
@@ -90,9 +98,23 @@ function makeTerminal(buffer: BufferState, scrollLines: (lines: number) => void)
   return terminal
 }
 
+/** What the page posts to the host: a typed message, checked rather than trusted. */
+function parseHostMessage(raw: unknown): { bytes?: string; type: string } {
+  const message: unknown = JSON.parse(String(raw))
+  if (typeof message !== 'object' || message === null || !('type' in message)) {
+    throw new Error('the page posted something that is not a message')
+  }
+  const { type } = message
+  const bytes = 'bytes' in message ? message.bytes : undefined
+  if (typeof type !== 'string') {
+    throw new Error('the page posted a message with no type')
+  }
+  return typeof bytes === 'string' ? { type, bytes } : { type }
+}
+
 function inputBytes(postMessage: ReturnType<typeof vi.fn>): string {
   return postMessage.mock.calls
-    .map(([raw]) => JSON.parse(String(raw)) as { bytes?: string; type: string })
+    .map(([raw]) => parseHostMessage(raw))
     .filter((message) => message.type === 'terminal-input')
     .map((message) => message.bytes ?? '')
     .join('')
@@ -146,14 +168,16 @@ describe('terminal WebView controller scroll', () => {
       buffer.viewportY = Math.min(Math.max(buffer.viewportY + lines, 0), buffer.baseY)
     })
     const addWindowEventListener = window.addEventListener.bind(window)
-    vi.spyOn(window, 'addEventListener').mockImplementation(((
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions
-    ) => {
-      registeredWindowListeners.push({ type, listener, options })
-      addWindowEventListener(type, listener, options)
-    }) as typeof window.addEventListener)
+    vi.spyOn(window, 'addEventListener').mockImplementation(
+      (
+        type: string,
+        listener: EventListenerOrEventListenerObject,
+        options?: boolean | AddEventListenerOptions
+      ) => {
+        registeredWindowListeners.push({ type, listener, options })
+        addWindowEventListener(type, listener, options)
+      }
+    )
     vi.stubGlobal('requestAnimationFrame', (callback: () => void) => {
       animationFrames.push(callback)
       return animationFrames.length
@@ -162,21 +186,24 @@ describe('terminal WebView controller scroll', () => {
     Object.defineProperty(window, 'innerWidth', { value: 381, configurable: true })
     Object.defineProperty(window, 'innerHeight', { value: 612, configurable: true })
     postMessage = vi.fn()
-    const webWindow = window as unknown as {
-      Terminal: new () => TerminalStub
-      ReactNativeWebView: { postMessage: (data: string) => void }
-    }
-    webWindow.Terminal = function () {
-      const created = makeTerminal(buffer, scrollLines)
-      terminals.push(created)
-      return created
-    } as unknown as new () => TerminalStub
-    webWindow.ReactNativeWebView = { postMessage }
+    // What the page finds on `window`: the engine it constructs, and the bridge it posts to.
+    Object.defineProperty(window, 'Terminal', {
+      configurable: true,
+      value: function () {
+        const created = makeTerminal(buffer, scrollLines)
+        terminals.push(created)
+        return created
+      }
+    })
+    Object.defineProperty(window, 'ReactNativeWebView', {
+      configurable: true,
+      value: { postMessage }
+    })
   })
 
   afterEach(() => {
     for (const { type, listener, options } of registeredWindowListeners) {
-      window.removeEventListener(type, listener as EventListener, options)
+      window.removeEventListener(type, listener, options)
     }
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
@@ -233,7 +260,7 @@ describe('terminal WebView controller scroll', () => {
     it('honours application cursor mode', () => {
       buffer = { baseY: 0, type: 'alternate', viewportY: 0 }
       boot()
-      ;(terminal().modes as Record<string, unknown>).applicationCursorKeysMode = true
+      terminal().modes.applicationCursorKeysMode = true
 
       controllerScroll(-2)
 
