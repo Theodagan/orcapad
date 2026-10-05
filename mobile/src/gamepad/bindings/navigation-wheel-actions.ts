@@ -7,7 +7,9 @@ import type { WheelActionBinding } from '../wheel/wheel-registry'
  */
 export const NAVIGATION_WHEEL_ACTION_IDS = {
   backToMenu: 'nav.back-to-menu',
-  newWorktree: 'nav.new-worktree'
+  newWorktree: 'nav.new-worktree',
+  focusMode: 'nav.focus-mode',
+  shortcuts: 'nav.shortcuts'
 } as const
 
 export type NavigationWheelOptions = {

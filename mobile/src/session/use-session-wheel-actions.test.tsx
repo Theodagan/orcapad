@@ -3,8 +3,9 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ControllerReader } from '../gamepad/controller-input/controller-reader'
 import { neutralSample, type ControllerSample } from '../gamepad/controller-input/controller-sample'
-import { ControllerProvider } from '../gamepad/controller-provider'
+import { ControllerProvider, useControllerBinding } from '../gamepad/controller-provider'
 import { AGENT_WHEEL_ACTION_IDS } from '../gamepad/bindings/agent-wheel-action-ids'
+import { NAVIGATION_WHEEL_ACTION_IDS } from '../gamepad/bindings/navigation-wheel-actions'
 import { createWheelRegistry, isMenuBinding } from '../gamepad/wheel/wheel-registry'
 import { useSessionWheelActions } from './use-session-wheel-actions'
 import type { MobileSessionController } from './use-mobile-session-controller'
@@ -229,9 +230,86 @@ describe('session wheel actions', () => {
     })
   })
 
+  describe('focus mode', () => {
+    it('is available and flips focus mode, updating its label', () => {
+      const { controller } = fakeController()
+      const registry = mount(controller, { padAttached: true })
+      const toggle = registry.lookup(NAVIGATION_WHEEL_ACTION_IDS.focusMode)
+
+      expect(toggle?.availability).toBe('available')
+      expect(toggle?.label).toBe('Focus mode')
+      act(() => {
+        if (toggle !== null && !isMenuBinding(toggle)) {
+          void toggle.run()
+        }
+      })
+
+      expect(registry.lookup(NAVIGATION_WHEEL_ACTION_IDS.focusMode)?.label).toBe('Exit focus mode')
+    })
+  })
+
+  describe('when the session ends', () => {
+    it('puts focus mode and the hidden shortcuts back, since they belong to the session', () => {
+      const { controller } = fakeController()
+      const registry = createWheelRegistry()
+      const { reader, publish } = fakeReader()
+      const held: { chrome: ReturnType<typeof useControllerBinding>['sessionChrome'] | null } = {
+        chrome: null
+      }
+      function Probe(): ReactNode {
+        held.chrome = useControllerBinding().sessionChrome
+        return null
+      }
+      function Session(): ReactNode {
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook reads a handful of fields, all of which the fake supplies.
+        useSessionWheelActions(controller as unknown as MobileSessionController)
+        return null
+      }
+      const tree = (inSession: boolean) =>
+        createElement(
+          ControllerProvider,
+          { registerWheelAction: registry.register, reader },
+          createElement(Probe),
+          inSession ? createElement(Session) : null
+        )
+      act(() => {
+        renderer = create(tree(true))
+      })
+      act(() => publish(neutralSample(1, true)))
+      act(() => {
+        held.chrome?.toggleFocusMode()
+        held.chrome?.toggleShortcuts()
+      })
+      expect(held.chrome?.focusMode()).toBe(true)
+
+      act(() => renderer?.update(tree(false)))
+
+      expect(held.chrome?.focusMode()).toBe(false)
+      expect(held.chrome?.shortcutsHidden()).toBe(false)
+    })
+  })
+
+  describe('shortcuts', () => {
+    it('is available and flips shortcuts hidden, updating its label', () => {
+      const { controller } = fakeController()
+      const registry = mount(controller, { padAttached: true })
+      const toggle = registry.lookup(NAVIGATION_WHEEL_ACTION_IDS.shortcuts)
+
+      expect(toggle?.availability).toBe('available')
+      expect(toggle?.label).toBe('Hide shortcuts')
+      act(() => {
+        if (toggle !== null && !isMenuBinding(toggle)) {
+          void toggle.run()
+        }
+      })
+
+      expect(registry.lookup(NAVIGATION_WHEEL_ACTION_IDS.shortcuts)?.label).toBe('Show shortcuts')
+    })
+  })
+
   it('retracts all of it when the session goes', () => {
     const registry = mount(fakeController().controller)
-    expect(registry.ids()).toHaveLength(4)
+    expect(registry.ids()).toHaveLength(6)
 
     act(() => renderer?.unmount())
     renderer = null

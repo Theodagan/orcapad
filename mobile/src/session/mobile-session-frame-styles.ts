@@ -62,6 +62,19 @@ export const mobileSessionFrameStyles = StyleSheet.create({
     flex: 1,
     minWidth: 0
   },
+  // Focus mode: the title is a short run with the connection dot after it, and the tabs take the rest.
+  sessionTitleBlockCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    maxWidth: 160,
+    minWidth: 0
+  },
+  sessionMetaRowCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: spacing.xs
+  },
   sessionTitle: {
     color: colors.textPrimary,
     fontSize: 14,

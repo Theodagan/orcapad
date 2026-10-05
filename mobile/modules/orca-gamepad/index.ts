@@ -51,6 +51,11 @@ export type OrcaGamepadModule = {
    * is a window of its own with nothing focused in it yet. Optional for the same reason.
    */
   readonly requestNativeFocusWithin?: (viewTag: number) => Promise<boolean>
+  /**
+   * Hides or reveals Android status and navigation/gesture bars (immersive mode).
+   * Optional in older native builds.
+   */
+  readonly setImmersive?: (enabled: boolean) => Promise<boolean>
   readonly addListener: {
     (
       event: 'onControllerSample',

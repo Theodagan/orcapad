@@ -234,3 +234,18 @@ Verification commands run from the repository root, e.g.
   **Verify:** `pnpm --dir mobile test src/gamepad/focus src/gamepad/zones src/host-screen src/gamepad/bindings/use-root-back-binding.test.tsx src/gamepad/controller-input/controller-runtime.test.ts`
 
   **Not verified:** the same on the Retroid.
+
+- [ ] **USE-T22 - Focus mode and a hideable shortcut row**
+
+  Implemented (the first slice was written by Antigravity and reviewed; the rest by hand). A
+  session-chrome store and hook (effective values are false without a pad), `setImmersive` in the
+  gamepad module, a four-segment left wheel, a hint bar that renders nothing in focus mode, system
+  bars tied to focus mode and restored when it ends, the one-line header (built from the same tab strip
+  and buttons, placed beside the title), and the shortcut row and its zone removed while hidden.
+
+  **Needs:** USE-T9, USE-T12
+
+  **Verify:** `pnpm --dir mobile test src/gamepad/session-chrome src/gamepad/ActionHintBar.test.tsx src/gamepad/wheel/experiments src/session/use-session-wheel-actions.test.tsx src/session/session-controller-zones.test.tsx src/session/mobile-session-route-parity.test.ts`
+
+  **Not verified:** on a device or the emulator: the system bars and the one-line header have only been
+  proven by composed tests and a Kotlin compile.

@@ -10,6 +10,7 @@ import {
 import { triggerMediumImpact } from '../platform/haptics'
 import { createTerminalLiveAccessoryInput } from '../terminal/terminal-live-accessory-input'
 import { ControllerFocusRing } from '../gamepad/focus/ControllerFocusRing'
+import { useSessionChrome } from '../gamepad/session-chrome/use-session-chrome'
 import { ZoneFrame } from '../gamepad/zones/ZoneFrame'
 import { ZoneItem } from '../gamepad/zones/ZoneItem'
 import { isTerminalPhoneDisplayMode } from './mobile-session-route-helpers'
@@ -62,10 +63,17 @@ export function MobileSessionAccessoryKeys({
   } = controller
 
   const strip = useHorizontalStripReveal()
+  const { shortcutsHidden } = useSessionChrome()
   const toggleActiveDisplayMode = (): void => {
     if (activeHandle) {
       void toggleDisplayMode(activeHandle)
     }
+  }
+
+  // Hidden with a pad attached, which also takes the shortcuts zone away; a raised keyboard keeps the
+  // row, because its dismiss button is the one way out of the keyboard (#5106).
+  if (shortcutsHidden && keyboardLift <= 0) {
+    return null
   }
 
   return (

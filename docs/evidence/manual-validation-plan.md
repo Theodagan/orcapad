@@ -170,6 +170,15 @@ ends in something to read.
 16. **A screen with no bindings.** On settings, accounts or tasks, `B` should go back. Record how
     far the D-pad gets you, because those screens are still touch-only.
 
+17. **Focus mode.** From a session open the left wheel and pick Focus mode: the status and gesture
+    bars go (a swipe from the edge shows them for a moment), the header is one line with the title, the
+    tabs and the buttons, and the hint bar is gone. In an opencode terminal count the rows you gain.
+    `X` still reaches the header and the D-pad walks the one row; `B` returns. Pick it again, and leave
+    the session, and check the bars come back each time. Pull the pad out of focus mode: the bars must
+    come back.
+18. **Shortcuts.** Hide them from the left wheel: the row goes, `X` skips its zone. Show them again.
+    With the soft keyboard up the row must stay.
+
 ## What to write down
 
 Beyond the BIND-T10 columns:

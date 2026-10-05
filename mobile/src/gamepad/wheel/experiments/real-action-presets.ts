@@ -26,8 +26,7 @@ const FULL_TURN = 6.283185307179586
 const BOUNDARY_OVERLAP = 0.001
 const TRIAD_HALF_WIDTH = FULL_TURN / 6 + BOUNDARY_OVERLAP
 const FIVE_HALF_WIDTH = FULL_TURN / 10 + BOUNDARY_OVERLAP
-/** Two segments a long way apart: wide enough to hit, with dead arcs above and below to rest in. */
-const PAIR_HALF_WIDTH = FULL_TURN / 6
+const QUAD_HALF_WIDTH = FULL_TURN / 8 + BOUNDARY_OVERLAP
 
 const REAL_ACTION_TRIAL = {
   targetDevice: 'any controller-capable Android device',
@@ -51,8 +50,8 @@ const AGENT_ACTION_TRIAL = {
 
 export const REAL_ACTION_PRESETS: Readonly<Record<string, WheelPresetDefinition>> = {
   /**
-   * The left wheel (`005` USE-R9): two choices, west and east, so there is nothing to mistake.
-   * West is "back", which is where a thumb expects it.
+   * The left wheel (`005` USE-R9): four choices, north/east/south/west. Focus mode is north,
+   * new worktree east, shortcuts south, and back to menu west.
    */
   navigation: loadPreset({
     presetId: 'navigation',
@@ -62,18 +61,32 @@ export const REAL_ACTION_PRESETS: Readonly<Record<string, WheelPresetDefinition>
     trial: { trialId: 'navigation', ...REAL_ACTION_TRIAL },
     segments: [
       {
-        id: 'back-to-menu',
-        label: 'Back to menu',
-        centerAngle: (FULL_TURN * 3) / 4,
-        halfWidth: PAIR_HALF_WIDTH,
-        bindingId: NAVIGATION_WHEEL_ACTION_IDS.backToMenu
+        id: 'focus-mode',
+        label: 'Focus mode',
+        centerAngle: 0,
+        halfWidth: QUAD_HALF_WIDTH,
+        bindingId: NAVIGATION_WHEEL_ACTION_IDS.focusMode
       },
       {
         id: 'new-worktree',
         label: 'New worktree',
         centerAngle: FULL_TURN / 4,
-        halfWidth: PAIR_HALF_WIDTH,
+        halfWidth: QUAD_HALF_WIDTH,
         bindingId: NAVIGATION_WHEEL_ACTION_IDS.newWorktree
+      },
+      {
+        id: 'shortcuts',
+        label: 'Shortcuts',
+        centerAngle: FULL_TURN / 2,
+        halfWidth: QUAD_HALF_WIDTH,
+        bindingId: NAVIGATION_WHEEL_ACTION_IDS.shortcuts
+      },
+      {
+        id: 'back-to-menu',
+        label: 'Back to menu',
+        centerAngle: (FULL_TURN * 3) / 4,
+        halfWidth: QUAD_HALF_WIDTH,
+        bindingId: NAVIGATION_WHEEL_ACTION_IDS.backToMenu
       }
     ]
   }),

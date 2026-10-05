@@ -6,7 +6,7 @@ import { createActiveDictationRegistry } from './bindings/active-dictation'
 import type { ControllerIntentKind } from './controller-input/controller-intent'
 import type { ControllerReader } from './controller-input/controller-reader'
 import { neutralSample, type ControllerSample } from './controller-input/controller-sample'
-import { ControllerProvider } from './controller-provider'
+import { ControllerProvider, useControllerBinding } from './controller-provider'
 import type { FocusZone } from './focus/focus-zones'
 import { useControllerFocus } from './focus/use-controller-focus'
 
@@ -62,20 +62,30 @@ describe('ActionHintBar', () => {
       connected?: boolean
       wheelOpen?: boolean
       dictation?: ReturnType<typeof createActiveDictationRegistry>
+      focusMode?: boolean
     } = {}
   ) {
     const { reader, publish } = fakeReader()
+    const held: { toggleFocusMode: (() => void) | null } = { toggleFocusMode: null }
+    function FocusHelper(): ReactNode {
+      held.toggleFocusMode = useControllerBinding().sessionChrome.toggleFocusMode
+      return null
+    }
     act(() => {
       renderer = create(
         createElement(
           ControllerProvider,
           { reader, activeDictation: options.dictation },
+          createElement(FocusHelper),
           ...children,
           createElement(ActionHintBar, { wheelOpen: options.wheelOpen })
         )
       )
     })
     act(() => publish({ ...neutralSample(1, options.connected ?? true) }))
+    if (options.focusMode) {
+      act(() => held.toggleFocusMode?.())
+    }
   }
 
   function texts(): string[] {
@@ -188,5 +198,37 @@ describe('ActionHintBar', () => {
     )
 
     expect(texts()).toEqual(['Wheel', 'R2', 'Select', 'L2', 'Cancel'])
+  })
+
+  it('renders nothing in focus mode', () => {
+    mount(
+      [
+        createElement(Surface, {
+          id: 'agent',
+          zone: 'agent',
+          accepts: ['confirm'],
+          labels: { confirm: 'Enter' }
+        })
+      ],
+      { focusMode: true }
+    )
+
+    expect(texts()).toEqual([])
+  })
+
+  it('renders nothing in focus mode even with wheelOpen', () => {
+    mount(
+      [
+        createElement(Surface, {
+          id: 'agent',
+          zone: 'agent',
+          accepts: ['confirm'],
+          labels: { confirm: 'Enter' }
+        })
+      ],
+      { focusMode: true, wheelOpen: true }
+    )
+
+    expect(texts()).toEqual([])
   })
 })

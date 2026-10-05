@@ -24,6 +24,7 @@ import { createActiveDictationRegistry } from '../src/gamepad/bindings/active-di
 import { ACTIVE_WHEEL_TRIAL } from '../src/gamepad/wheel/experiments/active-wheel-trial'
 import { navigationWheelActions } from '../src/gamepad/bindings/navigation-wheel-actions'
 import { useRootBackBinding } from '../src/gamepad/bindings/use-root-back-binding'
+import { useFocusModeSystemBars } from '../src/gamepad/session-chrome/use-focus-mode-system-bars'
 import { hostStackHostRoute } from '../src/navigation/host-stack-navigation'
 import { NavigatorScreenGate } from '../src/navigation/navigator-screen-gate'
 import { hostNewWorktreeRoute } from '../src/host-route-action-state'
@@ -78,6 +79,12 @@ function RootBackBinding(): null {
       return true
     }
   })
+  return null
+}
+
+/** Focus mode hides the system bars. Must sit inside the provider. */
+function FocusModeSystemBars(): null {
+  useFocusModeSystemBars(controllerRuntime.setImmersive)
   return null
 }
 
@@ -323,6 +330,7 @@ export default function RootLayout() {
           </Stack>
         </View>
         <RootBackBinding />
+        <FocusModeSystemBars />
         <ActionHintBar wheelOpen={wheel.view.state.kind === 'open'} />
         <ControllerConnectionNotice />
       </ControllerProvider>

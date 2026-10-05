@@ -5,6 +5,7 @@ import { useActiveDictation, useControllerBinding, useFocusSnapshot } from './co
 import { isDictationActive } from './bindings/active-dictation'
 import { actionHintsFor, type ActionHint } from './controller-input/action-hints'
 import { WHEEL_TRIGGER_NAMES } from './controller-input/wheel-trigger-steering'
+import { useSessionChrome } from './session-chrome/use-session-chrome'
 import type { FocusZone } from './focus/focus-zones'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 
@@ -34,6 +35,7 @@ const WHEEL_HINTS: readonly ActionHint[] = [
 
 export function ActionHintBar({ wheelOpen = false }: { readonly wheelOpen?: boolean }): ReactNode {
   const { connected } = useControllerBinding()
+  const { focusMode } = useSessionChrome()
   const { reachable, labels, focusedZone, zones, nextZone } = useFocusSnapshot()
   const dictation = useActiveDictation()
   const insets = useSafeAreaInsets()
@@ -50,7 +52,7 @@ export function ActionHintBar({ wheelOpen = false }: { readonly wheelOpen?: bool
     ...(live ? { 'toggle-dictation': 'Stop dictation' } : {})
   }
   const hints = wheelOpen ? WHEEL_HINTS : actionHintsFor(offered, wording)
-  if (!connected || hints.length === 0) {
+  if (!connected || focusMode || hints.length === 0) {
     return null
   }
   const chip = wheelOpen
