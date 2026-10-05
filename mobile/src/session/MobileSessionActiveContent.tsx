@@ -60,6 +60,7 @@ export function MobileSessionActiveContent({
     handleNativeChatFileTap,
     handleTerminalOpenUrl,
     handleTerminalInput,
+    handleAccessoryKey,
     handleTerminalQueryReply,
     handleSelectionMode,
     handleSelectionCopy,
@@ -81,6 +82,8 @@ export function MobileSessionActiveContent({
     toastAnimatedStyle,
     createTabBusy
   } = controller
+  // Arrows, Enter and Escape from the pad take the shortcut keys' path, not the gesture gate.
+  const sendControllerKey = (bytes: string): void => void handleAccessoryKey({ bytes })
   return showLoadingState ? (
     <View style={styles.emptyState}>
       <ActivityIndicator size="small" color={colors.textSecondary} />
@@ -208,6 +211,10 @@ export function MobileSessionActiveContent({
           key={terminal.handle}
           handle={terminal.handle}
           active={terminal.handle === activeHandle}
+          controllerFocused={
+            terminal.handle === activeHandle && !nativeChatController.showNativeChat
+          }
+          onControllerKey={sendControllerKey}
           keyboardLift={terminal.handle === activeHandle ? activeTerminalKeyboardLift : 0}
           terminalTheme={terminal.terminalTheme}
           textScale={terminalTextScale}

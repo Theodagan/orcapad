@@ -185,4 +185,18 @@ export const TERMINAL_HTML_MOUSE_REPORT_AND_SCROLL_ROUTING = `  function viewpor
     term.scrollLines(lines);
   }
 
+  // Why: no pointer here, so enter the touch router; the normal buffer is clamped at both ends.
+  function controllerScrollLines(lines) {
+    if (!term || typeof lines !== 'number' || !isFinite(lines)) return;
+    var whole = Math.trunc(lines);
+    if (whole === 0) return;
+    if (shouldRouteScrollToTerminalInput()) {
+      resetSmoothScrollOffset();
+      routeScrollLines(whole);
+      return;
+    }
+    var applied = clampNormalScrollLines(whole);
+    if (applied !== 0) { term.scrollLines(applied); updateScrollIndicator(true); }
+  }
+
 `

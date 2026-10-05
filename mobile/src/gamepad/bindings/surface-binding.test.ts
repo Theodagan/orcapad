@@ -19,21 +19,22 @@ describe('focus target from handler entries', () => {
       ['scroll', scroll]
     ])
 
-    target.handle({ kind: 'scroll', direction: 'down', velocity: 0.5 })
+    const intent = {
+      kind: 'scroll',
+      direction: 'down',
+      velocity: 0.5,
+      elapsedMs: 16,
+      begins: true
+    } as const
+    target.handle(intent)
 
-    expect(scroll).toHaveBeenCalledWith({ kind: 'scroll', direction: 'down', velocity: 0.5 })
+    expect(scroll).toHaveBeenCalledWith(intent)
     expect(confirm).not.toHaveBeenCalled()
   })
 
   it('ignores an intent it never accepted', () => {
     const target = focusTargetFor('surface', [['confirm', vi.fn()]])
 
-    expect(() => target.handle({ kind: 'stop' })).not.toThrow()
-  })
-
-  it('carries a dictation target through when one is given', () => {
-    const onTranscript = vi.fn()
-    expect(focusTargetFor('surface', [], { onTranscript }).textTarget).toEqual({ onTranscript })
-    expect(focusTargetFor('surface', []).textTarget).toBeUndefined()
+    expect(() => target.handle({ kind: 'back' })).not.toThrow()
   })
 })

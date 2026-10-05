@@ -54,7 +54,7 @@ function mount(expandedIds: readonly string[] = ['src'], list: readonly Row[] = 
   const onRetryDirectory = vi.fn()
   const onCollapseAll = vi.fn()
   const onBack = vi.fn()
-  const scrollTo = vi.fn()
+  const scrollBy = vi.fn()
   let dispatch: (intent: ControllerIntent) => boolean = () => false
   let selected: string | null = null
 
@@ -69,7 +69,7 @@ function mount(expandedIds: readonly string[] = ['src'], list: readonly Row[] = 
       onRetryDirectory,
       onCollapseAll,
       onBack,
-      scrollTo
+      scrollBy
     })
     dispatch = useController().dispatchIntent
     return null

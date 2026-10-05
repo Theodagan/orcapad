@@ -6,7 +6,10 @@ import type { ControllerIntent, ControllerIntentKind } from '../controller-input
 import type { ControllerReader } from '../controller-input/controller-reader'
 import { neutralSample, type ControllerSample } from '../controller-input/controller-sample'
 import { createWheelRegistry } from '../wheel/wheel-registry'
+import { createActiveDictationRegistry } from '../bindings/active-dictation'
 import { useAgentControllerBinding } from '../bindings/use-agent-controller-binding'
+import { useDictationBinding } from '../bindings/use-dictation-binding'
+import { useTerminalControllerBinding } from '../bindings/use-terminal-controller-binding'
 import { useFileExplorerControllerBinding } from '../bindings/use-file-explorer-controller-binding'
 import { useWorkspaceControllerBinding } from '../bindings/use-workspace-controller-binding'
 import { usePromptOptionBinding } from '../bindings/use-prompt-option-binding'
@@ -32,7 +35,7 @@ const PROBED_INTENTS: readonly ControllerIntentKind[] = [
   'confirm',
   'back',
   'scroll',
-  'stop',
+  'switch-zone',
   'cycle-tab',
   'cycle-workspace',
   'toggle-dictation',
@@ -49,9 +52,9 @@ const PROBE_BY_KIND: {
 } = {
   confirm: { kind: 'confirm' },
   back: { kind: 'back' },
-  stop: { kind: 'stop' },
+  'switch-zone': { kind: 'switch-zone' },
   'toggle-dictation': { kind: 'toggle-dictation' },
-  scroll: { kind: 'scroll', direction: 'down', velocity: 1 },
+  scroll: { kind: 'scroll', direction: 'down', velocity: 1, elapsedMs: 16, begins: true },
   'cycle-tab': { kind: 'cycle-tab', direction: 'next' },
   'cycle-workspace': { kind: 'cycle-workspace', direction: 'next' },
   'move-selection': { kind: 'move-selection', direction: 'down' },
@@ -82,6 +85,7 @@ function fakeReader(): { reader: ControllerReader; publish: (s: ControllerSample
 function capabilityOf(Surface: () => ReactNode): SurfaceCapability {
   const { reader, publish } = fakeReader()
   const registry = createWheelRegistry()
+  const activeDictation = createActiveDictationRegistry()
   let dispatch: (intent: ControllerIntent) => boolean = () => false
 
   function Probe(): ReactNode {
@@ -94,7 +98,7 @@ function capabilityOf(Surface: () => ReactNode): SurfaceCapability {
     create(
       createElement(
         ControllerProvider,
-        { reader, registerWheelAction: registry.register },
+        { reader, registerWheelAction: registry.register, activeDictation },
         createElement(Probe)
       )
     )
@@ -113,7 +117,11 @@ function capabilityOf(Surface: () => ReactNode): SurfaceCapability {
     }
   }
 
-  return { accepts, wheelBindingIds: new Set(registry.ids()) }
+  return {
+    accepts,
+    wheelBindingIds: new Set(registry.ids()),
+    canDictate: activeDictation.current()?.canStart === true
+  }
 }
 
 function workspaceCapability(): SurfaceCapability {
@@ -123,7 +131,7 @@ function workspaceCapability(): SurfaceCapability {
       idOf: (row) => row.worktreeId,
       onOpen: vi.fn(),
       onBack: vi.fn(),
-      scrollTo: vi.fn()
+      scrollBy: vi.fn()
     })
     return null
   })
@@ -135,14 +143,31 @@ function agentCapability(): SurfaceCapability {
       sessionId: 'wt-1',
       canStop: true,
       onStop: vi.fn(),
-      scrollTo: vi.fn(),
-      onDetachFromTail: vi.fn(),
+      scrollBy: vi.fn(),
       // A prompt is on screen: this is the state the loop's answer step happens in.
       question: { prompt: { itemId: 'q1', expectedRevision: 1 } },
-      onCancelPrompt: vi.fn(),
-      // Dictation is the primary path; this is the one that works without it.
-      onSendText: vi.fn(),
-      canSend: true
+      onCancelPrompt: vi.fn()
+    })
+    // The session registers its dictation beside the agent view (it owns the tabs and composer).
+    useDictationBinding({
+      activity: 'idle',
+      toggle: vi.fn(),
+      canStart: true,
+      onUnavailable: vi.fn()
+    })
+    return null
+  })
+}
+
+/** A raw terminal: `A` is Enter, which is what sends what was dictated into its input line. */
+function terminalCapability(): SurfaceCapability {
+  return capabilityOf(() => {
+    useTerminalControllerBinding({
+      handle: 'h1',
+      enabled: true,
+      scrollLines: vi.fn(),
+      sendKey: vi.fn(),
+      actions: []
     })
     return null
   })
@@ -160,7 +185,7 @@ function filesCapability(): SurfaceCapability {
       onRetryDirectory: vi.fn(),
       onCollapseAll: vi.fn(),
       onBack: vi.fn(),
-      scrollTo: vi.fn()
+      scrollBy: vi.fn()
     })
     return null
   })
@@ -191,6 +216,7 @@ function loopCapabilities(): ReadonlyMap<LoopStepId, SurfaceCapability> {
   return new Map<LoopStepId, SurfaceCapability>([
     ['observe', workspaces],
     ['prompt', agent],
+    ['send', terminalCapability()],
     ['interrupt', agent],
     ['answer', promptCapability()],
     ['approve', agent],
@@ -203,6 +229,7 @@ describe('the agentic loop', () => {
     expect(AGENTIC_LOOP.map((step) => step.id)).toEqual([
       'observe',
       'prompt',
+      'send',
       'interrupt',
       'answer',
       'approve',
@@ -219,7 +246,7 @@ describe('the agentic loop', () => {
   it('carries the steps that do work', () => {
     const unreachable = new Set(unreachableSteps(loopCapabilities()))
 
-    for (const id of ['observe', 'prompt', 'interrupt', 'answer', 'approve', 'read']) {
+    for (const id of ['observe', 'prompt', 'send', 'interrupt', 'answer', 'approve', 'read']) {
       expect(
         [...unreachable].some((entry) => entry.startsWith(id)),
         id
@@ -234,12 +261,34 @@ describe('the agentic loop', () => {
   // Any one path carries a step; `reachedBy` is alternatives, not a checklist.
   it('accepts a step reached by only one of its paths', () => {
     const onlyDictation: SurfaceCapability = {
-      accepts: new Set<ControllerIntentKind>(['toggle-dictation']),
-      wheelBindingIds: new Set()
+      accepts: new Set<ControllerIntentKind>(),
+      wheelBindingIds: new Set(),
+      canDictate: true
     }
     const capabilities = new Map(loopCapabilities())
     capabilities.set('prompt', onlyDictation)
 
     expect(unreachableSteps(capabilities)).toEqual([])
+  })
+
+  // `004` LOOP-AC4 asked for text with dictation unavailable. The device feedback that opened
+  // `005` revoked the canned replies from the wheel, so this is now a stated cost, not an oversight:
+  // with dictation unavailable the prompt step reports itself unreachable, by name.
+  it('reports the prompt step as unreachable when dictation cannot start', () => {
+    const noDictation: SurfaceCapability = {
+      accepts: new Set<ControllerIntentKind>(),
+      wheelBindingIds: new Set(),
+      canDictate: false
+    }
+    const capabilities = new Map(loopCapabilities())
+    capabilities.set('prompt', noDictation)
+
+    expect(unreachableSteps(capabilities)).toEqual(['prompt (get a prompt to the agent) on agent'])
+  })
+
+  it('reaches the interrupt step through the wheel, since X now switches zone', () => {
+    const interrupt = AGENTIC_LOOP.find((step) => step.id === 'interrupt')
+
+    expect(interrupt?.reachedBy).toEqual([{ kind: 'wheel', bindingId: 'agent.stop' }])
   })
 })

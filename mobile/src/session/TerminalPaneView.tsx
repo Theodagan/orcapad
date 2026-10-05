@@ -1,6 +1,5 @@
 import { useCallback, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
-import type { ControllerInterception } from '../gamepad/controller-input/native-controller-reader'
 import {
   useTerminalControllerBinding,
   type TerminalWheelAction
@@ -35,12 +34,13 @@ type TerminalPaneViewProps = {
   onTextScaleChange: (scale: number) => void
   /** Control keys and quick commands a wheel preset may name (BIND-R10). */
   controllerActions?: readonly TerminalWheelAction[]
-  /** CTRL-T4's WebView checkpoint, so controller scroll never doubles the WebView's own. */
-  interception?: ControllerInterception | null
+  /** The pane on screen: active and not covered by the native chat. Only it takes controller input. */
+  controllerFocused: boolean
+  /** Sends bytes the way a shortcut key does, which is how the D-pad, A and B reach an agent. */
+  onControllerKey: (bytes: string) => void
 }
 
-/** One controller sample is a fraction of a screen, not a page. */
-const LINES_PER_SCROLL_SAMPLE = 3
+const NO_CONTROLLER_ACTIONS: readonly TerminalWheelAction[] = []
 
 export function TerminalPaneView({
   handle,
@@ -63,7 +63,8 @@ export function TerminalPaneView({
   onOpenUrl,
   onTextScaleChange,
   controllerActions,
-  interception
+  controllerFocused,
+  onControllerKey
 }: TerminalPaneViewProps) {
   // The pane keeps its own copy of the handle purely so the controller can reach the scrollback;
   // `onRef` still hands the same ref upward exactly as before.
@@ -80,19 +81,12 @@ export function TerminalPaneView({
     webViewRef.current?.scrollLines(lines)
   }, [])
 
-  const sendBytes = useCallback(
-    (bytes: string) => onTerminalInput(handle, bytes),
-    [handle, onTerminalInput]
-  )
-
   useTerminalControllerBinding({
     handle,
-    linesPerScroll: LINES_PER_SCROLL_SAMPLE,
+    enabled: controllerFocused,
     scrollLines,
-    onSend: sendBytes,
-    onBack: () => onTerminalTap(handle),
-    actions: controllerActions ?? [],
-    interception: interception ?? null
+    sendKey: onControllerKey,
+    actions: controllerActions ?? NO_CONTROLLER_ACTIONS
   })
 
   return (

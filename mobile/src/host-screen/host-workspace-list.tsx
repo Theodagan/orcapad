@@ -8,6 +8,7 @@ import { MobileRepoIcon } from '../components/MobileRepoIcon'
 import { MobileSearchField } from '../components/MobileSearchField'
 import { NewWorkspaceFab, FAB_SIZE } from '../components/NewWorkspaceFab'
 import { WorktreeListRow } from '../components/WorktreeListRow'
+import { useControllerListScroll } from '../gamepad/bindings/use-controller-list-scroll'
 import { useWorkspaceControllerBinding } from '../gamepad/bindings/use-workspace-controller-binding'
 import { colors, spacing } from '../theme/mobile-theme'
 import { getWorktreeRowIdentity } from '../worktree/worktree-host-row-identity'
@@ -46,7 +47,7 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
   } = controller
   const { rawSections, sections, uniqueRepoColors } = sectionsResult
 
-  const scrollWorkspaceList = useCallback(
+  const scrollWorkspaceListTo = useCallback(
     (offset: number) => {
       activeWorktreeScroll.sectionListRef.current
         ?.getScrollResponder()
@@ -54,6 +55,7 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
     },
     [activeWorktreeScroll.sectionListRef]
   )
+  const listScroll = useControllerListScroll(scrollWorkspaceListTo)
 
   // The controller's view of this list: the order it renders, the activation its rows use, and a
   // selected id it draws. No parallel catalog and no second ordering (BIND-R1, BIND-AC4).
@@ -62,7 +64,7 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
     idOf: worktreeIdOf,
     onOpen: actions.openWorktreeSession,
     onBack: router.back,
-    scrollTo: scrollWorkspaceList
+    scrollBy: listScroll.scrollBy
   })
 
   return (
@@ -123,6 +125,7 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
 
       {sections.length > 0 && (
         <SectionList
+          {...listScroll.handlers}
           ref={activeWorktreeScroll.sectionListRef}
           sections={sections}
           keyExtractor={(w) => w.sectionListKey ?? getWorktreeRowIdentity(w)}

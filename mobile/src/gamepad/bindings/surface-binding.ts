@@ -1,5 +1,5 @@
 import type { ControllerIntent, ControllerIntentKind } from '../controller-input/controller-intent'
-import type { DictationTextTarget, FocusTarget } from '../focus/focus-target'
+import type { FocusTarget } from '../focus/focus-target'
 import type { WheelActionBinding } from '../wheel/wheel-registry'
 
 /**
@@ -31,16 +31,11 @@ export type IntentHandlerEntry = readonly [ControllerIntentKind, (intent: Contro
  * obvious way to get it wrong: a handler nothing accepts is silently dead, and a kind accepted
  * with no handler swallows the intent from anything else that might have wanted it.
  */
-export function focusTargetFor(
-  id: string,
-  entries: readonly IntentHandlerEntry[],
-  textTarget?: DictationTextTarget
-): FocusTarget {
+export function focusTargetFor(id: string, entries: readonly IntentHandlerEntry[]): FocusTarget {
   const handlers = new Map(entries)
   return {
     id,
     accepts: new Set(handlers.keys()),
-    handle: (intent) => handlers.get(intent.kind)?.(intent),
-    ...(textTarget === undefined ? {} : { textTarget })
+    handle: (intent) => handlers.get(intent.kind)?.(intent)
   }
 }

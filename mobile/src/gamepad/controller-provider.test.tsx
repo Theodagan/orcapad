@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ControllerIntent } from './controller-input/controller-intent'
 import type { ControllerReader } from './controller-input/controller-reader'
 import { neutralSample, type ControllerSample } from './controller-input/controller-sample'
+import { createActiveDictationRegistry } from './bindings/active-dictation'
 import { ControllerProvider, useController } from './controller-provider'
 import type { FocusTarget } from './focus/focus-target'
 
@@ -93,14 +94,14 @@ describe('ControllerProvider', () => {
   it('routes a resolved intent to the registered surface', () => {
     const { reader, publish } = fakeReader()
     const handle = vi.fn()
-    const target: FocusTarget = { id: 'session', accepts: new Set(['stop']), handle }
-    const stop: ControllerIntent = { kind: 'stop' }
+    const target: FocusTarget = { id: 'session', accepts: new Set(['confirm']), handle }
+    const confirm: ControllerIntent = { kind: 'confirm' }
 
     act(() => {
       renderer = create(
         createElement(
           ControllerProvider,
-          { reader, resolve: () => [stop] },
+          { reader, resolve: () => [confirm] },
           createElement(Surface, { target })
         )
       )
@@ -109,7 +110,7 @@ describe('ControllerProvider', () => {
       publish(neutralSample(1, true))
     })
 
-    expect(handle).toHaveBeenCalledWith(stop)
+    expect(handle).toHaveBeenCalledWith(confirm)
   })
 
   it('tracks connection from the reader rather than assuming it', () => {
@@ -145,7 +146,7 @@ describe('ControllerProvider', () => {
     expect(unsubscribed()).toBe(1)
   })
 
-  it('mounts the wheel overlay above the app and out of its touch path', () => {
+  it('mounts the wheel overlay above the app, passing touches through while it is closed', () => {
     act(() => {
       renderer = create(
         createElement(
@@ -156,8 +157,9 @@ describe('ControllerProvider', () => {
       )
     })
 
+    // box-none: the layer itself takes no touch, but an open wheel inside it can claim them.
     const layers = renderer?.root.findAll(
-      (node) => node.type === 'View' && node.props.pointerEvents === 'none'
+      (node) => node.type === 'View' && node.props.pointerEvents === 'box-none'
     )
     expect(layers).toHaveLength(1)
     expect(layers?.[0].findAllByType(WheelContent)).toHaveLength(1)
@@ -169,6 +171,120 @@ describe('ControllerProvider', () => {
       renderer = create(createElement(ControllerProvider, null, createElement(AppContent)))
     })
 
-    expect(renderer?.root.findAll((node) => node.props?.pointerEvents === 'none')).toHaveLength(0)
+    expect(renderer?.root.findAll((node) => node.props?.pointerEvents === 'box-none')).toHaveLength(
+      0
+    )
+  })
+
+  it('tells the resolver whether a wheel owns the pad, sample by sample', () => {
+    const { reader, publish } = fakeReader()
+    const resolve = vi.fn(() => [])
+    let captured = false
+
+    act(() => {
+      renderer = create(
+        createElement(ControllerProvider, { reader, resolve, captured: () => captured })
+      )
+    })
+    act(() => {
+      publish(neutralSample(1, true))
+    })
+    captured = true
+    act(() => {
+      publish(neutralSample(2, true))
+    })
+
+    expect(resolve.mock.calls.map(([, context]) => context)).toEqual([
+      { captured: false },
+      { captured: true }
+    ])
+  })
+
+  it('lets the wheel take every intent, so nothing reaches the surface beneath', () => {
+    const { reader, publish } = fakeReader()
+    const handle = vi.fn()
+    const target: FocusTarget = { id: 'session', accepts: new Set(['confirm']), handle }
+
+    act(() => {
+      renderer = create(
+        createElement(
+          ControllerProvider,
+          { reader, resolve: () => [{ kind: 'confirm' }], intercept: () => true },
+          createElement(Surface, { target })
+        )
+      )
+    })
+    act(() => {
+      publish(neutralSample(1, true))
+    })
+
+    expect(handle).not.toHaveBeenCalled()
+  })
+
+  it('answers a toggle from the registered dictation when the session says it can start', () => {
+    const { reader, publish } = fakeReader()
+    const toggle = vi.fn()
+    const onUnavailable = vi.fn()
+    const dictation = createActiveDictationRegistry()
+    dictation.register({ activity: 'idle', toggle, canStart: true, onUnavailable })
+    // Nothing focused accepts dictation: it is the session's, so no surface is asked.
+    const surface: FocusTarget = {
+      id: 'agent',
+      zone: 'agent',
+      accepts: new Set(['confirm']),
+      handle: vi.fn()
+    }
+
+    act(() => {
+      renderer = create(
+        createElement(
+          ControllerProvider,
+          { reader, resolve: () => [{ kind: 'toggle-dictation' }], activeDictation: dictation },
+          createElement(Surface, { target: surface })
+        )
+      )
+    })
+    act(() => {
+      publish(neutralSample(1, true))
+    })
+
+    expect(toggle).toHaveBeenCalledTimes(1)
+    expect(onUnavailable).not.toHaveBeenCalled()
+  })
+
+  it('refuses a start with nowhere for the words, out loud, but never refuses a stop', () => {
+    const { reader, publish } = fakeReader()
+    const toggle = vi.fn()
+    const onUnavailable = vi.fn()
+    const dictation = createActiveDictationRegistry()
+    const unregister = dictation.register({
+      activity: 'idle',
+      toggle,
+      canStart: false,
+      onUnavailable
+    })
+
+    act(() => {
+      renderer = create(
+        createElement(ControllerProvider, {
+          reader,
+          resolve: () => [{ kind: 'toggle-dictation' }],
+          activeDictation: dictation
+        })
+      )
+    })
+    act(() => {
+      publish(neutralSample(1, true))
+    })
+    expect(toggle).not.toHaveBeenCalled()
+    expect(onUnavailable).toHaveBeenCalledTimes(1)
+
+    unregister()
+    dictation.register({ activity: 'recording', toggle, canStart: false, onUnavailable })
+    act(() => {
+      publish(neutralSample(2, true))
+    })
+    expect(toggle).toHaveBeenCalledTimes(1)
+    expect(onUnavailable).toHaveBeenCalledTimes(1)
   })
 })

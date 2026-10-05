@@ -1,5 +1,5 @@
 import { memo, useCallback, type ReactElement, type RefObject } from 'react'
-import { FlatList, StyleSheet, View } from 'react-native'
+import { FlatList, StyleSheet, View, type FlatListProps } from 'react-native'
 import type { ListRenderItemInfo } from 'react-native'
 import { MobileHostCard } from '../components/MobileHostCard'
 import type { HomeStatsSummary } from '../stats/home-stats-total'
@@ -27,6 +27,8 @@ type MobileHomeHostListProps = {
   isWideLayout: boolean
   /** Lets the controller binding scroll the same list a finger does (BIND-R3). */
   listRef?: RefObject<FlatList<HostCatalogEntry> | null>
+  /** Reports the list's own offset and size, so the controller scrolls from where it really is. */
+  scrollHandlers?: Partial<FlatListProps<HostCatalogEntry>>
   /** Null unless a controller is attached; touch never shows a selection (BIND-AC10). */
   selectedHostId?: string | null
   stats: HomeStatsSummary | null
@@ -75,6 +77,7 @@ export function MobileHomeHostList(props: MobileHomeHostListProps) {
 
   return (
     <FlatList
+      {...props.scrollHandlers}
       ref={props.listRef}
       data={props.hosts}
       keyExtractor={(host) => host.id}

@@ -13,12 +13,17 @@ import type { BoundSurface } from '../bindings/controller-binding-evidence'
  * being noticed on a device three weeks later.
  */
 
-export type LoopStepId = 'observe' | 'prompt' | 'interrupt' | 'answer' | 'approve' | 'read'
+export type LoopStepId = 'observe' | 'prompt' | 'send' | 'interrupt' | 'answer' | 'approve' | 'read'
 
-/** How a step is carried: an intent the focused surface accepts, or a wheel binding it offers. */
+/**
+ * How a step is carried: an intent the focused surface accepts, a wheel binding it offers, or the
+ * session's dictation, which is the controller's one way to say something and is not an intent a
+ * surface answers (it is step 2 of `001` §7, above every surface).
+ */
 export type LoopReach =
   | { readonly kind: 'intent'; readonly intent: ControllerIntentKind }
   | { readonly kind: 'wheel'; readonly bindingId: string }
+  | { readonly kind: 'dictation' }
 
 export type LoopStep = {
   readonly id: LoopStepId
@@ -42,17 +47,22 @@ export const AGENTIC_LOOP: readonly LoopStep[] = [
     id: 'prompt',
     surface: 'agent',
     what: 'get a prompt to the agent',
-    reachedBy: [
-      // Dictation is the primary path; a canned reply is what works when it is unavailable.
-      { kind: 'intent', intent: 'toggle-dictation' },
-      { kind: 'wheel', bindingId: 'agent.reply.continue' }
-    ]
+    // The only path. `004` added canned replies for when dictation is unavailable, and the device
+    // feedback that opened `005` revoked them from the wheel, so this step now stands on one leg.
+    reachedBy: [{ kind: 'dictation' }]
+  },
+  {
+    id: 'send',
+    surface: 'agent',
+    what: 'send what was dictated, which lands in the composer or the terminal input',
+    reachedBy: [{ kind: 'intent', intent: 'confirm' }]
   },
   {
     id: 'interrupt',
     surface: 'agent',
     what: 'stop a turn that is going wrong',
-    reachedBy: [{ kind: 'intent', intent: 'stop' }]
+    // Off `X` since `005`: the zone switch took it, and stopping lives on the right wheel.
+    reachedBy: [{ kind: 'wheel', bindingId: 'agent.stop' }]
   },
   {
     id: 'answer',
@@ -87,12 +97,17 @@ export const AGENTIC_LOOP: readonly LoopStep[] = [
 export type SurfaceCapability = {
   readonly accepts: ReadonlySet<ControllerIntentKind>
   readonly wheelBindingIds: ReadonlySet<string>
+  /** Whether the session's dictation is registered and could start from here. */
+  readonly canDictate: boolean
 }
 
 function carried(reach: LoopReach, capability: SurfaceCapability): boolean {
-  return reach.kind === 'intent'
-    ? capability.accepts.has(reach.intent)
-    : capability.wheelBindingIds.has(reach.bindingId)
+  if (reach.kind === 'intent') {
+    return capability.accepts.has(reach.intent)
+  }
+  return reach.kind === 'wheel'
+    ? capability.wheelBindingIds.has(reach.bindingId)
+    : capability.canDictate
 }
 
 /**

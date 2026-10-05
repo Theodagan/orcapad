@@ -1,9 +1,5 @@
-import type { ControllerIntent, ControllerIntentKind } from '../controller-input/controller-intent'
-
-/** Where dictated text lands. `003` supplies the focused surface's existing transcript sink. */
-export type DictationTextTarget = {
-  readonly onTranscript: (text: string) => void
-}
+import type { ControllerIntent, IntentLabels } from '../controller-input/controller-intent'
+import type { FocusZone } from './focus-zones'
 
 /**
  * One mounted surface's controller edge. It references identity its surface already owns and
@@ -12,15 +8,15 @@ export type DictationTextTarget = {
 export type FocusTarget = {
   readonly id: string
   /**
-   * Which target wins when several are mounted. Higher is more specific: a prompt card above the
-   * chat view that contains it, the chat view above the session route around that.
-   *
-   * Declared rather than inferred from mount order, because React runs child effects before
-   * parent ones — so the outermost surface registers last, and "newest wins" would hand focus to
-   * exactly the wrong one. Ordering was load-bearing and invisible; this is neither.
+   * Which target answers first when several accept the same intent. Higher is more specific: a
+   * prompt card above the chat view that contains it, the chat view above the session route
+   * around that. See `FOCUS_PRIORITY`.
    */
   readonly priority?: number
-  readonly accepts: ReadonlySet<ControllerIntentKind>
+  /** Absent means the screen as a whole: heard from every zone, after the focused zone has had its turn. */
+  readonly zone?: FocusZone
+  readonly accepts: ReadonlySet<ControllerIntent['kind']>
   readonly handle: (intent: ControllerIntent) => void
-  readonly textTarget?: DictationTextTarget
+  /** Hint wording for the intents above; the hint bar falls back to a generic word. */
+  readonly labels?: IntentLabels
 }

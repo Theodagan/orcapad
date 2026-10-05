@@ -93,9 +93,16 @@ export function useMobileSessionNativeChatDictation(
     surfaceKey: JSON.stringify([routeKey, activeHandle, showNativeChat, liveInputEnabled])
   })
 
+  // Dictation needs somewhere for the words to land. A terminal that can take input is one; so is
+  // an unlocked chat composer. A structured agent session has no terminal handle, so `canSend` is
+  // false there and the mic was a silent no-op by touch and by pad until the chat counted too.
+  const chatCanDictate =
+    showNativeChat && connState === 'connected' && nativeChatOverlayInputLockReason == null
+  const dictationEnabled = canSend || chatCanDictate
+
   const dictation = useMobileDictation({
     client,
-    enabled: canSend,
+    enabled: dictationEnabled,
     onTranscript: (text) => {
       // Why: dictation belongs to the visible composer — native chat consumes it locally, terminal mode keeps live-input routing.
       if (showNativeChatRef.current) {
@@ -153,8 +160,14 @@ export function useMobileSessionNativeChatDictation(
       if (dictationRouteContextRef.current === routeContext) {
         dictationRouteContextRef.current = null
       }
+      const message = err instanceof Error ? err.message : String(err)
+      // The same answer `onError` gives: not set up on the desktop opens the setup sheet.
+      if (isDictationSetupRequiredError(message)) {
+        setShowDictationSetup(true)
+        return
+      }
       triggerError()
-      showToast(err instanceof Error ? err.message : String(err))
+      showToast(message)
     })
   }, [activeHandle, dictation, liveInputTerminalHandles, triggerError, showToast])
 
@@ -192,11 +205,23 @@ export function useMobileSessionNativeChatDictation(
     }
   }, [cancelDictation, dictation])
 
-  // `R3` reaches the same toggle the mic button does (BIND-R6, BIND-AC6). Nothing about the
-  // microphone is reimplemented here — the hook above still owns all of it.
+  // A tap of `Y` reaches the same toggle the mic button does (BIND-R6, BIND-AC6). Nothing about
+  // the microphone is reimplemented here — the hook above still owns all of it. A press with
+  // nowhere for the words to go is refused out loud, since a pad has no mic icon to look dead.
+  const explainDictationUnavailable = useCallback(() => {
+    triggerError()
+    showToast(
+      connState === 'connected'
+        ? 'Dictation needs a terminal or chat tab'
+        : 'Reconnect to use dictation',
+      1800
+    )
+  }, [connState, showToast])
   useDictationBinding({
     activity: dictationActivityOf(dictation.status),
-    toggle: handleDictationToggle
+    toggle: handleDictationToggle,
+    canStart: dictationEnabled,
+    onUnavailable: explainDictationUnavailable
   })
 
   const refreshDictationMode = useCallback(async () => {
