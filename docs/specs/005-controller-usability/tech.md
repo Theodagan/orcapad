@@ -218,7 +218,8 @@ shows in its centre. Eight segments is the most a thumb can tell apart; past tha
 last becomes "More…", one more level, and `B` steps back a page the way it steps back a
 menu.
 
-**Presets.** The left wheel is Back to menu (west) and New worktree (east). The right
+**Presets.** The left wheel is Back to menu (west), New worktree (east) and, from a session, Focus mode
+(north) and Shortcuts (south). The right
 wheel is five fifths of a turn: Launch agent (north), Chat / terminal, Stop agent, Show / hide
 input, Close agent, so a harmless choice sits between stop and close and they never touch. Both
 are experiment data (`wheel/experiments/`), and the agent preset declares `includes-destructive`
@@ -335,3 +336,21 @@ posted no `modes` message and no wheel reports; without them it posted `any`/SGR
 `build-terminal-webview-engine.mjs` keeps whitespace and identifier minification and turns syntax
 minification off, `terminal-webview-engine-mode-queries.test.ts` runs the engine, and the payload
 pin was refreshed. The generated file is untracked, so the fix lives in the build script.
+
+## 15. Focus mode
+
+`gamepad/session-chrome/` mirrors the input-visibility store: a store the provider owns (two booleans
+and their toggles), and `useSessionChrome`, which returns both false without a pad, so a touch user
+never sees a difference. The session registers the two wheel actions (`use-session-wheel-actions.ts`)
+and resets the store when it unmounts, so the state ends with the session. `useFocusModeSystemBars`,
+mounted by the root layout, calls the runtime's `setImmersive`, which reaches the gamepad module's
+`setImmersive` (`WindowInsetsControllerCompat`, system bars, transient on swipe); the effect's cleanup
+restores the bars, which is what covers the toggle, the session and the pad going away.
+
+The header builds its tab strip and pinned buttons once and places them either in their own row or in
+the top bar between the title and the icon buttons. The header zone's stops take `row` and `order`
+from the layout (`tabRow`, `tabBase`, `iconBase`), so one row is walked in the order it is drawn and
+the stops of the normal layout are unchanged. The shortcut row returns null while hidden (and a pad is
+attached, and no keyboard is up), which removes its `ZoneItem`s and so the zone. The hint bar returns
+null in focus mode before it looks at the wheel. The route parity pins and the quick-commands source
+guard were updated after a probe; `section 12` describes the technique.

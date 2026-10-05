@@ -55,7 +55,7 @@ Wheel assignments and segment contents remain deliberately open for UX iteration
 | R2 (analog) | Scroll down — current pane |
 | LB / RB | Previous / next tab — current project |
 | Y + LB/RB (hold) | Previous / next worktree or project |
-| Left stick (motion) | Open Wheel 1 — experiment preset: back to menu, new worktree |
+| Left stick (motion) | Open Wheel 1 — experiment preset: back to menu, new worktree, and from a session focus mode and shortcuts |
 | Right stick (motion) | Open Wheel 2 — experiment preset: launch agent, chat / terminal, stop, show / hide input, close |
 | A | Confirm (not used while a wheel is open) |
 | B | Reject / back; deletes a word while a draft is being edited |

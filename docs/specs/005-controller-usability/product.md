@@ -162,8 +162,9 @@ bound inside a session; see "Known gaps".
 
 ### USE-R9 - The left wheel
 
-Two segments: **Back to menu** (the workspace list of the current host) and
-**Create a new worktree**. The six placeholder slots are gone.
+**Back to menu** (the workspace list of the current host) and **Create a new worktree**, and, from a
+session, the two view toggles of USE-R20: **Focus mode** (north) and **Shortcuts** (south). The six
+placeholder slots are gone. Off a session the two toggles show greyed out, like every session action.
 
 ### USE-R10 - The right wheel
 
@@ -201,7 +202,8 @@ the wheel, so the overlay can never be left holding a screen nothing can reach.
 
 The hint bar names what each button does where the controller is now: the zone,
 the action ("Enter", "Back"), and, while a wheel is open, what `R2` and `L2` do to
-the wheel. It never shows a control name as its own label.
+the wheel. It never shows a control name as its own label. It is hidden completely in focus mode
+(USE-R20).
 
 ### USE-R13 - Touch remains exactly as it was
 
@@ -262,6 +264,25 @@ sort, group, accounts, tasks and search buttons (and back, reconnect and, where 
 workspace, hide sidebar and new workspace) are its stops. `B` in the header returns to the list. The
 list's cursor leaves with the pad. Where no binding claims `B`, it goes back one screen.
 
+### USE-R20 - Focus mode and a hideable shortcut row
+
+For a session whose agent draws its own prompt and footer (opencode's sits at the bottom of its
+screen and cannot be scrolled away), the app's own chrome is the space it can give back. Two toggles
+on the left wheel, both only while a pad is attached and only in a session, both reset when the
+session ends:
+
+- **Focus mode** hides the Android status and gesture bars, makes the header one line (back, title with
+  its connection dot, the tab chips scrolling and kept in view, then the new-tab, quick-commands, files,
+  source-control and more buttons), and hides the hint bar completely, with a wheel open or not. The
+  header zone still works: `X` walks into it and the D-pad walks the one row in the order it is drawn.
+- **Shortcuts** hides the shortcut key row and, with it, the shortcuts zone, so `X` goes from the agent to
+  the header. Escape, Enter and the arrows remain on `B`, `A` and the D-pad. A raised keyboard keeps the
+  row, because its dismiss button is the way out of the keyboard.
+
+Each says where it goes ("Focus mode" / "Exit focus mode", "Hide shortcuts" / "Show shortcuts"). The
+terminal re-fits through the existing frame layout, so the TUI gains the rows. Without a pad nothing
+changes.
+
 ## Acceptance criteria
 
 - **USE-AC1** - A trigger held for one second produces scroll continuously for
@@ -279,7 +300,7 @@ list's cursor leaves with the pad. Where no binding claims `B`, it goes back one
 - **USE-AC6** - `Y` tapped toggles dictation; `Y` held with `L1`/`R1` cycles
   worktrees and never toggles dictation; `R3` does nothing.
 - **USE-AC7** - `L1`/`R1` cycle tabs with focus in each zone.
-- **USE-AC8** - The left wheel has exactly its two segments; the right wheel has
+- **USE-AC8** - The left wheel has exactly its four segments; the right wheel has
   exactly its five; committing each reaches the intended existing path.
 - **USE-AC9** - The second-level wheel lists the live agents, shows
   loading, empty and error states, and cancels with no side effect.
@@ -305,6 +326,10 @@ list's cursor leaves with the pad. Where no binding claims `B`, it goes back one
   otherwise; the D-pad moves it, `A` presses and `B` closes (run on the emulator).
 - **USE-AC19** - `X` reaches the host screen's header, each button in it can be pressed with `A`, and
   `B` returns to the list.
+- **USE-AC20** - In focus mode with a pad attached the system bars are hidden, the header is one row
+  whose stops are walked left to right, and the hint bar renders nothing; with Shortcuts hidden the row
+  and its zone are gone; ending the session, the toggle or the pad restores all of it; without a pad
+  nothing is drawn differently.
 
 ## Known gaps
 
