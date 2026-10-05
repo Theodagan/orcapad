@@ -12,6 +12,7 @@ import { useControllerListScroll } from '../gamepad/bindings/use-controller-list
 import { useSelectionReveal } from '../gamepad/bindings/use-selection-reveal'
 import { useWorkspaceControllerBinding } from '../gamepad/bindings/use-workspace-controller-binding'
 import { colors, spacing } from '../theme/mobile-theme'
+import type { Worktree } from '../worktree/workspace-list-types'
 import { getWorktreeRowIdentity } from '../worktree/worktree-host-row-identity'
 import { HostWorkspaceListStates } from '../worktree/host-workspace-list-states'
 import { getWorktreeStatus } from '../worktree/workspace-list-sections'
@@ -19,7 +20,8 @@ import { repoColor } from '../worktree/repo-color'
 import { hostScreenStyles as styles } from './host-screen-styles'
 import type { HostScreenController } from './use-host-screen-controller'
 
-const worktreeIdOf = (item: { worktreeId: string }): string => item.worktreeId
+// The list's own row key: a pinned workspace also sits under its repo, and the cursor must be on one.
+const rowKeyOf = (item: Worktree): string => item.sectionListKey ?? getWorktreeRowIdentity(item)
 
 export function HostWorkspaceList({ controller }: { controller: HostScreenController }) {
   const {
@@ -62,7 +64,7 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
   // selected id it draws. No parallel catalog and no second ordering (BIND-R1, BIND-AC4).
   const selectedWorktreeId = useWorkspaceControllerBinding({
     sections,
-    idOf: worktreeIdOf,
+    idOf: rowKeyOf,
     onOpen: actions.openWorktreeSession,
     onBack: router.back,
     scrollBy: listScroll.scrollBy
@@ -73,7 +75,7 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
   const scrollToWorktree = useCallback(
     (worktreeId: string) => {
       for (const [sectionIndex, section] of sections.entries()) {
-        const itemIndex = section.data.findIndex((item) => worktreeIdOf(item) === worktreeId)
+        const itemIndex = section.data.findIndex((item) => rowKeyOf(item) === worktreeId)
         if (itemIndex !== -1) {
           activeWorktreeScroll.sectionListRef.current?.scrollToLocation({
             sectionIndex,
@@ -89,7 +91,7 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
   )
   const reveal = useSelectionReveal({
     selectedId: selectedWorktreeId,
-    idOf: worktreeIdOf,
+    idOf: rowKeyOf,
     scrollToId: scrollToWorktree,
     scrollToOffset: scrollWorkspaceListTo
   })
@@ -155,7 +157,7 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
           {...listScroll.handlers}
           ref={activeWorktreeScroll.sectionListRef}
           sections={sections}
-          keyExtractor={(w) => w.sectionListKey ?? getWorktreeRowIdentity(w)}
+          keyExtractor={rowKeyOf}
           stickySectionHeadersEnabled={false}
           // Why: keep the search IME up while tapping clear / scrolling results.
           keyboardShouldPersistTaps="handled"
@@ -226,7 +228,7 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
           renderItem={({ item }) => (
             <WorktreeListRow
               item={item}
-              selected={worktreeIdOf(item) === selectedWorktreeId}
+              selected={rowKeyOf(item) === selectedWorktreeId}
               isReadOnly={isReadOnly}
               now={now}
               status={getWorktreeStatus(item)}
