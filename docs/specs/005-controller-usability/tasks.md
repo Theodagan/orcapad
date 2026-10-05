@@ -49,7 +49,7 @@ Verification commands run from the repository root, e.g.
 
   **Needs:** USE-T2
 
-  **Verify:** `pnpm --dir mobile test src/gamepad/zones src/gamepad/bindings/use-file-explorer-controller-binding.test.tsx`
+  **Verify:** `pnpm --dir mobile test src/gamepad/zones src/gamepad/bindings/use-file-explorer-controller-binding.test.tsx src/session/session-controller-zones.test.tsx`
 
 - [ ] **USE-T5 - Focus is always visible, and Android follows**
 
@@ -72,7 +72,7 @@ Verification commands run from the repository root, e.g.
 
   **Needs:** USE-T2
 
-  **Verify:** `pnpm --dir mobile test src/gamepad/bindings/use-terminal-controller-binding.test.tsx src/gamepad/bindings/use-agent-controller-binding.test.tsx src/gamepad/bindings/use-composer-send-binding.test.tsx src/gamepad/bindings/use-prompt-option-binding.test.tsx`
+  **Verify:** `pnpm --dir mobile test src/gamepad/bindings/use-terminal-controller-binding.test.tsx src/gamepad/bindings/use-agent-controller-binding.test.tsx src/gamepad/bindings/use-composer-send-binding.test.tsx src/gamepad/bindings/use-prompt-option-binding.test.tsx src/session/MobileNativeChatComposer.controller.test.tsx`
 
 - [ ] **USE-T7 - Dictation on Y**
 
