@@ -11,8 +11,12 @@ import {
 export function useMobileNativeChatComposerVisibility(args: {
   hasDraft: boolean
   keyboardInset: number
-}): boolean {
+}): { visible: boolean; keyboardRequested: boolean } {
   const inputVisibility = useInputVisibility()
   useReportInputContent(args.hasDraft)
-  return inputVisibility.visible || args.keyboardInset > 0
+  return {
+    visible: inputVisibility.visible || args.keyboardInset > 0,
+    // The wheel asked for the keyboard: the composer hands over to its real input.
+    keyboardRequested: inputVisibility.typing
+  }
 }

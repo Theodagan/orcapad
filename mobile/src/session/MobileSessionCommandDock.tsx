@@ -12,6 +12,7 @@ import {
   useReportInputContent
 } from '../gamepad/input-visibility/use-input-visibility'
 import { colors } from '../theme/mobile-theme'
+import { useFocusOnKeyboardRequest } from './use-focus-on-keyboard-request'
 import { styles } from './mobile-session-styles'
 import type { MobileSessionController } from './use-mobile-session-controller'
 
@@ -54,6 +55,14 @@ export function MobileSessionCommandDock({ controller }: { controller: MobileSes
   const inputVisibility = useInputVisibility()
   useReportInputContent(!liveInputEnabled && bufferedTerminalDraftState.input.trim().length > 0)
   const inputBarVisible = inputVisibility.visible || keyboardLift > 0
+  // The wheel asked for the keyboard: the field takes focus once the bar is on screen.
+  useFocusOnKeyboardRequest(inputVisibility.typing, () => {
+    if (liveInputEnabled) {
+      focusLiveInput()
+    } else {
+      commandInputRef.current?.focus()
+    }
+  })
   return (
     !activeMarkdownTab &&
     !activeFileTab &&
@@ -126,6 +135,8 @@ export function MobileSessionCommandDock({ controller }: { controller: MobileSes
                   )
                 }}
                 placeholder=""
+                // Not Android's fullscreen keyboard: in landscape it hides the screen being typed into.
+                disableFullscreenUI
                 showSoftInputOnFocus
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -158,6 +169,7 @@ export function MobileSessionCommandDock({ controller }: { controller: MobileSes
                 onChangeText={bufferedTerminalDraftState.setInput}
                 placeholder="Type a command…"
                 placeholderTextColor={colors.textMuted}
+                disableFullscreenUI
                 autoCapitalize="none"
                 autoCorrect={autocompleteEnabled}
                 spellCheck={autocompleteEnabled}

@@ -317,14 +317,15 @@ describe('the navigation wheel (005 USE-R9)', () => {
 describe('the agent wheel (005 USE-R10)', () => {
   const preset = REAL_ACTION_PRESETS['agent-actions']
 
-  it('is the right wheel: launch, the two toggles, stop and close, with no handoff or web page', () => {
+  it('is the right wheel: launch, the toggles, stop, close and the keyboard, with no handoff or web page', () => {
     expect(preset.wheel).toBe(2)
     expect(preset.segments.map((segment) => segment.label)).toEqual([
       'Launch agent',
       'Chat / terminal',
       'Stop agent',
       'Show / hide input',
-      'Close agent'
+      'Close agent',
+      'Keyboard'
     ])
     expect(Object.keys(REAL_ACTION_PRESETS)).not.toContain('agent-replies')
   })

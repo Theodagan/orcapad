@@ -25,7 +25,7 @@ import { NAVIGATION_WHEEL_ACTION_IDS } from '../../bindings/navigation-wheel-act
 const FULL_TURN = 6.283185307179586
 const BOUNDARY_OVERLAP = 0.001
 const TRIAD_HALF_WIDTH = FULL_TURN / 6 + BOUNDARY_OVERLAP
-const FIVE_HALF_WIDTH = FULL_TURN / 10 + BOUNDARY_OVERLAP
+const SIX_HALF_WIDTH = FULL_TURN / 12 + BOUNDARY_OVERLAP
 const QUAD_HALF_WIDTH = FULL_TURN / 8 + BOUNDARY_OVERLAP
 
 const REAL_ACTION_TRIAL = {
@@ -92,11 +92,11 @@ export const REAL_ACTION_PRESETS: Readonly<Record<string, WheelPresetDefinition>
   }),
 
   /**
-   * The right wheel (`005` USE-R10): what you can do to the agent in front of you. Five choices on
-   * a dial, so each is a fifth of a turn. The two that are easy to regret, stop and close, sit
-   * with a harmless choice between them and never touch each other, and the two toggles flank the
-   * opener. "Hand off" is not here: the mobile app has no agent-to-agent handoff to reuse, so it is
-   * out of scope.
+   * The right wheel (`005` USE-R10): what you can do to the agent in front of you. Six choices on a
+   * dial, so each is a sixth of a turn. The two that are easy to regret, stop and close, sit with a
+   * harmless choice between them and never touch each other, and the two toggles flank the opener.
+   * "Hand off" is not here: the mobile app has no agent-to-agent handoff to reuse, so it is out of
+   * scope.
    */
   'agent-actions': loadPreset({
     presetId: 'agent-actions',
@@ -109,36 +109,43 @@ export const REAL_ACTION_PRESETS: Readonly<Record<string, WheelPresetDefinition>
         id: 'launch',
         label: 'Launch agent',
         centerAngle: 0,
-        halfWidth: FIVE_HALF_WIDTH,
+        halfWidth: SIX_HALF_WIDTH,
         bindingId: AGENT_WHEEL_ACTION_IDS.launch
       },
       {
         id: 'toggle-view',
         label: 'Chat / terminal',
-        centerAngle: FULL_TURN / 5,
-        halfWidth: FIVE_HALF_WIDTH,
+        centerAngle: FULL_TURN / 6,
+        halfWidth: SIX_HALF_WIDTH,
         bindingId: AGENT_WHEEL_ACTION_IDS.toggleView
       },
       {
         id: 'stop',
         label: 'Stop agent',
-        centerAngle: (FULL_TURN * 2) / 5,
-        halfWidth: FIVE_HALF_WIDTH,
+        centerAngle: (FULL_TURN * 2) / 6,
+        halfWidth: SIX_HALF_WIDTH,
         bindingId: AGENT_WHEEL_ACTION_IDS.stop
       },
       {
         id: 'toggle-input',
         label: 'Show / hide input',
-        centerAngle: (FULL_TURN * 3) / 5,
-        halfWidth: FIVE_HALF_WIDTH,
+        centerAngle: (FULL_TURN * 3) / 6,
+        halfWidth: SIX_HALF_WIDTH,
         bindingId: AGENT_WHEEL_ACTION_IDS.toggleInput
       },
       {
         id: 'close',
         label: 'Close agent',
-        centerAngle: (FULL_TURN * 4) / 5,
-        halfWidth: FIVE_HALF_WIDTH,
+        centerAngle: (FULL_TURN * 4) / 6,
+        halfWidth: SIX_HALF_WIDTH,
         bindingId: AGENT_WHEEL_ACTION_IDS.close
+      },
+      {
+        id: 'keyboard',
+        label: 'Keyboard',
+        centerAngle: (FULL_TURN * 5) / 6,
+        halfWidth: SIX_HALF_WIDTH,
+        bindingId: AGENT_WHEEL_ACTION_IDS.keyboard
       }
     ]
   }),

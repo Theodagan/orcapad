@@ -96,7 +96,10 @@ const HEAD_RUNTIME_STRING_SHA256 =
 // the facts against the previous pin: the same elements, the tab and button stops now come before the
 // icon stops with `row`/`order` computed from the layout, the title block and meta row take a compact
 // style, and the compact style adds two references; no string changed.
-const HEAD_HOST_JSX_SHA256 = '54085ed6988fcf33531ab8b6b302ee5b6ae71ad72ed7e708b418c4f635e7c36d'
+// Re-pinned in 005 round 3: the dock's two text inputs (live and buffered) take `disableFullscreenUI`,
+// so the keyboard does not cover the screen being typed into. A probe diffed the facts against the
+// previous pin: those two host elements and nothing else; strings, leaf and style facts are the same.
+const HEAD_HOST_JSX_SHA256 = 'b79ad2328462408f6451af094ae0491d8214c9c689111f87b4a0a2f067c293fd'
 // Re-pinned in 005: `controllerFocused` and `onControllerKey` on TerminalPaneView, which is how a
 // pane learns whether it is the one on screen. Then the controller zones: each header and shortcut
 // stop is a `ZoneItem` around the same host element, the `ControllerFocusRing` it shows when

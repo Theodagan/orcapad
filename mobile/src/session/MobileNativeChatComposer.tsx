@@ -45,6 +45,8 @@ type Props = {
   onCaretChange: (caret: number) => void
   /** Something more urgent than the draft (a permission prompt) has the D-pad. */
   editSuspended?: boolean
+  /** The wheel asked for the keyboard: hand over to the real input. */
+  keyboardRequested?: boolean
   onSend: (text: string) => Promise<boolean>
   /** Changes whenever the route focuses a different chat composer surface. */
   sendSurfaceId: string
@@ -81,6 +83,7 @@ export function MobileNativeChatComposer({
   caret: cursor,
   onCaretChange,
   editSuspended = false,
+  keyboardRequested = false,
   onSend,
   sendSurfaceId,
   getSendCompletionGeneration,
@@ -107,6 +110,8 @@ export function MobileNativeChatComposer({
   const { connected: padAttached } = useControllerBinding()
   const [touchEditing, setTouchEditing] = useState(false)
   const caretMode = padAttached && !touchEditing
+  const typingAt = useRef(cursor)
+  typingAt.current = cursor
   const setCursor = onCaretChange
   // Transiently drives the native caret after a mid-text autocomplete insert,
   // then released on the next selection change so manual caret placement still
@@ -122,6 +127,12 @@ export function MobileNativeChatComposer({
       setPendingSelection({ start: cursor, end: cursor })
     }
   }, [caretMode, cursor])
+  useEffect(() => {
+    if (keyboardRequested) {
+      setPendingSelection({ start: typingAt.current, end: typingAt.current })
+      setTouchEditing(true)
+    }
+  }, [keyboardRequested])
   const sendingRef = useRef(false)
   const mountedRef = useRef(true)
   const sendSurfaceIdRef = useRef(sendSurfaceId)
@@ -283,6 +294,8 @@ export function MobileNativeChatComposer({
               value={value}
               onChangeText={handleChange}
               autoFocus={touchEditing}
+              // Not Android's fullscreen keyboard: in landscape it hides the screen being typed into.
+              disableFullscreenUI
               onBlur={() => setTouchEditing(false)}
               // Controlled only transiently right after an autocomplete insert.
               selection={pendingSelection ?? undefined}

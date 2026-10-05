@@ -9,5 +9,6 @@ export const AGENT_WHEEL_ACTION_IDS = {
   handoff: 'agent.handoff',
   launch: 'agent.launch',
   toggleView: 'agent.toggle-view',
-  toggleInput: 'agent.toggle-input'
+  toggleInput: 'agent.toggle-input',
+  keyboard: 'agent.keyboard'
 } as const

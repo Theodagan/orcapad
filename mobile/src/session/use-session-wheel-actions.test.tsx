@@ -47,6 +47,7 @@ function fakeController(overrides: Record<string, unknown> = {}) {
   const handleCloseSessionTab = vi.fn()
   const handleCreateTerminal = vi.fn()
   const toggleTabChatView = vi.fn()
+  const dismissSoftwareKeyboard = vi.fn()
   const activeSessionTab: Tab = { id: 't1', type: 'agent-session' }
   const controller = {
     client: { sendRequest },
@@ -56,11 +57,20 @@ function fakeController(overrides: Record<string, unknown> = {}) {
     showNativeChat: false,
     nativeChatTranscriptIsLocalReadable: true,
     toggleTabChatView,
+    keyboardLift: 0,
+    dismissSoftwareKeyboard,
     handleCloseSessionTab,
     handleCreateTerminal,
     ...overrides
   }
-  return { controller, sendRequest, handleCloseSessionTab, handleCreateTerminal, toggleTabChatView }
+  return {
+    controller,
+    sendRequest,
+    handleCloseSessionTab,
+    handleCreateTerminal,
+    toggleTabChatView,
+    dismissSoftwareKeyboard
+  }
 }
 
 type FakeController = ReturnType<typeof fakeController>['controller']
@@ -248,6 +258,104 @@ describe('session wheel actions', () => {
     })
   })
 
+  describe('keyboard', () => {
+    function mountWithStore(overrides: Record<string, unknown>) {
+      const { controller, dismissSoftwareKeyboard } = fakeController(overrides)
+      const registry = createWheelRegistry()
+      const { reader, publish } = fakeReader()
+      const held: { input: ReturnType<typeof useControllerBinding>['inputVisibility'] | null } = {
+        input: null
+      }
+      function Probe(): ReactNode {
+        held.input = useControllerBinding().inputVisibility
+        return null
+      }
+      function Session(): ReactNode {
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook reads a handful of fields, all of which the fake supplies.
+        useSessionWheelActions(controller as unknown as MobileSessionController)
+        return null
+      }
+      // A fresh element each time, or React sees nothing changed and skips the render.
+      const tree = () =>
+        createElement(
+          ControllerProvider,
+          { registerWheelAction: registry.register, reader },
+          createElement(Probe),
+          createElement(Session)
+        )
+      act(() => {
+        renderer = create(tree())
+      })
+      act(() => publish(neutralSample(1, true)))
+      const press = (): void => {
+        const binding = registry.lookup(AGENT_WHEEL_ACTION_IDS.keyboard)
+        act(() => {
+          if (binding !== null && !isMenuBinding(binding)) {
+            void binding.run()
+          }
+        })
+      }
+      return {
+        controller,
+        registry,
+        press,
+        dismissSoftwareKeyboard,
+        input: () => held.input,
+        rerender: () => act(() => renderer?.update(tree()))
+      }
+    }
+
+    it('is offered where there is a field to type in, and not on a page or a file', () => {
+      const terminal = mountWithStore({ activeSessionTab: { id: 't', type: 'terminal' } })
+      expect(terminal.registry.lookup(AGENT_WHEEL_ACTION_IDS.keyboard)?.availability).toBe(
+        'available'
+      )
+      act(() => renderer?.unmount())
+
+      const chat = mountWithStore({})
+      expect(chat.registry.lookup(AGENT_WHEEL_ACTION_IDS.keyboard)?.availability).toBe('available')
+      act(() => renderer?.unmount())
+
+      const note = mountWithStore({ activeSessionTab: { id: 'n', type: 'markdown' } })
+      expect(note.registry.lookup(AGENT_WHEEL_ACTION_IDS.keyboard)?.availability).toBe(
+        'unavailable'
+      )
+    })
+
+    it('asks for the keyboard, which puts the strip up for the field to focus', () => {
+      const session = mountWithStore({})
+      expect(session.registry.lookup(AGENT_WHEEL_ACTION_IDS.keyboard)?.label).toBe('Keyboard')
+
+      session.press()
+
+      expect(session.input()?.typing()).toBe(true)
+      expect(session.input()?.visible()).toBe(true)
+    })
+
+    it('says Hide keyboard while it is up, and hides it', () => {
+      const session = mountWithStore({ keyboardLift: 300 })
+      expect(session.registry.lookup(AGENT_WHEEL_ACTION_IDS.keyboard)?.label).toBe('Hide keyboard')
+
+      session.press()
+
+      expect(session.dismissSoftwareKeyboard).toHaveBeenCalledTimes(1)
+      expect(session.input()?.typing()).toBe(false)
+    })
+
+    it('lets the strip go once the keyboard has come up and gone again', () => {
+      const session = mountWithStore({})
+      session.press()
+
+      session.controller.keyboardLift = 300
+      session.rerender()
+      expect(session.input()?.typing()).toBe(true)
+
+      session.controller.keyboardLift = 0
+      session.rerender()
+      expect(session.input()?.typing()).toBe(false)
+    })
+  })
+
   describe('when the session ends', () => {
     it('puts focus mode and the hidden shortcuts back, since they belong to the session', () => {
       const { controller } = fakeController()
@@ -309,7 +417,7 @@ describe('session wheel actions', () => {
 
   it('retracts all of it when the session goes', () => {
     const registry = mount(fakeController().controller)
-    expect(registry.ids()).toHaveLength(6)
+    expect(registry.ids()).toHaveLength(7)
 
     act(() => renderer?.unmount())
     renderer = null
