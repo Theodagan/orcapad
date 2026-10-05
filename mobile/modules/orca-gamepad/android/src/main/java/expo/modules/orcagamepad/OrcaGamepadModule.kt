@@ -11,6 +11,8 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.Window
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -95,6 +97,21 @@ class OrcaGamepadModule : Module() {
         NativeFocusRing.watch(container)
         (NativeFocusRing.firstControlWithin(container) ?: container).requestFocusFromTouch()
       }
+    }.runOnQueue(Queues.MAIN)
+
+    // Hides or reveals Android status and navigation/gesture bars. Transient bars appear
+    // on edge swipe and retreat automatically.
+    AsyncFunction("setImmersive") { enabled: Boolean ->
+      val window = appContext.currentActivity?.window ?: return@AsyncFunction false
+      val controller = WindowInsetsControllerCompat(window, window.decorView)
+      if (enabled) {
+        controller.hide(WindowInsetsCompat.Type.systemBars())
+        controller.systemBarsBehavior =
+          WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+      } else {
+        controller.show(WindowInsetsCompat.Type.systemBars())
+      }
+      true
     }.runOnQueue(Queues.MAIN)
 
     OnDestroy {

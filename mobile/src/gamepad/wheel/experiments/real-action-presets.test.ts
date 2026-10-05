@@ -209,19 +209,23 @@ describe('a real-action commit', () => {
 describe('the navigation wheel (005 USE-R9)', () => {
   const preset = REAL_ACTION_PRESETS.navigation
 
-  it('is the left wheel, with exactly two choices and no placeholders', () => {
+  it('is the left wheel, with four choices and no placeholders', () => {
     expect(preset.wheel).toBe(1)
     expect(preset.segments.map((segment) => segment.label)).toEqual([
-      'Back to menu',
-      'New worktree'
+      'Focus mode',
+      'New worktree',
+      'Shortcuts',
+      'Back to menu'
     ])
     expect(preset.segments.map((segment) => segment.bindingId)).toEqual([
-      NAVIGATION_WHEEL_ACTION_IDS.backToMenu,
-      NAVIGATION_WHEEL_ACTION_IDS.newWorktree
+      NAVIGATION_WHEEL_ACTION_IDS.focusMode,
+      NAVIGATION_WHEEL_ACTION_IDS.newWorktree,
+      NAVIGATION_WHEEL_ACTION_IDS.shortcuts,
+      NAVIGATION_WHEEL_ACTION_IDS.backToMenu
     ])
   })
 
-  it('puts back on the west and new on the east, with the stick free to rest north and south', () => {
+  it('puts focus mode north, new worktree east, shortcuts south, back to menu west', () => {
     const segments = resolveSegments(preset, createWheelRegistry())
     const at = (degree: number) =>
       selectSegment(
@@ -231,10 +235,29 @@ describe('the navigation wheel (005 USE-R9)', () => {
         DEAD_ZONE
       ).segmentId
 
-    expect(at(270)).toBe('back-to-menu')
+    expect(at(0)).toBe('focus-mode')
     expect(at(90)).toBe('new-worktree')
-    expect(at(0)).toBeNull()
-    expect(at(180)).toBeNull()
+    expect(at(180)).toBe('shortcuts')
+    expect(at(270)).toBe('back-to-menu')
+  })
+
+  it('cancels on focus mode and shortcuts off a session where they are not registered', () => {
+    const registry = createWheelRegistry()
+    for (const action of navigationWheelActions({
+      hostId: 'h1',
+      atWorkspaceList: false,
+      onBackToMenu: vi.fn(),
+      onNewWorktree: vi.fn()
+    })) {
+      registry.register(action)
+    }
+
+    expect(commitSegment(preset, registry, 'focus-mode').outcome).toMatchObject({
+      kind: 'cancel'
+    })
+    expect(commitSegment(preset, registry, 'shortcuts').outcome).toMatchObject({
+      kind: 'cancel'
+    })
   })
 
   it('reaches the navigation the app already has, once each', () => {

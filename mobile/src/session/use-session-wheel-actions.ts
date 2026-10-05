@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
 import { AGENT_WHEEL_ACTION_IDS } from '../gamepad/bindings/agent-wheel-action-ids'
+import { NAVIGATION_WHEEL_ACTION_IDS } from '../gamepad/bindings/navigation-wheel-actions'
 import { useWheelActions } from '../gamepad/bindings/use-wheel-actions'
 import { useInputVisibility } from '../gamepad/input-visibility/use-input-visibility'
+import { useSessionChrome } from '../gamepad/session-chrome/use-session-chrome'
 import type { WheelBinding } from '../gamepad/wheel/wheel-registry'
 import { loadMobileNewTabAgentOptions } from './mobile-new-tab-agent-loader'
 import { resolveMobileNativeChat } from './mobile-native-chat-eligibility'
@@ -31,6 +33,7 @@ export function useSessionWheelActions(controller: MobileSessionController): voi
   } = controller
   const connected = connState === 'connected' && client !== null
   const input = useInputVisibility()
+  const chrome = useSessionChrome()
 
   const bindings = useMemo<readonly WheelBinding[]>(() => {
     const isAgent =
@@ -84,6 +87,18 @@ export function useSessionWheelActions(controller: MobileSessionController): voi
         label: input.visible ? 'Hide input' : 'Show input',
         availability: 'available',
         run: input.toggle
+      },
+      {
+        id: NAVIGATION_WHEEL_ACTION_IDS.focusMode,
+        label: chrome.focusMode ? 'Exit focus mode' : 'Focus mode',
+        availability: 'available',
+        run: chrome.toggleFocusMode
+      },
+      {
+        id: NAVIGATION_WHEEL_ACTION_IDS.shortcuts,
+        label: chrome.shortcutsHidden ? 'Show shortcuts' : 'Hide shortcuts',
+        availability: 'available',
+        run: chrome.toggleShortcuts
       }
     ]
   }, [
@@ -96,6 +111,10 @@ export function useSessionWheelActions(controller: MobileSessionController): voi
     toggleTabChatView,
     input.visible,
     input.toggle,
+    chrome.focusMode,
+    chrome.shortcutsHidden,
+    chrome.toggleFocusMode,
+    chrome.toggleShortcuts,
     handleCloseSessionTab,
     handleCreateTerminal
   ])

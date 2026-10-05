@@ -23,6 +23,10 @@ import {
   createInputVisibilityStore,
   type InputVisibilityStore
 } from './input-visibility/input-visibility-store'
+import {
+  createSessionChromeStore,
+  type SessionChromeStore
+} from './session-chrome/session-chrome-store'
 import type { FocusTarget } from './focus/focus-target'
 import type { WheelBinding } from './wheel/wheel-registry'
 import {
@@ -75,6 +79,8 @@ export type ControllerContextValue = {
   readonly requestNativeFocus: (node: View | null, within?: boolean) => void
   /** Whether a session's text-entry strip is on screen. Hidden by default while a pad is attached. */
   readonly inputVisibility: InputVisibilityStore
+  /** Session-only chrome state: focus mode and shortcut row visibility. */
+  readonly sessionChrome: SessionChromeStore
 }
 
 const ControllerContext = createContext<ControllerContextValue | null>(null)
@@ -106,6 +112,15 @@ const INERT_INPUT_VISIBILITY: InputVisibilityStore = {
   visible: () => true,
   toggle: () => {},
   reportContent: () => {}
+}
+
+const INERT_SESSION_CHROME: SessionChromeStore = {
+  subscribe: () => () => {},
+  focusMode: () => false,
+  shortcutsHidden: () => false,
+  toggleFocusMode: () => {},
+  toggleShortcuts: () => {},
+  reset: () => {}
 }
 
 const INERT_FOCUS: FocusReader = {
@@ -143,7 +158,8 @@ const INERT_CONTROLLER: ControllerContextValue = {
   dictation: INERT_DICTATION,
   zoneItems: INERT_ZONE_ITEMS,
   requestNativeFocus: () => {},
-  inputVisibility: INERT_INPUT_VISIBILITY
+  inputVisibility: INERT_INPUT_VISIBILITY,
+  sessionChrome: INERT_SESSION_CHROME
 }
 
 export function useControllerBinding(): ControllerContextValue {
@@ -256,6 +272,7 @@ export function ControllerProvider({
 
   const zoneItems = useMemo(() => createZoneItemStore(registry), [registry])
   const inputVisibility = useMemo(() => createInputVisibilityStore(), [])
+  const sessionChrome = useMemo(() => createSessionChromeStore(), [])
 
   const dictation = useMemo<DictationReader>(
     () => activeDictation ?? INERT_DICTATION,
@@ -275,7 +292,8 @@ export function ControllerProvider({
       dictation,
       zoneItems,
       requestNativeFocus: requestNativeFocus ?? noNativeFocus,
-      inputVisibility
+      inputVisibility,
+      sessionChrome
     }),
     [
       support,
@@ -287,7 +305,8 @@ export function ControllerProvider({
       dictation,
       zoneItems,
       requestNativeFocus,
-      inputVisibility
+      inputVisibility,
+      sessionChrome
     ]
   )
 

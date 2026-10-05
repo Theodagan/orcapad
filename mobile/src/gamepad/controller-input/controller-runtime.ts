@@ -33,6 +33,8 @@ export type ControllerRuntime = {
    * `within` focuses the first control inside the view instead, which is how a sheet is entered.
    */
   readonly requestNativeFocus: (node: View | null, within?: boolean) => void
+  /** Hides or restores Android system bars (status and gesture/navigation bars). Inert without native module. */
+  readonly setImmersive: (enabled: boolean) => void
 }
 
 /**
@@ -77,7 +79,8 @@ export function createControllerRuntime(): ControllerRuntime {
       reader: native,
       resolve: createControllerIntentResolver(),
       setCaptured: () => {},
-      requestNativeFocus: () => {}
+      requestNativeFocus: () => {},
+      setImmersive: () => {}
     }
   }
   const module = orcaGamepad
@@ -100,6 +103,11 @@ export function createControllerRuntime(): ControllerRuntime {
     setCaptured: (captured) => {
       module.setInputCaptured(captured)
     },
-    requestNativeFocus: nativeFocusRequester(module)
+    requestNativeFocus: nativeFocusRequester(module),
+    setImmersive: (enabled) => {
+      if (Platform.OS === 'android' && module.setImmersive !== undefined) {
+        module.setImmersive(enabled).catch(() => {})
+      }
+    }
   }
 }
