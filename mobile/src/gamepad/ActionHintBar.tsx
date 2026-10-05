@@ -19,6 +19,7 @@ import { colors, radii, spacing, typography } from '../theme/mobile-theme'
  */
 
 const ZONE_NAME: Record<FocusZone, string> = {
+  list: 'List',
   agent: 'Agent',
   shortcuts: 'Shortcuts',
   header: 'Header',

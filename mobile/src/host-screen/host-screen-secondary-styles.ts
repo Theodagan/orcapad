@@ -6,6 +6,8 @@ export const hostScreenSecondaryStyles = StyleSheet.create({
     color: colors.statusRed,
     fontSize: typography.bodySize
   },
+  // Holds the list so the zone frame can sit over exactly the list and nothing above it.
+  listZone: { flex: 1 },
   list: {
     paddingBottom: spacing.lg
   },

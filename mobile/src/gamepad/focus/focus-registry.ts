@@ -40,6 +40,8 @@ export type FocusRegistry = {
   /** True when a target accepted and handled the intent. `switch-zone` is the registry's own. */
   readonly dispatch: (intent: ControllerIntent) => boolean
   readonly focusedZone: () => FocusZone | null
+  /** The zones something has declared, in walking order. Cheaper than a snapshot, which also reads every label. */
+  readonly zones: () => readonly FocusZone[]
   readonly focusZone: (zone: FocusZone) => void
   readonly cycleZone: () => FocusZone | null
   readonly subscribe: (listener: () => void) => () => void
@@ -209,6 +211,7 @@ export function createFocusRegistry(): FocusRegistry {
     activeTarget: () => ranked(focusedZone())[0] ?? null,
     dispatch,
     focusedZone,
+    zones: presentZones,
     focusZone,
     cycleZone,
     subscribe: (listener) => {
