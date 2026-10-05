@@ -154,6 +154,22 @@ ends in something to read.
 6. **Stop something on purpose.** `X` mid-turn, so you have seen it work when you
    need it rather than when you are testing it.
 
+11. **opencode.** Hold `R2` and `L2` in an opencode terminal with a long transcript: it must
+    scroll both ways, as Antigravity's does.
+12. **Text entry.** With the pad attached the terminal's input bar and the chat's composer are
+    hidden. Show them from the wheel, hide them again. Dictate into a chat: the composer must appear
+    with the words and go once `A` sends them.
+13. **Editing a draft.** In a chat draft the D-pad moves a block caret, `B` deletes a word, and a
+    second dictation lands at the caret. In a terminal with the strip shown, `B` deletes a word and
+    the arrows move the prompt's caret. With the strip hidden `B` is Escape again.
+14. **Sheets.** From the header (`X`), open Filter, Sort and Group, and a tab's long-press sheet:
+    the pad must land on a control at once, the D-pad must move a visible ring, `A` must press, `B`
+    must close. Note any sheet where it landed somewhere odd or raised the keyboard.
+15. **The host header.** `X` on the workspace list reaches the header; every button in it can be
+    pressed; `B` returns to the list.
+16. **A screen with no bindings.** On settings, accounts or tasks, `B` should go back. Record how
+    far the D-pad gets you, because those screens are still touch-only.
+
 ## What to write down
 
 Beyond the BIND-T10 columns:
@@ -233,12 +249,14 @@ Do these with the pad, and note every time you reach for the screen.
 7. **Tabs.** `L1`/`R1` cycle the tabs from every zone, wrap, and do nothing with one tab.
 8. **Left wheel.** Two segments. Back to menu lands on this host's workspace list; New
    worktree opens the new-worktree form.
-9. **Right wheel.** Four segments. Launch agent opens a second wheel of the agents the
-   new-tab drawer offers; Open web page opens one of the worktree's open ports and "Enter
-   URL…". `B` steps back a level. Stop interrupts the turn; Close closes the agent's tab.
-   These two are destructive: try them on something you can afford to lose.
-10. **Capture.** Open a wheel and try everything else: the other stick, both triggers, the
-    D-pad, `L1`/`R1`, `X`, `Y`, and a finger on the screen. Nothing underneath may react and
+9. **Right wheel.** Five segments. Launch agent opens a second wheel of the agents the
+   new-tab drawer offers; `L2` steps back a level. Chat / terminal switches the tab's view and
+   says where it goes; Show / hide input shows or hides the text-entry strip. Stop interrupts the
+   turn; Close closes the agent's tab. These two are destructive: try them on something you can
+   afford to lose, and note whether you ever landed on one by accident.
+10. **Capture.** Open a wheel and try everything else: the other stick, `A`, `B`, the D-pad,
+    `L1`/`R1`, `X`, `Y`, and a finger on the screen. `R2` selects and `L2` cancels; both are named
+    in the bottom corners. A trigger pulled under the wheel must not scroll once it has closed. Nothing underneath may react and
     Android's focus highlight must not move. Press a button while it is open, then close it:
     the button must not act. Unplug or switch off the pad with a wheel open: it must close.
 

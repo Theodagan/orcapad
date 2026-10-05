@@ -33,7 +33,7 @@ Build order:
           |
 004 the controller-only loop closes on paper
           |
-005 usability pass: the first device session's findings
+005 usability pass: the first and second device sessions' findings
 ```
 
 ## Product decisions

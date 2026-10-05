@@ -104,14 +104,15 @@ Verification commands run from the repository root, e.g.
 
 - [ ] **USE-T10 - The right wheel and the wheels it opens**
 
-  Implemented. Launch agent, Open web page, Stop agent and Close agent. A wheel can open a
+  Implemented. Launch agent, Chat / terminal, Stop agent, Show / hide input and Close agent
+  (round 2 replaced Open web page with the two toggles, decision 007). A wheel can open a
   wheel: the reducer descends and ascends without being able to run anything; a long list
-  pages with a More segment; loading, empty and failed menus are shown. Ports come from a
-  validated RPC operation. Hand off is out of scope (decision 006).
+  pages with a More segment; loading, empty and failed menus are shown. Hand off is out of
+  scope (decision 006).
 
   **Needs:** USE-T9
 
-  **Verify:** `pnpm --dir mobile test src/gamepad/wheel src/session/use-session-wheel-actions.test.tsx src/session/session-wheel-menus.test.ts src/session/workspace-ports-operations.test.ts`
+  **Verify:** `pnpm --dir mobile test src/gamepad/wheel src/session/use-session-wheel-actions.test.tsx src/session/session-wheel-menus.test.ts`
 
 - [ ] **USE-T11 - An open wheel captures all input**
 
@@ -128,7 +129,7 @@ Verification commands run from the repository root, e.g.
 - [ ] **USE-T12 - Hints tell the truth**
 
   Implemented. The zone chip, `X` naming its destination, the wording of whichever target
-  would answer, and the wheel's own `A` and `B` while one is open.
+  would answer, and the wheel's own `R2` and `L2` while one is open.
 
   **Needs:** USE-T4
 
@@ -163,3 +164,73 @@ Verification commands run from the repository root, e.g.
   **Needs:** USE-T1 through USE-T14
 
   **Verify:** `pnpm --dir mobile test src/gamepad/bindings/controller-binding-evidence.test.ts`
+
+## Round 2 (the second device session, decision 007)
+
+- [ ] **USE-T16 - A terminal that asks what the terminal knows still scrolls**
+
+  Implemented. The generated engine no longer throws on a mode query (esbuild's lowering of
+  `||=` plus syntax minification dropped a declaration in xterm's `requestMode`), so opencode's
+  first write reaches the alternate screen with the mouse on. Verified against a real opencode
+  transcript in headless Chrome, where `scroll-lines` now produces SGR wheel reports.
+
+  **Needs:** USE-T3
+
+  **Verify:** `pnpm --dir mobile test src/terminal/terminal-webview-engine-mode-queries.test.ts src/terminal/terminal-webview-payload-hash.test.ts`
+
+- [ ] **USE-T17 - The triggers steer a wheel**
+
+  Implemented. `R2` selects and `L2` cancels or backs out on a firm pull; `A`, `B` and scroll are
+  spent under a wheel; a trigger held across the wheel's opening or closing never fires or
+  scrolls. The overlay names the two in the bottom corners and leaves the middle empty; the hint
+  bar says the same.
+
+  **Needs:** USE-T11, USE-T12
+
+  **Verify:** `pnpm --dir mobile test src/gamepad/controller-input/wheel-trigger-steering.test.ts src/gamepad/wheel/WheelOverlay.test.tsx src/gamepad/ActionHintBar.test.tsx`
+
+  **Not verified:** trigger travel on the Retroid (the firm-pull threshold is half travel).
+
+- [ ] **USE-T18 - The right wheel loses the web page and gains two toggles**
+
+  Implemented. Open web page and the ports scan behind it are removed; Chat / terminal and
+  Show / hide input are added. Stop and close are never adjacent.
+
+  **Needs:** USE-T10, USE-T19
+
+  **Verify:** `pnpm --dir mobile test src/gamepad/wheel/experiments src/session/use-session-wheel-actions.test.tsx src/session/session-wheel-menus.test.ts`
+
+- [ ] **USE-T19 - Text entry is hidden until wanted**
+
+  Implemented. A store in the controller layer decides whether the strip is on screen (hidden
+  by default while a pad is attached; pinned by the wheel; opened by a draft). The terminal's
+  input bar is hidden with `display: none` rather than unmounted, and the chat composer is not
+  mounted until wanted.
+
+  **Needs:** USE-T9
+
+  **Verify:** `pnpm --dir mobile test src/gamepad/input-visibility src/session/use-session-wheel-actions.test.tsx src/session/mobile-session-route-parity.test.ts`
+
+- [ ] **USE-T20 - A draft is edited by caret**
+
+  Implemented. Pure caret rules (`composer-text-editing.ts`), a caret kept above the composer
+  next to its draft, a block-caret field drawn while a pad is attached, a binding above the
+  transcript's scroll for the D-pad and `B`, dictation at the caret, and `B` as Ctrl+W in a
+  terminal while the strip is up.
+
+  **Needs:** USE-T19
+
+  **Verify:** `pnpm --dir mobile test src/session/composer-text-editing.test.ts src/session/MobileNativeChatComposer.controller.test.tsx src/gamepad/bindings/use-composer-edit-binding.test.tsx src/gamepad/bindings/use-terminal-controller-binding.test.tsx`
+
+- [ ] **USE-T21 - Sheets take the pad, and the host screen has a header zone**
+
+  Implemented. A sheet focuses the first control inside it (`requestNativeFocusWithin`), and
+  focus in a sheet is ringed natively; the host screen's header is a zone of `HostHeaderControl`
+  stops with the workspace list as the `list` zone; a root fallback makes `B` go back where
+  nothing claims it. Sheets and the header were run on the Android emulator.
+
+  **Needs:** USE-T4, USE-T5
+
+  **Verify:** `pnpm --dir mobile test src/gamepad/focus src/gamepad/zones src/host-screen src/gamepad/bindings/use-root-back-binding.test.tsx src/gamepad/controller-input/controller-runtime.test.ts`
+
+  **Not verified:** the same on the Retroid.

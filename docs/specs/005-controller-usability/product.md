@@ -30,6 +30,16 @@ Source: the device feedback recorded in the session that opened this work
 | Wheels | The left wheel held six placeholders; the right wheel held canned replies |
 | Wheel capture | An open wheel did not stop the screen underneath from reacting |
 
+## What the second device session found
+
+The first pass worked overall. The second session's list, answered by round 2 (USE-R14 to USE-R19,
+decision `007`): `L2`/`R2` did not scroll an opencode terminal; the text-entry strip costs vertical
+space and is wanted only while words are being made; a draft needs a caret, `B` as delete-a-word and
+dictation at the caret; the wheel should be steered by `R2`/`L2`, labelled on each side, with no
+label in the middle; Open web page goes and a chat/terminal toggle comes; a button that opens a
+sheet should hand the pad to it; `X` should reach the host screen's header. The stated goal is that
+every surface is reachable by pad, with a redesign for vertical space to follow.
+
 ## Product decisions
 
 Taken in the question round that opened this work. Each changes a position the
@@ -49,7 +59,7 @@ PRD or an earlier specification took, and is recorded under
   is showing: not an intent, not a native key, not a touch.
 - **Hand off is out of scope.** In Orca a hand-off moves a session from one agent
   to another without losing context. Orca Mobile does not expose that, so there is
-  nothing for the wheel to reach, and the right wheel has four segments.
+  nothing for the wheel to reach.
 
 ## Scope
 
@@ -157,24 +167,25 @@ Two segments: **Back to menu** (the workspace list of the current host) and
 
 ### USE-R10 - The right wheel
 
-Four segments, replacing the canned replies:
+Five segments, replacing the canned replies (round 2 removed Open a web page and added the two
+toggles, decision `007`):
 
 | Segment | Does |
 | --- | --- |
-| Close the agent | closes the current agent, through the existing tab-close path |
-| Stop the agent | interrupts the running turn: Escape in a terminal, the chat's own stop in a chat |
 | Launch an agent | opens a second wheel of every agent the new-tab drawer offers |
-| Open a web page | opens a second wheel of the project's open ports, plus "Enter URL…" |
+| Chat / terminal | switches the tab between its chat and its terminal, through the tab menu's own toggle; says where it goes |
+| Stop the agent | interrupts the running turn: Escape in a terminal, the chat's own stop in a chat |
+| Show / hide input | shows or hides the text-entry strip (USE-R16) |
+| Close the agent | closes the current agent, through the existing tab-close path |
 
 Hand off was asked for and is out of scope (see the product decision above).
 
 A segment that cannot run where the user is renders disabled and cancels. Stop is
 offered by the surface that can stop, so it is available in a terminal and in a chat
-that has a turn to stop, and nowhere else. Close and stop are destructive: the preset says so (WHEEL-R7), and the
-decision to ship them is recorded where the promotion gate reads it.
-
-"Enter URL…" opens a blank browser tab, which is what New tab, Browser does. The
-address is typed there; the controller has no text entry of its own.
+that has a turn to stop, and nowhere else. Chat / terminal is available on a terminal tab whose
+agent has a chat view, and nowhere else. Close and stop are destructive: the preset says so
+(WHEEL-R7), and the decision to ship them is recorded where the promotion gate reads it. They are
+never adjacent on the dial: a harmless choice sits between them.
 
 ### USE-R11 - An open wheel captures all input
 
@@ -189,13 +200,67 @@ the wheel, so the overlay can never be left holding a screen nothing can reach.
 ### USE-R12 - Hints tell the truth
 
 The hint bar names what each button does where the controller is now: the zone,
-the action ("Enter", "Back"), and, while a wheel is open, what `A` and `B` do to
+the action ("Enter", "Back"), and, while a wheel is open, what `R2` and `L2` do to
 the wheel. It never shows a control name as its own label.
 
 ### USE-R13 - Touch remains exactly as it was
 
 Unchanged from BIND-AC10. Nothing here removes or degrades a touch path, except
-that an open wheel swallows touches for as long as it is open (USE-R11).
+that an open wheel swallows touches for as long as it is open (USE-R11). Everything
+added in round 2 that changes what is drawn applies only while a pad is attached.
+
+### USE-R14 - A terminal that asks what the terminal knows still scrolls
+
+A full-screen program that probes the terminal's modes before it switches to the alternate screen
+(opencode does) must reach the alternate screen with the mouse on, so `L2`/`R2` scroll it as they
+scroll one that does not probe. The engine answers a mode query rather than throwing on it.
+
+### USE-R15 - The wheel is steered by the triggers
+
+While a wheel is open, a firm pull of `R2` selects what is lit (or opens a second wheel) and `L2`
+cancels (or steps back a level). `A` and `B` do nothing under a wheel, and neither does scroll. A
+trigger held when the wheel opened never fires, and one pulled under a wheel does not scroll when the
+wheel closes. The two triggers are named in the bottom corners, each on its own side of the screen:
+`L2` "Cancel" (or "Back" in a second wheel) on the left and `R2` "Select" (or "Open") on the right,
+the latter dimmed when nothing selectable is lit. The middle of the dial is empty: the highlight says
+what is chosen. A second wheel's title sits above the dial; loading, empty and failed menus are said
+in the middle, because there is nothing to highlight.
+
+### USE-R16 - Text entry is hidden until wanted
+
+With a pad attached, the terminal's input bar and the chat's composer are not drawn until something
+asks for them. The wheel's Show / hide input pins the strip open or shut. A chat composer also opens by
+itself while a draft is in it (dictation fills one) and goes again once the draft is sent; a terminal's
+buffered command draft does the same. A strip put away with a draft in it stays away until a new draft
+begins. A raised keyboard keeps the strip up, because someone is typing into it. The terminal's input
+bar is hidden, not unmounted, so its refs and the live input's state are undisturbed. Without a pad
+nothing changes.
+
+### USE-R17 - A draft is edited by caret
+
+While the strip is up the agent zone edits text. In a chat the draft is drawn with a block caret over
+the character it sits before, `D-pad` left/right moves it by character, up/down by line (a draft with
+no line breaks goes to its start or end), `B` deletes the word before it (Ctrl+W's rule), and `A`
+sends. Dictation lands at the caret, spaced from its neighbours, and leaves the caret after it. `D-pad`
+and `B` take the draft only while it has words, and `B` steps aside when the caret has nothing before
+it, so a permission prompt waiting for a "no" still gets it. A pending permission or question keeps
+the D-pad. In a terminal, the arrows are the prompt's arrows as before, dictation is typed at the
+prompt's caret by the terminal, and `B` sends Ctrl+W instead of Escape while the strip is up. A touch
+on a chat draft hands over to the keyboard input, with the caret where it was.
+
+### USE-R18 - A sheet takes the pad
+
+Opening a sheet (the filter, sort and group pickers, the action sheets, the new-tab sheet, quick
+commands, confirmations) focuses the first control in it. The D-pad then moves between its controls,
+`A` presses the one it is on, and `B` closes it. The focused control has a ring in the controller
+accent. The backdrop is not a focus stop.
+
+### USE-R19 - The host screen has a header zone, and B leaves any screen
+
+On the host screen `X` walks from the workspace list to the header and back; the header's filter,
+sort, group, accounts, tasks and search buttons (and back, reconnect and, where shown, floating
+workspace, hide sidebar and new workspace) are its stops. `B` in the header returns to the list. The
+list's cursor leaves with the pad. Where no binding claims `B`, it goes back one screen.
 
 ## Acceptance criteria
 
@@ -215,9 +280,9 @@ that an open wheel swallows touches for as long as it is open (USE-R11).
   worktrees and never toggles dictation; `R3` does nothing.
 - **USE-AC7** - `L1`/`R1` cycle tabs with focus in each zone.
 - **USE-AC8** - The left wheel has exactly its two segments; the right wheel has
-  exactly its four; committing each reaches the intended existing path.
-- **USE-AC9** - The second-level wheels list the live agents and ports, show
-  loading, empty and error states, and cancel with no side effect.
+  exactly its five; committing each reaches the intended existing path.
+- **USE-AC9** - The second-level wheel lists the live agents, shows
+  loading, empty and error states, and cancels with no side effect.
 - **USE-AC10** - With a wheel open, a property test over every intent kind shows
   no focus target receives any; the native layer swallows controller keys; a
   touch on the overlay reaches nothing beneath it; a button pressed during the
@@ -227,6 +292,19 @@ that an open wheel swallows touches for as long as it is open (USE-R11).
 - **USE-AC12** - Every touch entry point `003` listed still reaches its action.
 - **USE-AC13** - The reachability audit of `004` is updated to the new contract
   and still fails when a step becomes unreachable.
+- **USE-AC14** - The generated engine answers a mode query and still applies the mode switches
+  that follow it in the same write, run against the engine itself and against a real opencode
+  transcript in a browser engine.
+- **USE-AC15** - With a wheel open, `R2` selects, `L2` cancels or steps back, `A`, `B` and scroll do
+  nothing, and a trigger pulled under the wheel does not scroll after it closes.
+- **USE-AC16** - With a pad attached, a session's text-entry strip is absent until the wheel shows it
+  or a draft is in it; without a pad it is always there.
+- **USE-AC17** - In a chat, the D-pad moves the caret, `B` deletes a word, dictation lands at the
+  caret, and the transcript still scrolls when there is no draft.
+- **USE-AC18** - Opening a sheet puts native focus on a control inside it, with a pad attached and not
+  otherwise; the D-pad moves it, `A` presses and `B` closes (run on the emulator).
+- **USE-AC19** - `X` reaches the host screen's header, each button in it can be pressed with `A`, and
+  `B` returns to the list.
 
 ## Known gaps
 
@@ -241,9 +319,17 @@ Stated here rather than discovered later.
   neither has been seen.
 - **`Y` with `L1`/`R1` is not bound inside a session.** It moves between worktrees
   on the workspace list only.
-- **"Enter URL…" opens a blank browser tab.** There is no controller text entry.
 - **Source control and pull request panels have no controller bindings.** They open
   docked from the header, and are driven by touch.
+- **Most other screens are still touch-only.** Home's settings gear and its cards, settings,
+  accounts, tasks, host edit, source control and the file previews have no zones. `B` leaves them and
+  Android's focus moves between their buttons, but nothing draws a cursor there and `A` does not
+  press what it is on. A generic header and list zone is the next step.
+- **Round 2 has been seen on the emulator only for sheets and the host header.** The wheel's triggers
+  and labels, the caret and `B` as delete-a-word, the hidden strip and the chat toggle are proven by
+  composed tests, not on a pad.
+- **A sheet's text inputs take focus first.** A sheet whose first control is a text field focuses it,
+  which can raise the keyboard.
 - **Native focus can still wander in the agent zone.** Android moves its own focus on
   an unconsumed D-pad press. The cursor in the header, shortcut and panel zones and
   in every list pulls it back; in the agent zone nothing does.
