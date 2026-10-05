@@ -86,7 +86,8 @@ export function TerminalPaneView({
   useTerminalControllerBinding({
     handle,
     enabled: controllerFocused,
-    editingText: input.visible,
+    // A raised keyboard means someone is typing: `B` takes a word back instead of sending Escape.
+    editingText: input.visible || keyboardLift > 0,
     scrollLines,
     sendKey: onControllerKey,
     actions: controllerActions ?? NO_CONTROLLER_ACTIONS

@@ -11,6 +11,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.Window
+import android.widget.EditText
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import expo.modules.kotlin.functions.Queues
@@ -148,6 +149,9 @@ class OrcaGamepadModule : Module() {
     val installed = WindowCallbackTap(
       delegate = delegate,
       isCaptured = { inputCaptured },
+      focusedTextInput = {
+        TextInputWordDelete.visibleField(appContext.currentActivity?.currentFocus)
+      },
       onKey = { event, consumed -> onKeyEvent(event, consumed) },
       onMotion = { event, consumed -> onMotionEvent(event, consumed) }
     )
@@ -303,6 +307,8 @@ class OrcaGamepadModule : Module() {
   private class WindowCallbackTap(
     private val delegate: Window.Callback,
     private val isCaptured: () -> Boolean,
+    /** The text field with focus that the user can see, if any: `B` edits it instead of going back. */
+    private val focusedTextInput: () -> EditText?,
     private val onKey: (KeyEvent, Boolean) -> Unit,
     private val onMotion: (MotionEvent, Boolean) -> Unit
   ) : Window.Callback by delegate {
@@ -319,6 +325,16 @@ class OrcaGamepadModule : Module() {
         }
         onKey(event, false)
         return true
+      }
+      if (fromPad && event.keyCode == KeyEvent.KEYCODE_BUTTON_B) {
+        val field = focusedTextInput()
+        if (field != null) {
+          // Neither forwarded nor reported: JavaScript would take it for Back and leave the screen.
+          if (event.action == KeyEvent.ACTION_DOWN) {
+            TextInputWordDelete.deleteWordBefore(field)
+          }
+          return true
+        }
       }
       val consumed = delegate.dispatchKeyEvent(event)
       if (fromPad) {

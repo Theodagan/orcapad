@@ -69,7 +69,11 @@ function buildTab(): RuntimeMobileSessionTerminalClientTab {
     launchAgent: CHAT_AGENT,
     agentStatus,
     viewMode: 'chat',
-    isActive: true
+    isActive: true,
+    // Opt-in: seeds the composer, which is how a draft appears on an emulator that cannot dictate.
+    ...(process.env.MOCK_CHAT_DRAFT
+      ? { launchDraft: process.env.MOCK_CHAT_DRAFT, launchDraftCreatedAt: Date.now() }
+      : {})
   }
 }
 
