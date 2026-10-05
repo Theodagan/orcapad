@@ -23,4 +23,6 @@ export type WheelSegment = {
   readonly availability: SegmentAvailability
   /** Resolved by the dispatcher on commit, never by the geometry. */
   readonly bindingId: string
+  /** Committing opens a second-level wheel instead of running anything (`005` USE-R10). */
+  readonly opens?: boolean
 }

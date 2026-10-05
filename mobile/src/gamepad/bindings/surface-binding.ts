@@ -1,6 +1,6 @@
 import type { ControllerIntent, ControllerIntentKind } from '../controller-input/controller-intent'
 import type { FocusTarget } from '../focus/focus-target'
-import type { WheelActionBinding } from '../wheel/wheel-registry'
+import type { WheelBinding } from '../wheel/wheel-registry'
 
 /**
  * What an existing surface contributes to the controller layer (`003` §1): where its intents go,
@@ -13,7 +13,7 @@ import type { WheelActionBinding } from '../wheel/wheel-registry'
 export type SurfaceBinding = {
   readonly focusTarget: FocusTarget
   /** BIND-R10: stable ids a preset may name. Position and wheel side are never decided here. */
-  readonly wheelActions: readonly WheelActionBinding[]
+  readonly wheelActions: readonly WheelBinding[]
 }
 
 /**

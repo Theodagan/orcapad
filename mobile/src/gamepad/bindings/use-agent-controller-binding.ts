@@ -7,7 +7,6 @@ import {
   LIST_SCROLL_POINTS_PER_SECOND_AT_FULL_PRESSURE
 } from './controller-scroll-rate'
 import type { WheelActionBinding } from '../wheel/wheel-registry'
-import { agentReplyActions } from '../wheel/experiments/agent-reply-actions'
 import { FOCUS_PRIORITY } from '../focus/focus-zones'
 import { focusTargetFor, type IntentHandlerEntry, type SurfaceBinding } from './surface-binding'
 import { useSurfaceBinding } from './use-surface-binding'
@@ -39,17 +38,10 @@ export type AgentControllerBindingOptions = InterventionSurface & {
    * tail-follow, and that disagreement is what made trigger scrolling jump to the top.
    */
   readonly scrollBy: (delta: number) => void
-  /**
-   * The chat's own send. With it, `004` LOOP-R3's second path exists: a few replies committable
-   * from the wheel when dictation is not available, which is otherwise a controller-only user
-   * with nothing to say.
-   */
-  readonly onSendText?: (text: string) => void
-  readonly canSend?: boolean
 }
 
 export function useAgentControllerBinding(options: AgentControllerBindingOptions): void {
-  const { sessionId, canStop, onStop, onSendText, canSend } = options
+  const { sessionId, canStop, onStop } = options
   const latest = useRef(options)
   useLayoutEffect(() => {
     latest.current = options
@@ -111,17 +103,14 @@ export function useAgentControllerBinding(options: AgentControllerBindingOptions
     }
 
     // The chat decides whether a turn can be stopped, and a stop its button would refuse is
-    // unavailable here too. Close, handoff, launch and web arrive with the right wheel.
+    // unavailable here too. Close, launch and web belong to the session around the chat.
     const stopAction: WheelActionBinding = {
       id: AGENT_WHEEL_ACTION_IDS.stop,
       label: 'Stop agent',
       availability: canStop && onStop !== undefined ? 'available' : 'unavailable',
       run: () => latest.current.onStop?.()
     }
-    const wheelActions: readonly WheelActionBinding[] = [
-      stopAction,
-      ...(onSendText === undefined ? [] : agentReplyActions(onSendText, canSend === true))
-    ]
+    const wheelActions: readonly WheelActionBinding[] = [stopAction]
 
     return {
       focusTarget: {
@@ -132,7 +121,7 @@ export function useAgentControllerBinding(options: AgentControllerBindingOptions
       },
       wheelActions
     }
-  }, [sessionId, canStop, onStop, intervention, onSendText, canSend, integrator])
+  }, [sessionId, canStop, onStop, intervention, integrator])
 
   useSurfaceBinding(binding)
 }

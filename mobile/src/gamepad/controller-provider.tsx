@@ -19,7 +19,7 @@ import type { ControllerSample } from './controller-input/controller-sample'
 import type { ResolveContext } from './controller-input/controller-resolver'
 import { createFocusRegistry, type FocusRegistry, type FocusSnapshot } from './focus/focus-registry'
 import type { FocusTarget } from './focus/focus-target'
-import type { WheelActionBinding } from './wheel/wheel-registry'
+import type { WheelBinding } from './wheel/wheel-registry'
 import {
   shouldToggleDictation,
   type ActiveDictation,
@@ -57,7 +57,7 @@ export type ControllerContextValue = {
    * BIND-R10: a mounted surface offers an action a wheel preset may name. Inert without a
    * registry above, so a surface can be rendered in a test without standing a wheel up.
    */
-  readonly registerWheelAction: (binding: WheelActionBinding) => () => void
+  readonly registerWheelAction: (binding: WheelBinding) => () => void
   /** The mounted session's dictation, so `Y` reaches it from step 2 wherever focus is. */
   readonly registerActiveDictation: (dictation: ActiveDictation) => () => void
   /** Zones and what a press can reach, for the hint bar and the zone frames to draw. */
@@ -153,7 +153,7 @@ export type ControllerProviderProps = {
   /** True while an open wheel owns the pad. The resolver reads it, so a press that began under a wheel never acts once it closes. */
   readonly captured?: () => boolean
   /** WHEEL-T4's registry, passed in rather than reached for, so the provider owns no wheel state. */
-  readonly registerWheelAction?: (binding: WheelActionBinding) => () => void
+  readonly registerWheelAction?: (binding: WheelBinding) => () => void
   /**
    * Step 2 of `001` §7, between the wheel and the focused surface: `Y` reaches the session's
    * dictation wherever focus is. Absent means no dictation layer, and `Y` is an ordinary intent.

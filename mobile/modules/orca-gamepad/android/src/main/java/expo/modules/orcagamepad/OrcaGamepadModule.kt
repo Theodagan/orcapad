@@ -38,6 +38,13 @@ class OrcaGamepadModule : Module() {
   private var minimumIntervalMs: Long = 8
   private var lastEmitAt: Long = 0
 
+  /**
+   * True while an open wheel owns the pad. Controller events are then reported and never forwarded
+   * to the view tree, so Android's own focus traversal and a focused WebView cannot react to a pad
+   * that is steering a menu (`005` USE-R11). Set from JavaScript, which is where the wheel lives.
+   */
+  @Volatile private var inputCaptured = false
+
   override fun definition() = ModuleDefinition {
     Name("OrcaGamepad")
     Events(EVENT_SAMPLE, EVENT_DEVICES)
@@ -60,6 +67,11 @@ class OrcaGamepadModule : Module() {
       true
     }
 
+    Function("setInputCaptured") { captured: Boolean ->
+      inputCaptured = captured
+      true
+    }
+
     OnDestroy {
       stopTap()
       stopDeviceListener()
@@ -67,6 +79,8 @@ class OrcaGamepadModule : Module() {
   }
 
   private fun resetState() {
+    // Nothing is owning the pad across a restart either.
+    inputCaptured = false
     // A disconnect must not leave a button held forever, so neutral is the only safe baseline.
     for (button in ALL_BUTTONS) {
       buttons[button] = 0f
@@ -91,6 +105,7 @@ class OrcaGamepadModule : Module() {
     val delegate = window.callback ?: return
     val installed = WindowCallbackTap(
       delegate = delegate,
+      isCaptured = { inputCaptured },
       onKey = { event, consumed -> onKeyEvent(event, consumed) },
       onMotion = { event, consumed -> onMotionEvent(event, consumed) }
     )
@@ -245,11 +260,32 @@ class OrcaGamepadModule : Module() {
 
   private class WindowCallbackTap(
     private val delegate: Window.Callback,
+    private val isCaptured: () -> Boolean,
     private val onKey: (KeyEvent, Boolean) -> Unit,
     private val onMotion: (MotionEvent, Boolean) -> Unit
   ) : Window.Callback by delegate {
+    /** Keys the view tree saw go down, so a release that arrives under a wheel is still delivered. */
+    private val forwardedKeys = mutableSetOf<Int>()
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+      val fromPad = isControllerSource(event.source)
+      if (fromPad && isCaptured()) {
+        // Reported to JavaScript, not forwarded. A key the view tree already saw go down still
+        // gets its release, or it would stay pressed beneath the wheel.
+        if (event.action == KeyEvent.ACTION_UP && forwardedKeys.remove(event.keyCode)) {
+          delegate.dispatchKeyEvent(event)
+        }
+        onKey(event, false)
+        return true
+      }
       val consumed = delegate.dispatchKeyEvent(event)
+      if (fromPad) {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+          forwardedKeys.add(event.keyCode)
+        } else if (event.action == KeyEvent.ACTION_UP) {
+          forwardedKeys.remove(event.keyCode)
+        }
+      }
       onKey(event, consumed)
       // Reporting what the view tree did is the tap's job; suppressing Android's fallback is the
       // one place it has to act. An unconsumed `BUTTON_B` comes back as `KEYCODE_BACK`, so a
@@ -259,6 +295,10 @@ class OrcaGamepadModule : Module() {
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
+      if (isControllerSource(event.source) && isCaptured()) {
+        onMotion(event, false)
+        return true
+      }
       val consumed = delegate.dispatchGenericMotionEvent(event)
       onMotion(event, consumed)
       return consumed

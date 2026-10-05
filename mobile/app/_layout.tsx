@@ -21,7 +21,10 @@ import { useWheelController } from '../src/gamepad/wheel/use-wheel-controller'
 import { createWheelRegistry } from '../src/gamepad/wheel/wheel-registry'
 import { createActiveDictationRegistry } from '../src/gamepad/bindings/active-dictation'
 import { ACTIVE_WHEEL_TRIAL } from '../src/gamepad/wheel/experiments/active-wheel-trial'
-import { createSmokeDiagnostics } from '../src/gamepad/wheel/experiments/smoke-diagnostic-bindings'
+import { navigationWheelActions } from '../src/gamepad/bindings/navigation-wheel-actions'
+import { hostStackHostRoute } from '../src/navigation/host-stack-navigation'
+import { NavigatorScreenGate } from '../src/navigation/navigator-screen-gate'
+import { hostNewWorktreeRoute } from '../src/host-route-action-state'
 import { getNotificationNavigationTarget } from '../src/notifications/notification-routing'
 import { useOpenNotificationRoute } from '../src/notifications/use-open-notification-route'
 import {
@@ -45,11 +48,9 @@ SplashScreen.preventAutoHideAsync()
 const controllerRuntime = createControllerRuntime()
 // One registry per process, like the runtime: surfaces register into it as they mount.
 const wheelRegistry = createWheelRegistry()
-// The smoke bindings belong to the process rather than to any surface, so they register once and
-// are never retracted — there is no mount whose end would mean they should go away.
-createSmokeDiagnostics().register(wheelRegistry)
-// `R3` is step 2 of `001` §7, so the mounted session's dictation registers here rather than
-// being dispatched to: a live microphone stays stoppable from wherever focus has gone.
+// Dictation is step 2 of `001` §7, so the mounted session's dictation registers here rather than
+// being dispatched to: a live microphone stays stoppable from wherever focus has gone (unless a
+// wheel is open, which takes every input first).
 const activeDictation = createActiveDictationRegistry()
 
 // Why at boot and not only on subscribe: the gateway's FCM payload targets the
@@ -69,11 +70,37 @@ export default function RootLayout() {
   const wheel = useWheelController({
     presets: ACTIVE_WHEEL_TRIAL,
     registry: wheelRegistry,
-    deadZone: 0.15
+    deadZone: 0.15,
+    // An open wheel owns the pad: Android must not also move its own focus underneath it.
+    onOpenChange: controllerRuntime.setCaptured
   })
   const router = useRouter()
   const pathname = usePathname()
   const { hostId, worktreeId } = useGlobalSearchParams<{ hostId?: string; worktreeId?: string }>()
+  // The left wheel: back to this host's workspace list, and a new worktree on it. Registered here
+  // because this is the one place that owns the router and sees every screen.
+  useEffect(() => {
+    const host = typeof hostId === 'string' ? hostId : null
+    const unregister = navigationWheelActions({
+      hostId: host,
+      atWorkspaceList: host !== null && pathname === hostStackHostRoute(host),
+      onBackToMenu: () => {
+        if (host !== null) {
+          router.dismissTo(hostStackHostRoute(host))
+        }
+      },
+      onNewWorktree: () => {
+        if (host !== null) {
+          router.dismissTo(hostNewWorktreeRoute(host))
+        }
+      }
+    }).map((action) => wheelRegistry.register(action))
+    return () => {
+      for (const retract of unregister) {
+        retract()
+      }
+    }
+  }, [hostId, pathname, router])
   useEffect(() => {
     setNotificationViewingWorkspace(
       pathname.includes('/session/') && typeof hostId === 'string' && typeof worktreeId === 'string'
@@ -224,6 +251,7 @@ export default function RootLayout() {
         reader={controllerRuntime.reader}
         resolve={controllerRuntime.resolve}
         intercept={wheel.intercept}
+        captured={wheel.isOpen}
         registerWheelAction={wheelRegistry.register}
         activeDictation={activeDictation}
         wheelOverlay={<WheelOverlay controller={wheel} />}
@@ -231,6 +259,10 @@ export default function RootLayout() {
         <View style={styles.root} onLayout={onNavigatorLayout}>
           <StatusBar style="light" />
           <Stack
+            // Screens kept under the top one must not answer the pad (see NavigatorScreenGate).
+            screenLayout={({ navigation, children }) => (
+              <NavigatorScreenGate navigation={navigation}>{children}</NavigatorScreenGate>
+            )}
             screenOptions={{
               headerStyle: { backgroundColor: colors.bgPanel },
               headerTintColor: colors.textPrimary,
@@ -270,7 +302,7 @@ export default function RootLayout() {
             <Stack.Screen name="h" options={{ headerShown: false }} />
           </Stack>
         </View>
-        <ActionHintBar />
+        <ActionHintBar wheelOpen={wheel.view.state.kind === 'open'} />
         <ControllerConnectionNotice />
       </ControllerProvider>
     </RpcClientProvider>

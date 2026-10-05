@@ -4,7 +4,11 @@ import {
   explorerWheelActions
 } from '../../bindings/file-explorer-row-action'
 import { HOME_WHEEL_ACTION_IDS, homeWheelActions } from '../../bindings/home-wheel-actions'
-import { AGENT_REPLY_IDS, agentReplyActions } from './agent-reply-actions'
+import { AGENT_WHEEL_ACTION_IDS } from '../../bindings/agent-wheel-action-ids'
+import {
+  NAVIGATION_WHEEL_ACTION_IDS,
+  navigationWheelActions
+} from '../../bindings/navigation-wheel-actions'
 import { dispatchWheelOutcome } from '../wheel-dispatcher'
 import { selectSegment } from '../wheel-geometry'
 import { resolveSegments, validatePreset, type WheelPresetDefinition } from '../wheel-preset'
@@ -19,8 +23,11 @@ const presets = Object.entries(REAL_ACTION_PRESETS)
 const REGISTERED_IDS = new Set<string>([
   ...Object.values(EXPLORER_WHEEL_ACTION_IDS),
   ...Object.values(HOME_WHEEL_ACTION_IDS),
-  ...Object.values(AGENT_REPLY_IDS)
+  ...Object.values(AGENT_WHEEL_ACTION_IDS),
+  ...Object.values(NAVIGATION_WHEEL_ACTION_IDS)
 ])
+
+const DESTRUCTIVE = /stop|close|forget|delete|remove|archive/i
 
 function vectorAt(angle: number): { readonly x: number; readonly y: number } {
   return { x: Math.sin(angle), y: -Math.cos(angle) }
@@ -81,12 +88,14 @@ describe('real-action presets', () => {
     expect(preset.contractual).toBe(false)
   })
 
-  // WHEEL-R7: no stop, close, forget or delete until cancel and commit pass device trials.
-  it.each(presets)('%s excludes destructive actions', (_id, preset) => {
-    expect(preset.trial.destructivePolicy).toBe('excludes-destructive')
-    for (const segment of preset.segments) {
-      expect(segment.bindingId).not.toMatch(/stop|close|forget|delete|remove|archive/i)
-    }
+  // WHEEL-R7: a preset that can reach a destructive action says so before it runs, and one that
+  // does not say so cannot reach one.
+  it.each(presets)('%s says whether it can reach a destructive action', (_id, preset) => {
+    const reaches = preset.segments.some((segment) => DESTRUCTIVE.test(segment.bindingId))
+
+    expect(preset.trial.destructivePolicy).toBe(
+      reaches ? 'includes-destructive' : 'excludes-destructive'
+    )
   })
 
   // The point of a real-action preset: every id is one a surface actually registers, so a commit
@@ -97,13 +106,17 @@ describe('real-action presets', () => {
     }
   })
 
-  it.each(presets)('%s tiles the dial with no dead arc', (_id, preset) => {
-    const segments = resolveSegments(preset, createWheelRegistry())
-    for (let degree = 0; degree < 360; degree += 1) {
-      const vector = vectorAt((degree * 2 * Math.PI) / 360)
-      expect(selectSegment(vector.x, vector.y, segments, DEAD_ZONE).segmentId).not.toBeNull()
+  // A pair of segments leaves arcs to rest the stick in on purpose; three or more tile the dial.
+  it.each(presets.filter(([, preset]) => preset.segments.length >= 3))(
+    '%s tiles the dial with no dead arc',
+    (_id, preset) => {
+      const segments = resolveSegments(preset, createWheelRegistry())
+      for (let degree = 0; degree < 360; degree += 1) {
+        const vector = vectorAt((degree * 2 * Math.PI) / 360)
+        expect(selectSegment(vector.x, vector.y, segments, DEAD_ZONE).segmentId).not.toBeNull()
+      }
     }
-  })
+  )
 
   it('names no product default', () => {
     for (const [id, preset] of presets) {
@@ -140,7 +153,7 @@ describe('a real-action commit', () => {
     )
 
     expect(segments.find((segment) => segment.id === 'pair')?.availability).toBe('unavailable')
-    expect(outcome).toEqual({ kind: 'cancel' })
+    expect(outcome).toMatchObject({ kind: 'cancel' })
   })
 
   it('keeps every segment on the wheel when only one surface is mounted', () => {
@@ -188,40 +201,152 @@ describe('a real-action commit', () => {
       gone
     )
 
-    expect(outcome).toEqual({ kind: 'cancel' })
+    expect(outcome).toMatchObject({ kind: 'cancel' })
     expect(explorer.previewSelected).not.toHaveBeenCalled()
   })
 })
 
-describe('the replies preset', () => {
-  // `004` LOOP-R3: this is the preset a controller-only session leans on when dictation is not
-  // available, so it has to reach the chat's own send and nothing else.
-  it('commits a reply through the agent view\u2019s send', () => {
-    const registry = createWheelRegistry()
-    const send = vi.fn()
-    for (const action of agentReplyActions(send, true)) {
-      registry.register(action)
-    }
+describe('the navigation wheel (005 USE-R9)', () => {
+  const preset = REAL_ACTION_PRESETS.navigation
 
-    const { outcome, segments } = commitSegment(
-      REAL_ACTION_PRESETS['agent-replies'],
-      registry,
-      'continue'
-    )
-
-    expect(outcome.kind).toBe('commit')
-    dispatchWheelOutcome(outcome, segments, (id) => void registry.lookup(id)?.run())
-    expect(send).toHaveBeenCalledWith('Continue.')
+  it('is the left wheel, with exactly two choices and no placeholders', () => {
+    expect(preset.wheel).toBe(1)
+    expect(preset.segments.map((segment) => segment.label)).toEqual([
+      'Back to menu',
+      'New worktree'
+    ])
+    expect(preset.segments.map((segment) => segment.bindingId)).toEqual([
+      NAVIGATION_WHEEL_ACTION_IDS.backToMenu,
+      NAVIGATION_WHEEL_ACTION_IDS.newWorktree
+    ])
   })
 
-  it('cancels while the composer cannot send', () => {
+  it('puts back on the west and new on the east, with the stick free to rest north and south', () => {
+    const segments = resolveSegments(preset, createWheelRegistry())
+    const at = (degree: number) =>
+      selectSegment(
+        vectorAt((degree * Math.PI) / 180).x,
+        vectorAt((degree * Math.PI) / 180).y,
+        segments,
+        DEAD_ZONE
+      ).segmentId
+
+    expect(at(270)).toBe('back-to-menu')
+    expect(at(90)).toBe('new-worktree')
+    expect(at(0)).toBeNull()
+    expect(at(180)).toBeNull()
+  })
+
+  it('reaches the navigation the app already has, once each', () => {
     const registry = createWheelRegistry()
-    for (const action of agentReplyActions(vi.fn(), false)) {
+    const onBackToMenu = vi.fn()
+    const onNewWorktree = vi.fn()
+    for (const action of navigationWheelActions({
+      hostId: 'h1',
+      atWorkspaceList: false,
+      onBackToMenu,
+      onNewWorktree
+    })) {
       registry.register(action)
     }
 
-    const { outcome } = commitSegment(REAL_ACTION_PRESETS['agent-replies'], registry, 'continue')
+    for (const id of ['back-to-menu', 'new-worktree']) {
+      const { outcome, segments } = commitSegment(preset, registry, id)
+      expect(outcome.kind).toBe('commit')
+      dispatchWheelOutcome(outcome, segments, (binding) => void registry.lookup(binding)?.run())
+    }
 
-    expect(outcome).toEqual({ kind: 'cancel' })
+    expect(onBackToMenu).toHaveBeenCalledTimes(1)
+    expect(onNewWorktree).toHaveBeenCalledTimes(1)
+  })
+
+  it('greys out what has no host to act on, and what would go nowhere', () => {
+    const registry = createWheelRegistry()
+    for (const action of navigationWheelActions({
+      hostId: null,
+      atWorkspaceList: false,
+      onBackToMenu: vi.fn(),
+      onNewWorktree: vi.fn()
+    })) {
+      registry.register(action)
+    }
+    expect(commitSegment(preset, registry, 'back-to-menu').outcome).toMatchObject({
+      kind: 'cancel'
+    })
+    expect(commitSegment(preset, registry, 'new-worktree').outcome).toMatchObject({
+      kind: 'cancel'
+    })
+
+    const onList = createWheelRegistry()
+    for (const action of navigationWheelActions({
+      hostId: 'h1',
+      atWorkspaceList: true,
+      onBackToMenu: vi.fn(),
+      onNewWorktree: vi.fn()
+    })) {
+      onList.register(action)
+    }
+    expect(commitSegment(preset, onList, 'back-to-menu').outcome).toMatchObject({ kind: 'cancel' })
+    expect(commitSegment(preset, onList, 'new-worktree').outcome.kind).toBe('commit')
+  })
+})
+
+describe('the agent wheel (005 USE-R10)', () => {
+  const preset = REAL_ACTION_PRESETS['agent-actions']
+
+  it('is the right wheel, replacing the canned replies with four actions and no handoff', () => {
+    expect(preset.wheel).toBe(2)
+    expect(preset.segments.map((segment) => segment.label)).toEqual([
+      'Launch agent',
+      'Open web page',
+      'Stop agent',
+      'Close agent'
+    ])
+    expect(Object.keys(REAL_ACTION_PRESETS)).not.toContain('agent-replies')
+  })
+
+  it('declares that it can stop and close, so a trial knows before it runs (WHEEL-R7)', () => {
+    expect(preset.trial.destructivePolicy).toBe('includes-destructive')
+  })
+
+  it('keeps the two destructive choices apart from the two that open another wheel', () => {
+    const angle = (id: string) => preset.segments.find((segment) => segment.id === id)?.centerAngle
+    const spread = (a: string, b: string) => Math.abs((angle(a) ?? 0) - (angle(b) ?? 0))
+
+    // Stop (south) and close (west) are each a quarter turn from the nearest opener.
+    expect(spread('stop', 'launch')).toBeGreaterThanOrEqual(Math.PI / 2)
+    expect(spread('close', 'web')).toBeGreaterThanOrEqual(Math.PI / 2)
+  })
+
+  it('cancels on every segment off a session, where nothing is mounted to answer', () => {
+    const registry = createWheelRegistry()
+
+    for (const segment of preset.segments) {
+      expect(commitSegment(preset, registry, segment.id).outcome, segment.id).toMatchObject({
+        kind: 'cancel'
+      })
+    }
+  })
+
+  it('commits the stop through the binding the session registers', () => {
+    const registry = createWheelRegistry()
+    const run = vi.fn()
+    registry.register({
+      id: AGENT_WHEEL_ACTION_IDS.stop,
+      label: 'Stop agent',
+      availability: 'available',
+      run
+    })
+
+    const { outcome, segments } = commitSegment(preset, registry, 'stop')
+
+    expect(outcome.kind).toBe('commit')
+    dispatchWheelOutcome(outcome, segments, (id) => {
+      const binding = registry.lookup(id)
+      if (binding !== null && 'run' in binding) {
+        void binding.run()
+      }
+    })
+    expect(run).toHaveBeenCalledTimes(1)
   })
 })

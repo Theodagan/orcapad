@@ -230,7 +230,6 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
   useNativeChatControllerBinding({
     ...props,
     sessionId: sendSurfaceId,
-    canSend: inputLockReason == null,
     scrollBy
   })
 

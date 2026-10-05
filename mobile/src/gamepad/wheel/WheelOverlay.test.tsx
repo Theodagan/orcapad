@@ -97,10 +97,24 @@ describe('WheelOverlay', () => {
     return publish
   }
 
+  /** The label of each segment, not the hub's. */
   function labels(): string[] {
-    return (renderer?.root.findAll((node) => node.type === 'Text') ?? []).flatMap((node) =>
-      typeof node.children[0] === 'string' ? [node.children[0]] : []
-    )
+    const segments =
+      renderer?.root.findAll(
+        (node) =>
+          node.type === 'View' && String(node.props.testID ?? '').startsWith('wheel-segment:')
+      ) ?? []
+    return segments.flatMap((node) => {
+      const text = node.findAll((child) => child.type === 'Text')[0]
+      return typeof text?.children[0] === 'string' ? [text.children[0]] : []
+    })
+  }
+
+  function hubText(): string {
+    const hub = renderer?.root.findAll((node) => node.props.testID === 'wheel-hub')[0]
+    return (hub?.findAll((node) => node.type === 'Text') ?? [])
+      .map((node) => node.children.join(''))
+      .join(' | ')
   }
 
   it('renders nothing while the wheel is closed', () => {
@@ -122,17 +136,40 @@ describe('WheelOverlay', () => {
     expect(labels()).toEqual(['North', 'East'])
   })
 
-  it('takes no touches, so the surface underneath stays usable (WHEEL-R8)', () => {
+  // `005` USE-R11 reversed WHEEL-R8: an open wheel owns every input, touch included. An accidental
+  // open stays harmless because the wheel closes the moment the stick returns to centre.
+  it('takes the touches, so nothing beneath it reacts while it is up (USE-R11)', () => {
     let controller: WheelController | null = null
     mount(createWheelRegistry(), (c) => (controller = c))
     act(() => {
       controller?.intercept(up)
     })
 
-    const blocking = renderer?.root.findAll(
-      (node) => node.type === 'View' && node.props.style?.position === 'absolute'
+    const layer = renderer?.root.findAll(
+      (node) => node.type === 'View' && node.props.pointerEvents === 'auto'
     )
-    expect(blocking?.every((node) => node.props.pointerEvents === 'none')).toBe(true)
+    expect(layer).toHaveLength(1)
+    expect(layer?.[0]?.props.onStartShouldSetResponder()).toBe(true)
+    expect(layer?.[0]?.props.onResponderTerminationRequest()).toBe(false)
+  })
+
+  it('lets touches through while it is closed', () => {
+    mount(createWheelRegistry(), () => {})
+
+    expect(
+      renderer?.root.findAll((node) => node.props?.pointerEvents === 'auto') ?? []
+    ).toHaveLength(0)
+  })
+
+  it('says what the locked segment is in the middle, and how to leave', () => {
+    let controller: WheelController | null = null
+    mount(createWheelRegistry(), (c) => (controller = c))
+
+    act(() => {
+      controller?.intercept(up)
+    })
+
+    expect(hubText()).toBe('North | B cancel')
   })
 
   it('closes when the stick returns to centre', () => {

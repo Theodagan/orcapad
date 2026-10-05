@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { TERMINAL_ACCESSORY_KEY_DEFINITIONS } from '../../terminal/terminal-key-definitions'
 import { FOCUS_PRIORITY } from '../focus/focus-zones'
+import { AGENT_WHEEL_ACTION_IDS } from './agent-wheel-action-ids'
 import type { WheelActionBinding } from '../wheel/wheel-registry'
 import { createScrollIntegrator } from './controller-scroll-rate'
 import { focusTargetFor, type IntentHandlerEntry, type SurfaceBinding } from './surface-binding'
@@ -117,12 +118,23 @@ export function useTerminalControllerBinding(options: TerminalControllerBindingO
       ['back', () => send(KEYS.escape)]
     ]
 
-    const wheelActions: readonly WheelActionBinding[] = actions.map((action) => ({
-      id: action.id,
-      label: action.label,
-      availability: action.enabled ? 'available' : 'unavailable',
-      run: () => latest.current.sendKey(action.send)
-    }))
+    // Stopping an agent in a terminal is the key every agent CLI answers to: Escape interrupts the
+    // turn. The chat has its own stop, and only one of the two is ever the surface on screen.
+    const stopAction: WheelActionBinding = {
+      id: AGENT_WHEEL_ACTION_IDS.stop,
+      label: 'Stop agent',
+      availability: 'available',
+      run: () => send(KEYS.escape)
+    }
+    const wheelActions: readonly WheelActionBinding[] = [
+      stopAction,
+      ...actions.map((action) => ({
+        id: action.id,
+        label: action.label,
+        availability: action.enabled ? ('available' as const) : ('unavailable' as const),
+        run: () => latest.current.sendKey(action.send)
+      }))
+    ]
 
     return {
       focusTarget: {

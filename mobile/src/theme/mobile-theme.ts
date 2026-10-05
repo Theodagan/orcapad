@@ -8,6 +8,9 @@ export const colors = {
   borderSubtle: '#2a2a2a',
   editorSurface: '#1e1e1e',
 
+  // The dim behind a modal layer; drawers already used this value inline.
+  scrim: 'rgba(0, 0, 0, 0.5)',
+
   textPrimary: '#e0e0e0',
   textSecondary: '#a1a1a1',
   textMuted: '#8c8c8c',

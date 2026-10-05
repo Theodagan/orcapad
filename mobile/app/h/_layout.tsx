@@ -11,6 +11,7 @@ import {
   saveHostSidebarWidth
 } from '../../src/storage/preferences'
 import { HostProtocolGate } from '../../src/components/HostProtocolGate'
+import { NavigatorScreenGate } from '../../src/navigation/navigator-screen-gate'
 import { HostScreen } from './[hostId]/index'
 
 // Keep at least this much room for the detail pane when resizing the sidebar.
@@ -30,6 +31,10 @@ function clampSidebarToWindow(width: number, windowWidth: number): number {
 function HostStack({ animation }: { animation: 'none' | 'default' }) {
   return (
     <Stack
+      // Screens kept under the top one must not answer the pad (see NavigatorScreenGate).
+      screenLayout={({ navigation, children }) => (
+        <NavigatorScreenGate navigation={navigation}>{children}</NavigatorScreenGate>
+      )}
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: colors.bgBase },

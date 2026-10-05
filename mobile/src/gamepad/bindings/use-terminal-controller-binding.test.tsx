@@ -221,6 +221,15 @@ describe('terminal controller binding', () => {
     })
 
     // WHEEL-R7: arbitrary shell stays visible but unfireable until device trials pass.
+    it('stops an agent in the terminal with the key every agent CLI interrupts on', () => {
+      const pane = mount()
+
+      pane.registry.lookup('agent.stop')?.run()
+
+      expect(pane.sendKey).toHaveBeenCalledWith(ESC)
+      expect(pane.registry.lookup('agent.stop')?.availability).toBe('available')
+    })
+
     it('offers a quick command disabled rather than hidden', () => {
       const pane = mount()
 

@@ -25,6 +25,8 @@ import type { NativeControllerDevice } from '../../../modules/orca-gamepad'
 export type ControllerRuntime = {
   readonly reader: ControllerReader
   readonly resolve: ControllerResolver
+  /** Stops the native layer forwarding controller keys beneath an open wheel. Inert without it. */
+  readonly setCaptured: (captured: boolean) => void
 }
 
 /** The device's own figure when it states one; the floor only covers a pad that declares none. */
@@ -44,7 +46,7 @@ export function policyForControllers(
 export function createControllerRuntime(): ControllerRuntime {
   const native = createNativeControllerReader()
   if (orcaGamepad === null) {
-    return { reader: native, resolve: createControllerIntentResolver() }
+    return { reader: native, resolve: createControllerIntentResolver(), setCaptured: () => {} }
   }
   const module = orcaGamepad
 
@@ -62,6 +64,9 @@ export function createControllerRuntime(): ControllerRuntime {
       policy: () => policy,
       isActive: () => AppState.currentState === 'active'
     }),
-    resolve: (sample, context) => resolve(sample, context)
+    resolve: (sample, context) => resolve(sample, context),
+    setCaptured: (captured) => {
+      module.setInputCaptured(captured)
+    }
   }
 }

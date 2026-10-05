@@ -36,6 +36,11 @@ export type OrcaGamepadModule = {
   /** `intervalMs` paces analog samples; a button edge is always delivered immediately. */
   readonly start: (intervalMs: number) => boolean
   readonly stop: () => boolean
+  /**
+   * While true, controller keys and motion are reported but not forwarded to the view tree, so an
+   * open wheel owns the pad. Synchronous on purpose: it must land before the next event.
+   */
+  readonly setInputCaptured: (captured: boolean) => boolean
   readonly addListener: {
     (
       event: 'onControllerSample',

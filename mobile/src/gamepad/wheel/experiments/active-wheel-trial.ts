@@ -1,7 +1,6 @@
 import type { WheelPresetDefinition } from '../wheel-preset'
 import type { WheelId } from '../wheel-segment'
 import { REAL_ACTION_PRESETS } from './real-action-presets'
-import { SMOKE_PRESETS } from './smoke-presets'
 
 /**
  * Which presets the shell is currently running. WHEEL-AC7 forbids a default assignment outside
@@ -16,9 +15,9 @@ import { SMOKE_PRESETS } from './smoke-presets'
  * and only with a trial record and a recorded human decision behind it.
  */
 export const ACTIVE_WHEEL_TRIAL: Readonly<Partial<Record<WheelId, WheelPresetDefinition>>> = {
-  1: SMOKE_PRESETS['smoke-hex'],
-  // The replies, because `004` makes them the path a controller-only session depends on when
-  // dictation is not there. Off the chat they resolve unavailable, which is the mostly-disabled
-  // wheel question worth watching in the same session.
-  2: REAL_ACTION_PRESETS['agent-replies']
+  // Back to the workspace list, and a new worktree: navigation that works from anywhere.
+  1: REAL_ACTION_PRESETS.navigation,
+  // What can be done to the agent in front of you, and two doors to more choices. Off a session
+  // its segments resolve unavailable, which is the mostly-disabled wheel question worth watching.
+  2: REAL_ACTION_PRESETS['agent-actions']
 }
