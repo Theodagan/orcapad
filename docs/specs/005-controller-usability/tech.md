@@ -269,10 +269,12 @@ No hint shows a control name as its own label.
 - Behaviour is proved through the composed provider with a fake reader and the real
   bindings, not through one binding in isolation.
 - `mobile-session-route-parity.test.ts` pins the session route's hooks, callbacks, strings
-  and JSX. It was re-pinned three times in this pass, each time after a probe diffed the
-  facts against `HEAD` and showed the only differences were the zone items, the focus refs
-  and rings, the strip-reveal props, the agent and shortcut frames, and the extraction of
-  the shortcut row into `MobileSessionAccessoryKeys`.
+  and JSX. The zone work re-pinned it twice, each time after a probe diffed the facts against
+  `HEAD` and showed the only differences were the zone items, the focus refs and rings, the
+  strip-reveal props, the agent and shortcut frames, and the extraction of the shortcut row
+  into `MobileSessionAccessoryKeys`. The probe is a copy of the test that records what it
+  hashes, run in a scratch worktree of `HEAD` and in the working tree; hashing the `HEAD`
+  record must reproduce the existing pins, which is what shows the probe is honest.
 - The reachability audit of `004` was updated to the new contract and still fails when a
   step becomes unreachable.
 - Not provable here: anything that needs the pad, the Retroid's trigger classification, or
