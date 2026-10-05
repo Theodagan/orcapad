@@ -21,6 +21,8 @@ export type SelectionRevealOptions<T> = {
   readonly scrollToId: (id: string) => void
   /** The list's own jump, for rows it has not measured yet. */
   readonly scrollToOffset: (offset: number) => void
+  /** Names a section from the section a header token carries, so a selected header counts as seen too. */
+  readonly headerIdOf?: (section: unknown) => string | null
 }
 
 export function useSelectionReveal<T>(options: SelectionRevealOptions<T>): {
@@ -40,8 +42,16 @@ export function useSelectionReveal<T>(options: SelectionRevealOptions<T>): {
 
   const onViewableItemsChanged = useCallback((info: { readonly changed: ViewToken<T>[] }) => {
     for (const token of info.changed) {
-      // A section header is reported with no item index; it is not a row the pad selects.
+      // A section header is reported with no item index. It counts only if the list says what to call it.
       if (token.index === null) {
+        const headerId = latest.current.headerIdOf?.(token.section) ?? null
+        if (headerId !== null) {
+          if (token.isViewable) {
+            viewable.current.add(headerId)
+          } else {
+            viewable.current.delete(headerId)
+          }
+        }
         continue
       }
       const id = latest.current.idOf(token.item)

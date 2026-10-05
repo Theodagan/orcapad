@@ -11,6 +11,8 @@ import { WorktreeListRow } from '../components/WorktreeListRow'
 import { useControllerListScroll } from '../gamepad/bindings/use-controller-list-scroll'
 import { useSelectionReveal } from '../gamepad/bindings/use-selection-reveal'
 import { useWorkspaceControllerBinding } from '../gamepad/bindings/use-workspace-controller-binding'
+import { SECTION_HEADER_PREFIX, sectionHeaderId } from '../gamepad/bindings/workspace-list-order'
+import { ControllerFocusRing } from '../gamepad/focus/ControllerFocusRing'
 import { ZoneFrame } from '../gamepad/zones/ZoneFrame'
 import { colors, spacing } from '../theme/mobile-theme'
 import type { Worktree } from '../worktree/workspace-list-types'
@@ -67,6 +69,7 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
     sections,
     idOf: rowKeyOf,
     onOpen: actions.openWorktreeSession,
+    onToggleSection: settings.toggleCollapsed,
     onBack: router.back,
     scrollBy: listScroll.scrollBy
   })
@@ -74,10 +77,19 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
   // The cursor follows the list and the list follows the cursor: a selection that scrolls out of
   // view is brought back, centred, without touching the desktop-active row's own scroll.
   const scrollToWorktree = useCallback(
-    (worktreeId: string) => {
+    (selectedId: string) => {
+      const headerKey = selectedId.startsWith(SECTION_HEADER_PREFIX)
+        ? selectedId.slice(SECTION_HEADER_PREFIX.length)
+        : null
       for (const [sectionIndex, section] of sections.entries()) {
-        const itemIndex = section.data.findIndex((item) => rowKeyOf(item) === worktreeId)
-        if (itemIndex !== -1) {
+        // The list counts a section's header as its item 0, so the rows start at 1.
+        const itemIndex =
+          headerKey !== null
+            ? section.key === headerKey
+              ? 0
+              : -1
+            : section.data.findIndex((item) => rowKeyOf(item) === selectedId) + 1
+        if (itemIndex > 0 || (headerKey !== null && itemIndex === 0)) {
           activeWorktreeScroll.sectionListRef.current?.scrollToLocation({
             sectionIndex,
             itemIndex,
@@ -94,7 +106,14 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
     selectedId: selectedWorktreeId,
     idOf: rowKeyOf,
     scrollToId: scrollToWorktree,
-    scrollToOffset: scrollWorkspaceListTo
+    scrollToOffset: scrollWorkspaceListTo,
+    headerIdOf: (section) =>
+      typeof section === 'object' &&
+      section !== null &&
+      'key' in section &&
+      typeof section.key === 'string'
+        ? sectionHeaderId(section.key)
+        : null
   })
 
   return (
@@ -214,6 +233,9 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
                   ) : null}
                   <Text style={styles.sectionTitle}>{section.title}</Text>
                   <Text style={styles.sectionCount}>{count}</Text>
+                  {selectedWorktreeId === sectionHeaderId(section.key) ? (
+                    <ControllerFocusRing radius={6} />
+                  ) : null}
                 </Pressable>
               )
             }}
