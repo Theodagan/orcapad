@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useActiveDictation, useControllerBinding, useFocusSnapshot } from './controller-provider'
 import { isDictationActive } from './bindings/active-dictation'
 import { actionHintsFor, type ActionHint } from './controller-input/action-hints'
+import { WHEEL_TRIGGER_NAMES } from './controller-input/wheel-trigger-steering'
 import type { FocusZone } from './focus/focus-zones'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 
@@ -24,10 +25,10 @@ const ZONE_NAME: Record<FocusZone, string> = {
   panels: 'Panel'
 }
 
-/** What `A` and `B` do to an open wheel, which is all that does anything while one is up. */
+/** What the two triggers do to an open wheel, which is all that does anything while one is up. */
 const WHEEL_HINTS: readonly ActionHint[] = [
-  { control: 'A', label: 'Select' },
-  { control: 'B', label: 'Cancel' }
+  { control: WHEEL_TRIGGER_NAMES.select, label: 'Select' },
+  { control: WHEEL_TRIGGER_NAMES.back, label: 'Cancel' }
 ]
 
 export function ActionHintBar({ wheelOpen = false }: { readonly wheelOpen?: boolean }): ReactNode {

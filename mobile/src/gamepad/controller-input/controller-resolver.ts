@@ -6,6 +6,7 @@ import { createDpadRepeater } from './dpad-repeat'
 import { DPAD_NAVIGATION_BINDINGS } from './dpad-navigation-bindings'
 import { axisOf, isDown, outsideDeadZone, wentDown } from './sample-edges'
 import { createTapTracker } from './tap-tracker'
+import { createWheelTriggerSteering } from './wheel-trigger-steering'
 
 /**
  * Samples in, intents out. A button produces one intent when it goes down (or, for a tap binding,
@@ -154,8 +155,8 @@ export type ControllerResolver = (
 
 /**
  * The stateful form the provider mounts. It holds the previous sample, which is what makes an
- * edge detectable, and the two rules that need a memory of their own: a tap's release and a
- * D-pad hold. Everything else is the pure resolver above.
+ * edge detectable, and the rules that need a memory of their own: a tap's release, a D-pad hold,
+ * and the triggers that steer an open wheel. Everything else is the pure resolver above.
  */
 export function createControllerIntentResolver(
   policy: ControllerPolicy = DEFAULT_CONTROLLER_POLICY
@@ -166,12 +167,19 @@ export function createControllerIntentResolver(
     delayMs: policy.dpadRepeatDelayMs,
     intervalMs: policy.dpadRepeatIntervalMs
   })
+  const steering = createWheelTriggerSteering()
   return (sample, context = { captured: false }) => {
-    const intents = [
-      ...resolveControllerIntents(previous, sample, policy),
-      ...taps(previous, sample, context.captured),
-      ...(policy.dpadNavigation ? repeat(previous, sample, context.captured) : [])
-    ]
+    const intents = steering(
+      previous,
+      sample,
+      [
+        ...resolveControllerIntents(previous, sample, policy),
+        ...taps(previous, sample, context.captured),
+        ...(policy.dpadNavigation ? repeat(previous, sample, context.captured) : [])
+      ],
+      context.captured,
+      policy.triggerDeadZone
+    )
     previous = sample
     return intents
   }

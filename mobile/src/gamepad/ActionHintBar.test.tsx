@@ -179,7 +179,7 @@ describe('ActionHintBar', () => {
     expect(texts()).not.toContain('Dictate')
   })
 
-  it('shows only what A and B do to an open wheel, while one is open', () => {
+  it('shows only what the triggers do to an open wheel, while one is open', () => {
     mount(
       [createElement(Surface, { id: 'agent', zone: 'agent', accepts: ['confirm', 'scroll'] })],
       {
@@ -187,6 +187,6 @@ describe('ActionHintBar', () => {
       }
     )
 
-    expect(texts()).toEqual(['Wheel', 'A', 'Select', 'B', 'Cancel'])
+    expect(texts()).toEqual(['Wheel', 'R2', 'Select', 'L2', 'Cancel'])
   })
 })
