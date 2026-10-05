@@ -8,6 +8,8 @@ export type SessionChrome = {
   readonly shortcutsHidden: boolean
   readonly toggleFocusMode: () => void
   readonly toggleShortcuts: () => void
+  /** Puts both back, for the session that owns them to call when it ends. */
+  readonly reset: () => void
 }
 
 /** Effective session chrome state: both flags are false when no pad is attached. */
@@ -27,6 +29,7 @@ export function useSessionChrome(): SessionChrome {
     focusMode: connected && focusModeRaw,
     shortcutsHidden: connected && shortcutsHiddenRaw,
     toggleFocusMode: sessionChrome.toggleFocusMode,
-    toggleShortcuts: sessionChrome.toggleShortcuts
+    toggleShortcuts: sessionChrome.toggleShortcuts,
+    reset: sessionChrome.reset
   }
 }

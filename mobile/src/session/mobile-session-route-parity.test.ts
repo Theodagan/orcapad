@@ -91,7 +91,12 @@ const HEAD_TIMER_CLEANUP_SHA256 = 'c73f1d1c2cc89642f3d727d6f3b6b81860a9d6f342345
 // same. Hidden rather than unmounted so the bar's refs and the live input's state stay put.
 const HEAD_RUNTIME_STRING_SHA256 =
   '4cd3f4335943be31bc744718b9a34e5e14b8b863fb6d0750e50c53ce2cc22735'
-const HEAD_HOST_JSX_SHA256 = '650472427e8b559d4372ebee81905bcfda235793f9a5e8bea91b2534d20306e3'
+// Re-pinned in 005 focus mode: the header is one line while focus mode is on, so the tab strip and its
+// pinned buttons are built once and placed either in their own row or beside the title. A probe diffed
+// the facts against the previous pin: the same elements, the tab and button stops now come before the
+// icon stops with `row`/`order` computed from the layout, the title block and meta row take a compact
+// style, and the compact style adds two references; no string changed.
+const HEAD_HOST_JSX_SHA256 = '54085ed6988fcf33531ab8b6b302ee5b6ae71ad72ed7e708b418c4f635e7c36d'
 // Re-pinned in 005: `controllerFocused` and `onControllerKey` on TerminalPaneView, which is how a
 // pane learns whether it is the one on screen. Then the controller zones: each header and shortcut
 // stop is a `ZoneItem` around the same host element, the `ControllerFocusRing` it shows when
@@ -100,9 +105,9 @@ const HEAD_HOST_JSX_SHA256 = '650472427e8b559d4372ebee81905bcfda235793f9a5e8bea9
 // `ref={focusRef}` so Android's focus can follow the cursor, and the shortcut row's scroll view and
 // keys take the strip-reveal props. The strings are the zone and stop ids. The shortcut row now
 // lives in MobileSessionAccessoryKeys, and the agent zone has a `ZoneFrame` of its own.
-const HEAD_LEAF_JSX_SHA256 = 'd4e6dc8fe03b7908109ebcb2482165019b2da330a7c8c8c36a85da964a7a52f6'
+const HEAD_LEAF_JSX_SHA256 = 'c02d83c322661561b6c3bcfb0ccb6f5a0b5e8ef82b37623e4349877b08b6bf61'
 const HEAD_STYLE_REFERENCE_SHA256 =
-  '295a3501c2c6d7bea7c8bbf38b3f3534f01344cd7e1b91bb8e07c040821d596a'
+  'a83f9be988bffe24775dad927db0e043f9328102a31c4d403f377c9e9297b30f'
 const HEAD_IDENTITY_FIELD_SHA256 =
   '91146853930a34dd1f3d80e5c97fbacd7cf19fb93dd26fe8fc6f29169622f9d6'
 const HEAD_NAVIGATION_SHA256 = '9d96f5dad7de555d6553eac39c0fab00efad507470fd562cb9beaa32db16f512'
@@ -543,7 +548,7 @@ describe('mobile session route extraction parity', () => {
     expect(hash(jsx.host)).toBe(HEAD_HOST_JSX_SHA256)
     expect(jsx.leaf).toHaveLength(88)
     expect(hash(jsx.leaf)).toBe(HEAD_LEAF_JSX_SHA256)
-    expect(jsx.styleReferences).toHaveLength(172)
+    expect(jsx.styleReferences).toHaveLength(174)
     expect(hash(jsx.styleReferences)).toBe(HEAD_STYLE_REFERENCE_SHA256)
   })
 })

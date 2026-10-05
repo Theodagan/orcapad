@@ -219,6 +219,14 @@ describe('the session chrome, driven by a pad', () => {
       agentConfirmed,
       requestNativeFocus,
       connect: () => act(() => publish({ ...neutralSample(0), connected: true })),
+      toggleFocusMode: () => act(() => held.controller?.sessionChrome.toggleFocusMode()),
+      toggleShortcuts: () => act(() => held.controller?.sessionChrome.toggleShortcuts()),
+      hasShortcutRow: (): boolean =>
+        (
+          renderer?.root.findAll(
+            (node) => node.props.accessibilityLabel === 'Switch to desktop mode'
+          ) ?? []
+        ).length > 0,
       press: (kind: Press) => dispatch({ kind }),
       move: (direction: 'left' | 'right') => dispatch({ kind: 'move-horizontal', direction }),
       moveVertically: (direction: 'up' | 'down') => dispatch({ kind: 'move-selection', direction }),
@@ -370,5 +378,84 @@ describe('the session chrome, driven by a pad', () => {
     expect(screen.requestNativeFocus).toHaveBeenLastCalledWith({
       label: 'Switch to live terminal input'
     })
+  })
+
+  it('is one row in focus mode: the tabs and the icons are walked in the order they are drawn', () => {
+    const screen = mount()
+    screen.connect()
+    screen.toggleFocusMode()
+    screen.press('switch-zone')
+    screen.press('switch-zone')
+    expect(screen.frames()).toEqual(['zone-frame:header'])
+    expect(screen.ringed()).toBe('tests')
+
+    const walked: (string | null)[] = []
+    for (let step = 0; step < 6; step += 1) {
+      screen.move('right')
+      walked.push(screen.ringed())
+    }
+
+    expect(walked).toEqual([
+      'server',
+      'New tab',
+      expect.any(String),
+      'Open file explorer',
+      'Open source control',
+      'More session actions'
+    ])
+    // One row: up and down have nowhere to go.
+    screen.moveVertically('up')
+    expect(screen.ringed()).toBe('More session actions')
+    screen.moveVertically('down')
+    expect(screen.ringed()).toBe('More session actions')
+  })
+
+  it('walks left from the first tab to the back button in focus mode', () => {
+    const screen = mount()
+    screen.connect()
+    screen.toggleFocusMode()
+    screen.press('switch-zone')
+    screen.press('switch-zone')
+
+    screen.move('left')
+    screen.move('left')
+
+    expect(screen.ringed()).toBe('Back to worktrees')
+  })
+
+  it('draws nothing different for a user with no pad, whatever was toggled', () => {
+    const screen = mount()
+    screen.toggleFocusMode()
+    screen.toggleShortcuts()
+
+    expect(screen.hasShortcutRow()).toBe(true)
+    expect(screen.frames()).toEqual([])
+  })
+
+  it('hides the shortcut row and takes its zone with it: X goes from the agent to the header', () => {
+    const screen = mount()
+    screen.connect()
+    expect(screen.hasShortcutRow()).toBe(true)
+
+    screen.toggleShortcuts()
+    expect(screen.hasShortcutRow()).toBe(false)
+
+    screen.press('switch-zone')
+    expect(screen.frames()).toEqual(['zone-frame:header'])
+    screen.press('switch-zone')
+    expect(screen.frames()).toEqual(['zone-frame:agent'])
+
+    screen.toggleShortcuts()
+    expect(screen.hasShortcutRow()).toBe(true)
+  })
+
+  it('keeps the row while the keyboard is up, because its dismiss button is the way out', () => {
+    const screen = mount()
+    screen.connect()
+    screen.dock.keyboardLift = 300
+
+    screen.toggleShortcuts()
+
+    expect(screen.hasShortcutRow()).toBe(true)
   })
 })

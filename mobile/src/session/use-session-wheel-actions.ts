@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { AGENT_WHEEL_ACTION_IDS } from '../gamepad/bindings/agent-wheel-action-ids'
 import { NAVIGATION_WHEEL_ACTION_IDS } from '../gamepad/bindings/navigation-wheel-actions'
 import { useWheelActions } from '../gamepad/bindings/use-wheel-actions'
@@ -34,6 +34,9 @@ export function useSessionWheelActions(controller: MobileSessionController): voi
   const connected = connState === 'connected' && client !== null
   const input = useInputVisibility()
   const chrome = useSessionChrome()
+  const resetChrome = chrome.reset
+  // Focus mode and the hidden shortcuts belong to the session: they end when it does.
+  useEffect(() => resetChrome, [resetChrome])
 
   const bindings = useMemo<readonly WheelBinding[]>(() => {
     const isAgent =

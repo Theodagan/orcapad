@@ -41,10 +41,22 @@ function attributeText(element: ts.JsxSelfClosingElement | ts.JsxOpeningElement,
   return attribute?.initializer?.getText(sourceFile)
 }
 
-/** Everything between the button and the row of tabs it sits in, or null when it sits in none. */
+/**
+ * Everything between the button and the row of tabs it sits in, or null when it sits in none. The
+ * pinned buttons are built once (`tabButtons`) so focus mode can place them beside the title instead
+ * of in the tab row; that variable's own "are there tabs" condition is the same outer gate the row
+ * always had, so it ends the walk the way the row does.
+ */
 function nodesBetweenButtonAndTabBar(button: ts.Node): ts.Node[] | null {
   const between: ts.Node[] = []
   for (let current = button.parent; current !== undefined; current = current.parent) {
+    if (
+      ts.isConditionalExpression(current) &&
+      ts.isVariableDeclaration(current.parent) &&
+      current.parent.name.getText(sourceFile) === 'tabButtons'
+    ) {
+      return between
+    }
     if (
       ts.isJsxElement(current) &&
       current.openingElement.tagName.getText(sourceFile) === 'View' &&
