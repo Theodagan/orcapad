@@ -64,6 +64,8 @@ describe('a sheet taking the pad when it opens', () => {
     act(() => vi.advanceTimersByTime(200))
 
     expect(sheet.requestNativeFocus).toHaveBeenCalledTimes(1)
+    // Into the sheet, not onto its container.
+    expect(sheet.requestNativeFocus.mock.calls[0]?.[1]).toBe(true)
   })
 
   it('does nothing without a pad attached', () => {

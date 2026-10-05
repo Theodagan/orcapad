@@ -72,7 +72,7 @@ export type ControllerContextValue = {
   /** Where the cursor is in the zones that are rows of buttons: the header and the shortcut keys. */
   readonly zoneItems: ZoneItemStore
   /** Moves Android's own focus onto the view the cursor is on; a no-op where there is none. */
-  readonly requestNativeFocus: (node: View | null) => void
+  readonly requestNativeFocus: (node: View | null, within?: boolean) => void
   /** Whether a session's text-entry strip is on screen. Hidden by default while a pad is attached. */
   readonly inputVisibility: InputVisibilityStore
 }
@@ -189,7 +189,7 @@ export type ControllerProviderProps = {
    */
   readonly activeDictation?: ActiveDictationRegistry
   /** The runtime's native focus request. Absent means the cursor is drawn but Android's focus stays put. */
-  readonly requestNativeFocus?: (node: View | null) => void
+  readonly requestNativeFocus?: (node: View | null, within?: boolean) => void
 }
 
 export function ControllerProvider({

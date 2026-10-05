@@ -40,6 +40,29 @@ object NativeFocusRing {
     watched[root] = listener
   }
 
+  /**
+   * The first focusable view inside `container` that has no focusable view inside it. A scroll
+   * view or a card is focusable too, but focus on one of those has nowhere to go from there.
+   */
+  fun firstControlWithin(container: View): View? {
+    val focusables = ArrayList<View>()
+    container.addFocusables(focusables, View.FOCUS_DOWN, View.FOCUSABLES_ALL)
+    return focusables.firstOrNull { candidate ->
+      candidate !== container && focusables.none { other -> other !== candidate && isInside(other, candidate) }
+    }
+  }
+
+  private fun isInside(view: View, ancestor: View): Boolean {
+    var parent = view.parent
+    while (parent != null) {
+      if (parent === ancestor) {
+        return true
+      }
+      parent = parent.parent
+    }
+    return false
+  }
+
   private fun ring(view: View) {
     if (!displaced.containsKey(view)) {
       displaced[view] = view.foreground

@@ -88,6 +88,19 @@ class OrcaGamepadModule : Module() {
       view?.requestFocus() ?: false
     }.runOnQueue(Queues.MAIN)
 
+    // A sheet is a window of its own with nothing focused in it. Focusing its container would
+    // leave the D-pad nowhere to go, since everything it could reach is inside, so this goes to
+    // the first control that has no other control inside it.
+    AsyncFunction("requestNativeFocusWithin") { viewTag: Int ->
+      val container = appContext.findView<View>(viewTag)
+      if (container == null) {
+        false
+      } else {
+        NativeFocusRing.watch(container)
+        (NativeFocusRing.firstControlWithin(container) ?: container).requestFocusFromTouch()
+      }
+    }.runOnQueue(Queues.MAIN)
+
     OnDestroy {
       stopTap()
       stopDeviceListener()

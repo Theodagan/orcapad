@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const platform = { OS: 'android' }
 const findNodeHandle = vi.fn<(node: unknown) => number | null>()
 const requestNativeFocus = vi.fn<(tag: number) => Promise<boolean>>()
+const requestNativeFocusWithin = vi.fn<(tag: number) => Promise<boolean>>()
 const nativeModule: { current: Record<string, unknown> | null } = { current: null }
 
 vi.mock('react-native', () => ({
@@ -38,13 +39,21 @@ describe('the controller runtime’s native focus request', () => {
     platform.OS = 'android'
     findNodeHandle.mockReset().mockReturnValue(41)
     requestNativeFocus.mockReset().mockResolvedValue(true)
-    nativeModule.current = nativeWith({ requestNativeFocus })
+    requestNativeFocusWithin.mockReset().mockResolvedValue(true)
+    nativeModule.current = nativeWith({ requestNativeFocus, requestNativeFocusWithin })
   })
 
   it('asks the native layer to focus the view behind the node', () => {
     createControllerRuntime().requestNativeFocus(view)
 
     expect(requestNativeFocus).toHaveBeenCalledExactlyOnceWith(41)
+  })
+
+  it('asks for the first control inside a sheet, not the sheet itself, when told to go within', () => {
+    createControllerRuntime().requestNativeFocus(view, true)
+
+    expect(requestNativeFocusWithin).toHaveBeenCalledExactlyOnceWith(41)
+    expect(requestNativeFocus).not.toHaveBeenCalled()
   })
 
   it('leaves focus alone off Android, without a node, or for a node with no tag yet', () => {

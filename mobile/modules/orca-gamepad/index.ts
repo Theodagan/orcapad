@@ -46,6 +46,11 @@ export type OrcaGamepadModule = {
    * take focus. Absent in a build older than the JavaScript, so callers treat it as optional.
    */
   readonly requestNativeFocus?: (viewTag: number) => Promise<boolean>
+  /**
+   * Focuses the first control inside the view with this tag, not the view itself: for a sheet, which
+   * is a window of its own with nothing focused in it yet. Optional for the same reason.
+   */
+  readonly requestNativeFocusWithin?: (viewTag: number) => Promise<boolean>
   readonly addListener: {
     (
       event: 'onControllerSample',

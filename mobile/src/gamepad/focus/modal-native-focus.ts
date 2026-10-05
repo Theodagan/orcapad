@@ -9,8 +9,9 @@ import { useControllerBinding } from '../controller-provider'
  * holds it. This puts the first focusable thing in the sheet under the pad, after which the D-pad
  * walks the sheet, `A` presses what it is on, and `B` closes it, all natively.
  *
- * The ref goes on a view that contains the sheet's controls and not its backdrop, because the
- * first focusable view in the window would otherwise be the one that dismisses it.
+ * The ref goes on a view that contains the sheet's controls and not its backdrop, and focus goes to
+ * the first control inside it: a container that took focus itself would leave the D-pad nowhere to
+ * go, because everything it could reach is inside it.
  *
  * Only while a pad is attached, and a beat after the sheet appears: asking before the window has
  * been shown focuses nothing.
@@ -24,7 +25,7 @@ export function useModalNativeFocus(active: boolean): RefObject<View | null> {
     if (!active || !connected) {
       return
     }
-    const timer = setTimeout(() => requestNativeFocus(ref.current), SHEET_SETTLE_MS)
+    const timer = setTimeout(() => requestNativeFocus(ref.current, true), SHEET_SETTLE_MS)
     return () => clearTimeout(timer)
   }, [active, connected, requestNativeFocus])
   return ref
