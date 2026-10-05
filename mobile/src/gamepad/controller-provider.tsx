@@ -19,6 +19,10 @@ import type { ControllerSample } from './controller-input/controller-sample'
 import type { ResolveContext } from './controller-input/controller-resolver'
 import { createFocusRegistry, type FocusRegistry, type FocusSnapshot } from './focus/focus-registry'
 import { createZoneItemStore, type ZoneItemStore } from './zones/zone-item-store'
+import {
+  createInputVisibilityStore,
+  type InputVisibilityStore
+} from './input-visibility/input-visibility-store'
 import type { FocusTarget } from './focus/focus-target'
 import type { WheelBinding } from './wheel/wheel-registry'
 import {
@@ -69,6 +73,8 @@ export type ControllerContextValue = {
   readonly zoneItems: ZoneItemStore
   /** Moves Android's own focus onto the view the cursor is on; a no-op where there is none. */
   readonly requestNativeFocus: (node: View | null) => void
+  /** Whether a session's text-entry strip is on screen. Hidden by default while a pad is attached. */
+  readonly inputVisibility: InputVisibilityStore
 }
 
 const ControllerContext = createContext<ControllerContextValue | null>(null)
@@ -93,6 +99,13 @@ const INERT_ZONE_ITEMS: ZoneItemStore = {
   isFocused: () => false,
   selectedId: () => null,
   subscribe: () => () => {}
+}
+
+const INERT_INPUT_VISIBILITY: InputVisibilityStore = {
+  subscribe: () => () => {},
+  visible: () => true,
+  toggle: () => {},
+  reportContent: () => {}
 }
 
 const INERT_FOCUS: FocusReader = {
@@ -129,7 +142,8 @@ const INERT_CONTROLLER: ControllerContextValue = {
   focus: INERT_FOCUS,
   dictation: INERT_DICTATION,
   zoneItems: INERT_ZONE_ITEMS,
-  requestNativeFocus: () => {}
+  requestNativeFocus: () => {},
+  inputVisibility: INERT_INPUT_VISIBILITY
 }
 
 export function useControllerBinding(): ControllerContextValue {
@@ -241,6 +255,7 @@ export function ControllerProvider({
   )
 
   const zoneItems = useMemo(() => createZoneItemStore(registry), [registry])
+  const inputVisibility = useMemo(() => createInputVisibilityStore(), [])
 
   const dictation = useMemo<DictationReader>(
     () => activeDictation ?? INERT_DICTATION,
@@ -259,7 +274,8 @@ export function ControllerProvider({
       focus,
       dictation,
       zoneItems,
-      requestNativeFocus: requestNativeFocus ?? noNativeFocus
+      requestNativeFocus: requestNativeFocus ?? noNativeFocus,
+      inputVisibility
     }),
     [
       support,
@@ -270,7 +286,8 @@ export function ControllerProvider({
       focus,
       dictation,
       zoneItems,
-      requestNativeFocus
+      requestNativeFocus,
+      inputVisibility
     ]
   )
 

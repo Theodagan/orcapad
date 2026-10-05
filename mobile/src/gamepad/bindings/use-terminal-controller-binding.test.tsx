@@ -40,6 +40,7 @@ function mount(overrides: Partial<TerminalControllerBindingOptions> = {}) {
   let props: TerminalControllerBindingOptions = {
     handle: 'h1',
     enabled: true,
+    editingText: false,
     scrollLines,
     sendKey,
     actions,
@@ -152,6 +153,15 @@ describe('terminal controller binding', () => {
       pane.dispatch({ kind: 'back' })
 
       expect(pane.sendKey.mock.calls.map(([bytes]) => bytes)).toEqual(['\r', ESC])
+    })
+
+    it('deletes a word on B instead of sending Escape while the text-entry strip is up', () => {
+      const pane = mount({ editingText: true })
+
+      pane.dispatch({ kind: 'back' })
+
+      expect(pane.sendKey.mock.calls.map(([bytes]) => bytes)).toEqual(['\x17'])
+      expect(pane.snapshot().labels.back).toBe('Delete word')
     })
 
     it('says so in its hints, in the words of a keyboard, and lives in the agent zone', () => {

@@ -7,6 +7,10 @@ import {
 import { MobileTerminalLiveInputStatus } from './MobileTerminalLiveInputStatus'
 import { MobileTerminalInputActions } from './MobileTerminalInputActions'
 import { MobileSessionAccessoryKeys } from './MobileSessionAccessoryKeys'
+import {
+  useInputVisibility,
+  useReportInputContent
+} from '../gamepad/input-visibility/use-input-visibility'
 import { colors } from '../theme/mobile-theme'
 import { styles } from './mobile-session-styles'
 import type { MobileSessionController } from './use-mobile-session-controller'
@@ -45,6 +49,11 @@ export function MobileSessionCommandDock({ controller }: { controller: MobileSes
     activeBrowserTab,
     keyboardLift
   } = controller
+  // With a pad attached the strip stays away until the wheel asks for it, or a typed command is
+  // waiting in it; a raised keyboard means someone is typing into it, so it never goes then.
+  const inputVisibility = useInputVisibility()
+  useReportInputContent(!liveInputEnabled && bufferedTerminalDraftState.input.trim().length > 0)
+  const inputBarVisible = inputVisibility.visible || keyboardLift > 0
   return (
     !activeMarkdownTab &&
     !activeFileTab &&
@@ -59,7 +68,7 @@ export function MobileSessionCommandDock({ controller }: { controller: MobileSes
         <MobileSessionAccessoryKeys controller={controller} />
 
         {/* Input bar */}
-        {liveInputEnabled ? (
+        {!inputBarVisible ? null : liveInputEnabled ? (
           <View style={[styles.inputBar, styles.liveInputBar]}>
             <Pressable
               style={({ pressed }) => [

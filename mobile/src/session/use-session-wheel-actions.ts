@@ -1,18 +1,18 @@
 import { useMemo } from 'react'
 import { AGENT_WHEEL_ACTION_IDS } from '../gamepad/bindings/agent-wheel-action-ids'
 import { useWheelActions } from '../gamepad/bindings/use-wheel-actions'
+import { useInputVisibility } from '../gamepad/input-visibility/use-input-visibility'
 import type { WheelBinding } from '../gamepad/wheel/wheel-registry'
-import { getRepoIdFromMobileWorktreeId } from './mobile-session-route-helpers'
 import { loadMobileNewTabAgentOptions } from './mobile-new-tab-agent-loader'
+import { resolveMobileNativeChat } from './mobile-native-chat-eligibility'
 import { resolveMobileTerminalTabAgentId } from './mobile-terminal-tab-agent'
-import { agentMenuEntries, webMenuEntries, worktreePorts } from './session-wheel-menus'
-import { workspacePortsScanRead } from './workspace-ports-operations'
+import { agentMenuEntries } from './session-wheel-menus'
 import type { MobileSessionController } from './use-mobile-session-controller'
 
 /**
  * What the right wheel can do from a session (`005` USE-R10). Each one is a path the session
- * already has: the tab's own close, the new-tab drawer's agent launch, the browser tab creation
- * a tapped URL uses. The wheel only names them, and lists the agents and ports they act on.
+ * already has: the tab's own close, the new-tab drawer's agent launch, the tab menu's switch
+ * between chat and terminal. The wheel only names them, and lists the agents they act on.
  *
  * Stopping is not here: it belongs to the surface that can stop, which is the chat or the
  * terminal in front of you.
@@ -23,11 +23,14 @@ export function useSessionWheelActions(controller: MobileSessionController): voi
     worktreeId,
     connState,
     activeSessionTab,
+    showNativeChat,
+    nativeChatTranscriptIsLocalReadable,
+    toggleTabChatView,
     handleCloseSessionTab,
-    handleCreateTerminal,
-    handleCreateBrowser
+    handleCreateTerminal
   } = controller
   const connected = connState === 'connected' && client !== null
+  const input = useInputVisibility()
 
   const bindings = useMemo<readonly WheelBinding[]>(() => {
     const isAgent =
@@ -61,24 +64,26 @@ export function useSessionWheelActions(controller: MobileSessionController): voi
         }
       },
       {
-        id: AGENT_WHEEL_ACTION_IDS.web,
-        label: 'Open web page',
-        availability,
-        menu: async () => {
-          const open = (url: string): void => void handleCreateBrowser(url)
-          if (client === null) {
-            return webMenuEntries([], open)
+        id: AGENT_WHEEL_ACTION_IDS.toggleView,
+        // Says where it goes, not where you are.
+        label: showNativeChat ? 'Terminal view' : 'Chat view',
+        // A structured agent session has no terminal to go back to, and a plain terminal has no chat.
+        availability:
+          activeSessionTab?.type === 'terminal' &&
+          resolveMobileNativeChat(activeSessionTab, nativeChatTranscriptIsLocalReadable) !== null
+            ? 'available'
+            : 'unavailable',
+        run: () => {
+          if (activeSessionTab !== null) {
+            toggleTabChatView(activeSessionTab.id)
           }
-          const reply = await workspacePortsScanRead.request(client, {
-            repoId: getRepoIdFromMobileWorktreeId(worktreeId)
-          })
-          const verdict = workspacePortsScanRead.interpret(reply)
-          // A scan that fails still leaves a way to type an address.
-          return webMenuEntries(
-            verdict.accepted ? worktreePorts(verdict.value, worktreeId) : [],
-            open
-          )
         }
+      },
+      {
+        id: AGENT_WHEEL_ACTION_IDS.toggleInput,
+        label: input.visible ? 'Hide input' : 'Show input',
+        availability: 'available',
+        run: input.toggle
       }
     ]
   }, [
@@ -86,9 +91,13 @@ export function useSessionWheelActions(controller: MobileSessionController): voi
     worktreeId,
     connected,
     activeSessionTab,
+    showNativeChat,
+    nativeChatTranscriptIsLocalReadable,
+    toggleTabChatView,
+    input.visible,
+    input.toggle,
     handleCloseSessionTab,
-    handleCreateTerminal,
-    handleCreateBrowser
+    handleCreateTerminal
   ])
 
   useWheelActions(bindings)

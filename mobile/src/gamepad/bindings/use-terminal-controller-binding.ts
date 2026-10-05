@@ -42,6 +42,11 @@ export type TerminalControllerBindingOptions = {
    * registers nothing, neither focus nor wheel actions, so it can never answer for the visible one.
    */
   readonly enabled: boolean
+  /**
+   * The text-entry strip is up, so the pad is shaping a prompt rather than steering a menu: `B`
+   * deletes a word instead of sending Escape, as it does in the chat's composer.
+   */
+  readonly editingText: boolean
   /** Signed rows; the WebView routes them by the terminal's mode. */
   readonly scrollLines: (lines: number) => void
   /** Sends bytes to the agent exactly as a shortcut key does. */
@@ -60,11 +65,12 @@ const KEYS = {
   left: keyBytes('arrowLeft'),
   right: keyBytes('arrowRight'),
   enter: keyBytes('enter'),
-  escape: keyBytes('escape')
+  escape: keyBytes('escape'),
+  deleteWord: keyBytes('ctrlW')
 }
 
 export function useTerminalControllerBinding(options: TerminalControllerBindingOptions): void {
-  const { handle, enabled, actions } = options
+  const { handle, enabled, actions, editingText } = options
   // Handlers read the latest callbacks, so the binding does not change identity when a caller's does.
   const latest = useRef(options)
   useLayoutEffect(() => {
@@ -115,7 +121,7 @@ export function useTerminalControllerBinding(options: TerminalControllerBindingO
         }
       ],
       ['confirm', () => send(KEYS.enter)],
-      ['back', () => send(KEYS.escape)]
+      ['back', () => send(editingText ? KEYS.deleteWord : KEYS.escape)]
     ]
 
     // Stopping an agent in a terminal is the key every agent CLI answers to: Escape interrupts the
@@ -146,12 +152,12 @@ export function useTerminalControllerBinding(options: TerminalControllerBindingO
           'move-selection': 'Arrows',
           'move-horizontal': 'Arrows',
           confirm: 'Enter',
-          back: 'Esc'
+          back: editingText ? 'Delete word' : 'Esc'
         }
       },
       wheelActions
     }
-  }, [handle, actions, integrator])
+  }, [handle, actions, integrator, editingText])
 
   useSurfaceBinding(enabled ? binding : null)
 }
