@@ -1,6 +1,11 @@
 import { memo, useCallback, type ReactElement, type RefObject } from 'react'
-import { FlatList, StyleSheet, View, type FlatListProps } from 'react-native'
-import type { ListRenderItemInfo } from 'react-native'
+import {
+  FlatList,
+  StyleSheet,
+  View,
+  type FlatListProps,
+  type ListRenderItemInfo
+} from 'react-native'
 import { MobileHostCard } from '../components/MobileHostCard'
 import { useSelectionReveal } from '../gamepad/bindings/use-selection-reveal'
 import type { HomeStatsSummary } from '../stats/home-stats-total'

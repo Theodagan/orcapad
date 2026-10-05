@@ -1,5 +1,8 @@
-import type { ControllerIntent, ControllerIntentKind } from '../controller-input/controller-intent'
-import type { IntentLabels } from '../controller-input/controller-intent'
+import type {
+  ControllerIntent,
+  ControllerIntentKind,
+  IntentLabels
+} from '../controller-input/controller-intent'
 import { DECLINED, type FocusTarget } from './focus-target'
 import { FOCUS_ZONES, ZONE_AGNOSTIC_INTENTS, type FocusZone } from './focus-zones'
 

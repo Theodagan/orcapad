@@ -21,7 +21,3 @@ export const ZONE_AGNOSTIC_INTENTS: ReadonlySet<ControllerIntentKind> = new Set(
   'cycle-tab',
   'cycle-workspace'
 ])
-
-export function isFocusZone(value: string): value is FocusZone {
-  return FOCUS_ZONES.some((zone) => zone === value)
-}
