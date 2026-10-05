@@ -354,3 +354,29 @@ the stops of the normal layout are unchanged. The shortcut row returns null whil
 attached, and no keyboard is up), which removes its `ZoneItem`s and so the zone. The hint bar returns
 null in focus mode before it looks at the wheel. The route parity pins and the quick-commands source
 guard were updated after a probe; `section 12` describes the technique.
+
+## 16. Round 3: collapsed projects, `B` in text, the Keyboard action
+
+**Section stops.** `workspace-list-order.ts` flattens the sections into stops (`flattenListStops`): a
+header stop (id `section-header:<key>`) for any section with a key and a title, then its row stops;
+`nextStopId` walks them and clamps. A collapsed group has no rows, which is what makes it a header with
+nothing under it. `use-workspace-controller-binding.ts` takes `onToggleSection`, starts on the first row
+(not a header), and answers `confirm` and `move-horizontal` on a header or a row's way up to its header,
+returning `DECLINED` otherwise so another zone may take it. `use-selection-reveal.ts` takes
+`headerIdOf` so a header is scrolled into view, and `host-workspace-list.tsx` counts the header as item
+0 of its section when scrolling (RN's `SectionList` does).
+
+**`B` in text.** The tap sees the key before the view tree, so `WindowCallbackTap` asks
+`TextInputWordDelete.visibleField` for the focused `EditText` (alpha above 0.05, wider than 4 px,
+enabled; the terminal's live input is excluded) and deletes the word itself, returning true so the key is
+neither forwarded nor reported. Dialogs are other windows, so `NativeFocusRing` puts
+`TextInputWordDelete.keyListener` on a focused `EditText` in a watched root and removes it on release.
+`TerminalPaneView` reads `editingText` as `input.visible || keyboardLift > 0`, which sends `B` as Ctrl+W.
+
+**The Keyboard action.** `input-visibility-store` carries a `typing` request beside the mode (`resolve =
+typing || shown || (auto && content)`). The right wheel's `agent.keyboard` calls `beginTyping()`, or
+`dismissSoftwareKeyboard()` when the keyboard is up. `useFocusOnKeyboardRequest` focuses the dock's
+input 80 ms after the request turns true; the chat composer takes `keyboardRequested` from
+`use-mobile-native-chat-composer-visibility` and hands the caret over to touch editing. The request ends
+when the keyboard has risen and gone, or after 4 s if it never rose. Every text input of the session sets
+`disableFullscreenUI`, which is what keeps Android from taking the whole screen for its extract UI.

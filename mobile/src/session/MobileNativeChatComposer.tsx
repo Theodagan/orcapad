@@ -110,8 +110,6 @@ export function MobileNativeChatComposer({
   const { connected: padAttached } = useControllerBinding()
   const [touchEditing, setTouchEditing] = useState(false)
   const caretMode = padAttached && !touchEditing
-  const typingAt = useRef(cursor)
-  typingAt.current = cursor
   const setCursor = onCaretChange
   // Transiently drives the native caret after a mid-text autocomplete insert,
   // then released on the next selection change so manual caret placement still
@@ -127,12 +125,15 @@ export function MobileNativeChatComposer({
       setPendingSelection({ start: cursor, end: cursor })
     }
   }, [caretMode, cursor])
-  useEffect(() => {
+  // A keyboard request hands the draft to the real input, caret where the pad left it.
+  const [seenKeyboardRequest, setSeenKeyboardRequest] = useState(false)
+  if (seenKeyboardRequest !== keyboardRequested) {
+    setSeenKeyboardRequest(keyboardRequested)
     if (keyboardRequested) {
-      setPendingSelection({ start: typingAt.current, end: typingAt.current })
+      setPendingSelection({ start: cursor, end: cursor })
       setTouchEditing(true)
     }
-  }, [keyboardRequested])
+  }
   const sendingRef = useRef(false)
   const mountedRef = useRef(true)
   const sendSurfaceIdRef = useRef(sendSurfaceId)

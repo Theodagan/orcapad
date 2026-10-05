@@ -249,3 +249,22 @@ Verification commands run from the repository root, e.g.
 
   **Not verified:** on a device or the emulator: the system bars and the one-line header have only been
   proven by composed tests and a Kotlin compile.
+
+- [ ] **USE-T23 - Collapsed projects, `B` in text fields, and a Keyboard action**
+
+  Implemented. Section headers are stops on the workspace list (`flattenListStops`, `nextStopId`), with
+  `A`, right and left toggling or climbing, and a ring on the header. A native `B` rule deletes a word
+  in a focused visible text field of the activity window and of dialogs (`TextInputWordDelete`), and a
+  terminal reads `B` as Ctrl+W while the keyboard is up. The right wheel gains a sixth segment, Keyboard
+  (`agent.keyboard`): an input-visibility `typing` request that the terminal dock and the chat composer
+  turn into focus, with `disableFullscreenUI` on all three text inputs. The route parity hash was
+  re-pinned after a probe (only the two dock inputs changed).
+
+  **Needs:** USE-T20, USE-T21, USE-T22
+
+  **Verify:** `pnpm --dir mobile test src/gamepad/bindings src/gamepad/input-visibility src/gamepad/wheel/experiments src/session/use-session-wheel-actions.test.tsx src/session/use-focus-on-keyboard-request.test.tsx src/session/MobileNativeChatComposer.controller.test.tsx src/session/mobile-session-route-parity.test.ts`
+
+  **Not verified:** on the Retroid. On the emulator (D-pad on a gamepad source): collapsed projects
+  (reach, open, close) and `B` in the keyboard-focused composer. Not run anywhere: the Keyboard segment
+  itself (sticks and triggers cannot be injected), `B` in a sheet's field on a device, and the terminal's
+  `B` with the keyboard up.

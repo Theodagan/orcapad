@@ -168,8 +168,8 @@ placeholder slots are gone. Off a session the two toggles show greyed out, like 
 
 ### USE-R10 - The right wheel
 
-Five segments, replacing the canned replies (round 2 removed Open a web page and added the two
-toggles, decision `007`):
+Six segments, replacing the canned replies (round 2 removed Open a web page and added the two
+toggles, decision `007`; round 3 added Keyboard, decision `009`):
 
 | Segment | Does |
 | --- | --- |
@@ -178,6 +178,7 @@ toggles, decision `007`):
 | Stop the agent | interrupts the running turn: Escape in a terminal, the chat's own stop in a chat |
 | Show / hide input | shows or hides the text-entry strip (USE-R16) |
 | Close the agent | closes the current agent, through the existing tab-close path |
+| Keyboard | raises the soft keyboard on the text entry the session is showing, or lowers it when it is up (USE-R23) |
 
 Hand off was asked for and is out of scope (see the product decision above).
 
@@ -283,6 +284,31 @@ Each says where it goes ("Focus mode" / "Exit focus mode", "Hide shortcuts" / "S
 terminal re-fits through the existing frame layout, so the TUI gains the rows. Without a pad nothing
 changes.
 
+### USE-R21 - Every project on the host list can be reached and opened
+
+A project group is a stop of its own on the workspace list, collapsed or not. The D-pad walks every
+header and every row in the order they are drawn, so a collapsed project is no longer skipped. On a
+header `A` toggles the group; right opens a collapsed one and left closes an open one; on a row, left
+goes up to its project, so a group can be closed from inside it. The list still opens on its first
+workspace, so `A` opens something at once, and `L1`/`R1` (worktree cycling) still step over rows only.
+The header draws the same ring as a row.
+
+### USE-R22 - `B` deletes a word in any text field
+
+Where a text field has the pad's focus and is on screen, `B` deletes the word before the caret and
+does not go back: the chat composer with the keyboard up, the terminal's input bar, and the fields of a
+sheet. It is the same rule as Ctrl+W (a selection is deleted whole). A terminal reads `B` as Ctrl+W
+while its input strip is shown or the keyboard is up, and as Escape otherwise (USE-R16).
+
+### USE-R23 - A Keyboard action on the right wheel
+
+For text the pad cannot make (a path, a flag, a password), the right wheel can raise the soft keyboard
+on the session's text entry: the terminal's input bar or the chat composer. It is not the platform's
+fullscreen keyboard: the text fields opt out of Android's extract UI, so the session stays visible above
+the keyboard. The segment says "Hide keyboard" while the keyboard is up. It is offered in a terminal and
+in a chat, and nowhere else. If the keyboard never rises the request lapses, so the strip does not stay
+open on its own.
+
 ## Acceptance criteria
 
 - **USE-AC1** - A trigger held for one second produces scroll continuously for
@@ -301,7 +327,7 @@ changes.
   worktrees and never toggles dictation; `R3` does nothing.
 - **USE-AC7** - `L1`/`R1` cycle tabs with focus in each zone.
 - **USE-AC8** - The left wheel has exactly its four segments; the right wheel has
-  exactly its five; committing each reaches the intended existing path.
+  exactly its six; committing each reaches the intended existing path.
 - **USE-AC9** - The second-level wheel lists the live agents, shows
   loading, empty and error states, and cancels with no side effect.
 - **USE-AC10** - With a wheel open, a property test over every intent kind shows
@@ -330,6 +356,15 @@ changes.
   whose stops are walked left to right, and the hint bar renders nothing; with Shortcuts hidden the row
   and its zone are gone; ending the session, the toggle or the pad restores all of it; without a pad
   nothing is drawn differently.
+
+- **USE-AC21** - A collapsed project is reached by the D-pad and opened by `A` or right, an open one
+  is closed by left, and the worktree cycle steps over rows only (composed test; run on the emulator).
+- **USE-AC22** - With the pad's focus in a text field (the composer with the keyboard up, a sheet's
+  field), `B` deletes the word before the caret, does not leave the screen, and is not reported as a
+  press (run on the emulator).
+- **USE-AC23** - Keyboard on the right wheel raises the soft keyboard on the session's text entry
+  without Android's fullscreen UI, reads "Hide keyboard" while it is up, and ends its request when the
+  keyboard goes or never comes.
 
 ## Known gaps
 
