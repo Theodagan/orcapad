@@ -68,7 +68,13 @@ async function buildEngineJs() {
     },
     bundle: true,
     format: 'iife',
-    minify: true,
+    // Why: esbuild 0.25 lowers `x ||= {}` for the chrome74 target, then minifySyntax drops the
+    // `let x` it still assigns to, so xterm's requestMode throws "i is not defined" on every DECRQM
+    // (`CSI ? Ps $ p`). A TUI that probes modes at startup (opencode) then loses its whole first
+    // write: no alternate screen, no mouse tracking. Whitespace and identifiers still minify.
+    minifyWhitespace: true,
+    minifyIdentifiers: true,
+    minifySyntax: false,
     platform: 'browser',
     target,
     legalComments: 'none',

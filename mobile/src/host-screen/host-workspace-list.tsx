@@ -11,6 +11,7 @@ import { WorktreeListRow } from '../components/WorktreeListRow'
 import { useControllerListScroll } from '../gamepad/bindings/use-controller-list-scroll'
 import { useSelectionReveal } from '../gamepad/bindings/use-selection-reveal'
 import { useWorkspaceControllerBinding } from '../gamepad/bindings/use-workspace-controller-binding'
+import { ZoneFrame } from '../gamepad/zones/ZoneFrame'
 import { colors, spacing } from '../theme/mobile-theme'
 import type { Worktree } from '../worktree/workspace-list-types'
 import { getWorktreeRowIdentity } from '../worktree/worktree-host-row-identity'
@@ -153,96 +154,99 @@ export function HostWorkspaceList({ controller }: { controller: HostScreenContro
       />
 
       {sections.length > 0 && (
-        <SectionList
-          {...listScroll.handlers}
-          ref={activeWorktreeScroll.sectionListRef}
-          sections={sections}
-          keyExtractor={rowKeyOf}
-          stickySectionHeadersEnabled={false}
-          // Why: keep the search IME up while tapping clear / scrolling results.
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          viewabilityConfig={reveal.viewabilityConfig}
-          onViewableItemsChanged={reveal.onViewableItemsChanged}
-          onScrollToIndexFailed={(info) => {
-            if (!reveal.onScrollToIndexFailed(info)) {
-              activeWorktreeScroll.onScrollToIndexFailed(info)
-            }
-          }}
-          // Why: edge-to-edge under the system nav bar; insets.bottom keeps the last row above it.
-          contentContainerStyle={[
-            styles.list,
-            // Reserve room so the last row stays tappable above the phone's floating "+" (embedded uses the toolbar +).
-            { paddingBottom: (embedded ? spacing.lg : FAB_SIZE + spacing.xl) + insets.bottom },
-            isWideLayout &&
-              !embedded && { maxWidth: contentMaxWidth, width: '100%', alignSelf: 'center' }
-          ]}
-          renderSectionHeader={({ section }) => {
-            if (!section.title) {
-              return null
-            }
-            const isCollapsed = state.collapsedGroups.has(section.key)
-            const rawSection = rawSections.find((s) => s.key === section.key)
-            const count = rawSection?.data.length ?? 0
-            const repoSectionColor =
-              state.groupMode === 'repo' ? uniqueRepoColors.get(section.title) : null
-            const repoSectionIcon =
-              state.groupMode === 'repo' ? state.repoIconsByName.get(section.title) : null
-            return (
-              <Pressable
-                style={styles.sectionHeader}
-                onPress={() => settings.toggleCollapsed(section.key)}
-              >
-                {isCollapsed ? (
-                  <ChevronRight size={12} color={colors.textMuted} style={styles.sectionIcon} />
-                ) : (
-                  <ChevronDown size={12} color={colors.textMuted} style={styles.sectionIcon} />
-                )}
-                {section.icon === 'pin' && (
-                  <Pin size={12} color={colors.textMuted} style={styles.sectionIcon} />
-                )}
-                {state.groupMode === 'repo' ? (
-                  <View style={styles.sectionRepoIcon}>
-                    <MobileRepoIcon
-                      repoIcon={repoSectionIcon}
-                      size={14}
-                      color={repoSectionColor ?? colors.textSecondary}
-                    />
-                  </View>
-                ) : null}
-                <Text style={styles.sectionTitle}>{section.title}</Text>
-                <Text style={styles.sectionCount}>{count}</Text>
-              </Pressable>
-            )
-          }}
-          ItemSeparatorComponent={ListSeparator}
-          // Why (#8498): manual pull-to-refresh forces a fresh snapshot after a stale-cache reconnect.
-          refreshControl={
-            <RefreshControl
-              refreshing={catalog.refreshing}
-              onRefresh={catalog.onRefresh}
-              tintColor={colors.textSecondary}
-              colors={[colors.textSecondary]}
-            />
-          }
-          renderItem={({ item }) => (
-            <WorktreeListRow
-              item={item}
-              selected={rowKeyOf(item) === selectedWorktreeId}
-              isReadOnly={isReadOnly}
-              now={now}
-              status={getWorktreeStatus(item)}
-              repoColor={uniqueRepoColors.get(item.repo) ?? repoColor(item.repo)}
-              repoIcon={state.repoIconsByName.get(item.repo) ?? null}
-              hideRepo={state.groupMode === 'repo'}
-              onPress={actions.openWorktreeSession}
-              onLongPress={
-                item.workspaceKind === 'folder-workspace' ? undefined : state.setActionTarget
+        <View style={styles.listZone}>
+          <SectionList
+            {...listScroll.handlers}
+            ref={activeWorktreeScroll.sectionListRef}
+            sections={sections}
+            keyExtractor={rowKeyOf}
+            stickySectionHeadersEnabled={false}
+            // Why: keep the search IME up while tapping clear / scrolling results.
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            viewabilityConfig={reveal.viewabilityConfig}
+            onViewableItemsChanged={reveal.onViewableItemsChanged}
+            onScrollToIndexFailed={(info) => {
+              if (!reveal.onScrollToIndexFailed(info)) {
+                activeWorktreeScroll.onScrollToIndexFailed(info)
               }
-              onToggleLineage={settings.toggleWorktreeLineage}
-            />
-          )}
-        />
+            }}
+            // Why: edge-to-edge under the system nav bar; insets.bottom keeps the last row above it.
+            contentContainerStyle={[
+              styles.list,
+              // Reserve room so the last row stays tappable above the phone's floating "+" (embedded uses the toolbar +).
+              { paddingBottom: (embedded ? spacing.lg : FAB_SIZE + spacing.xl) + insets.bottom },
+              isWideLayout &&
+                !embedded && { maxWidth: contentMaxWidth, width: '100%', alignSelf: 'center' }
+            ]}
+            renderSectionHeader={({ section }) => {
+              if (!section.title) {
+                return null
+              }
+              const isCollapsed = state.collapsedGroups.has(section.key)
+              const rawSection = rawSections.find((s) => s.key === section.key)
+              const count = rawSection?.data.length ?? 0
+              const repoSectionColor =
+                state.groupMode === 'repo' ? uniqueRepoColors.get(section.title) : null
+              const repoSectionIcon =
+                state.groupMode === 'repo' ? state.repoIconsByName.get(section.title) : null
+              return (
+                <Pressable
+                  style={styles.sectionHeader}
+                  onPress={() => settings.toggleCollapsed(section.key)}
+                >
+                  {isCollapsed ? (
+                    <ChevronRight size={12} color={colors.textMuted} style={styles.sectionIcon} />
+                  ) : (
+                    <ChevronDown size={12} color={colors.textMuted} style={styles.sectionIcon} />
+                  )}
+                  {section.icon === 'pin' && (
+                    <Pin size={12} color={colors.textMuted} style={styles.sectionIcon} />
+                  )}
+                  {state.groupMode === 'repo' ? (
+                    <View style={styles.sectionRepoIcon}>
+                      <MobileRepoIcon
+                        repoIcon={repoSectionIcon}
+                        size={14}
+                        color={repoSectionColor ?? colors.textSecondary}
+                      />
+                    </View>
+                  ) : null}
+                  <Text style={styles.sectionTitle}>{section.title}</Text>
+                  <Text style={styles.sectionCount}>{count}</Text>
+                </Pressable>
+              )
+            }}
+            ItemSeparatorComponent={ListSeparator}
+            // Why (#8498): manual pull-to-refresh forces a fresh snapshot after a stale-cache reconnect.
+            refreshControl={
+              <RefreshControl
+                refreshing={catalog.refreshing}
+                onRefresh={catalog.onRefresh}
+                tintColor={colors.textSecondary}
+                colors={[colors.textSecondary]}
+              />
+            }
+            renderItem={({ item }) => (
+              <WorktreeListRow
+                item={item}
+                selected={rowKeyOf(item) === selectedWorktreeId}
+                isReadOnly={isReadOnly}
+                now={now}
+                status={getWorktreeStatus(item)}
+                repoColor={uniqueRepoColors.get(item.repo) ?? repoColor(item.repo)}
+                repoIcon={state.repoIconsByName.get(item.repo) ?? null}
+                hideRepo={state.groupMode === 'repo'}
+                onPress={actions.openWorktreeSession}
+                onLongPress={
+                  item.workspaceKind === 'folder-workspace' ? undefined : state.setActionTarget
+                }
+                onToggleLineage={settings.toggleWorktreeLineage}
+              />
+            )}
+          />
+          <ZoneFrame zone="list" />
+        </View>
       )}
 
       {/* Floating "new workspace" button — phone only; embedded sidebars keep the toolbar +. */}

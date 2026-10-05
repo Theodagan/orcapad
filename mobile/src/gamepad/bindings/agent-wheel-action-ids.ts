@@ -8,5 +8,6 @@ export const AGENT_WHEEL_ACTION_IDS = {
   stop: 'agent.stop',
   handoff: 'agent.handoff',
   launch: 'agent.launch',
-  web: 'agent.web'
+  toggleView: 'agent.toggle-view',
+  toggleInput: 'agent.toggle-input'
 } as const

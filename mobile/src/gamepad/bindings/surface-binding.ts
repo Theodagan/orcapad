@@ -1,5 +1,5 @@
 import type { ControllerIntent, ControllerIntentKind } from '../controller-input/controller-intent'
-import type { FocusTarget } from '../focus/focus-target'
+import type { DECLINED, FocusTarget } from '../focus/focus-target'
 import type { WheelBinding } from '../wheel/wheel-registry'
 
 /**
@@ -22,9 +22,13 @@ export type SurfaceBinding = {
  * structure the handlers live in, with no cast and no second list to keep in step.
  *
  * Each handler takes the whole intent and narrows what it needs; only `scroll` and the
- * provisional selection intents carry a payload worth narrowing for.
+ * provisional selection intents carry a payload worth narrowing for. A handler that finds it has
+ * nothing to do returns `DECLINED`, and the intent falls through to the next surface.
  */
-export type IntentHandlerEntry = readonly [ControllerIntentKind, (intent: ControllerIntent) => void]
+export type IntentHandlerEntry = readonly [
+  ControllerIntentKind,
+  (intent: ControllerIntent) => void | typeof DECLINED
+]
 
 /**
  * Declaring `accepts` and the handlers separately is the obvious way to write this and the

@@ -1,4 +1,4 @@
-import { createElement, StrictMode, type ComponentProps } from 'react'
+import { createElement, StrictMode, useState, type ComponentProps } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { Keyboard } from 'react-native'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -7,13 +7,30 @@ import { MobileNativeChatComposer as NativeChatComposer } from './MobileNativeCh
 
 const getNoComposerEditGeneration = () => 0
 
+// The caret is owned above the composer; a test that does not care holds it here, as the route does.
 function MobileNativeChatComposer({
   getComposerEditGeneration = getNoComposerEditGeneration,
+  caret: initialCaret = 0,
+  onCaretChange,
   ...props
-}: Omit<ComponentProps<typeof NativeChatComposer>, 'getComposerEditGeneration'> & {
+}: Omit<
+  ComponentProps<typeof NativeChatComposer>,
+  'getComposerEditGeneration' | 'caret' | 'onCaretChange'
+> & {
   getComposerEditGeneration?: () => number
+  caret?: number
+  onCaretChange?: (caret: number) => void
 }): React.JSX.Element {
-  return createElement(NativeChatComposer, { ...props, getComposerEditGeneration })
+  const [caret, setCaret] = useState(initialCaret)
+  return createElement(NativeChatComposer, {
+    ...props,
+    getComposerEditGeneration,
+    caret,
+    onCaretChange: (next: number) => {
+      setCaret(next)
+      onCaretChange?.(next)
+    }
+  })
 }
 
 vi.mock('react-native', async () => {

@@ -7,7 +7,7 @@ named.
 ## 1. Why the first pass failed
 
 The device found four defects, and each had a cause that a green suite could not
-see.
+see. (Round 2 found a fifth of the same kind, in section 14.)
 
 | Symptom | Cause |
 | --- | --- |
@@ -219,27 +219,32 @@ last becomes "More…", one more level, and `B` steps back a page the way it ste
 menu.
 
 **Presets.** The left wheel is Back to menu (west) and New worktree (east). The right
-wheel is Launch agent, Open web page, Stop agent, Close agent; stop and close are away
-from the two doors. Both are experiment data (`wheel/experiments/`), and the agent
-preset declares `includes-destructive` as WHEEL-R7 asks.
+wheel is five fifths of a turn: Launch agent (north), Chat / terminal, Stop agent, Show / hide
+input, Close agent, so a harmless choice sits between stop and close and they never touch. Both
+are experiment data (`wheel/experiments/`), and the agent preset declares `includes-destructive`
+as WHEEL-R7 asks.
 
 | Segment | Reaches |
 | --- | --- |
 | Back to menu | `router.dismissTo` the host's workspace list |
 | New worktree | `router.dismissTo` the host's new-worktree route |
 | Launch agent | the new-tab drawer's agent options (`loadMobileNewTabAgentOptions`), then `handleCreateTerminal(agent)` |
-| Open web page | the host's port scan, then `handleCreateBrowser(url)` |
+| Chat / terminal | `toggleTabChatView` for the active terminal tab, when `resolveMobileNativeChat` offers a chat |
+| Show / hide input | the input-visibility store's toggle (section 13) |
 | Stop agent | the focused surface's stop (the chat's, or Escape in a terminal) |
 | Close agent | `handleCloseSessionTab` on the active agent tab |
 
 Back to menu and New worktree are registered by the root layout, the one place that
 owns the router and sees every screen. The agent actions belong to the session or to
-the surface in front of it.
+the surface in front of it. A binding's own label wins over the preset's, which is how the
+two toggles say where they go ("Chat view" / "Terminal view", "Show input" / "Hide input").
 
-**Ports** are read through `workspacePorts.scan` as a validated RPC operation
-(`workspace-ports-operations.ts`), because the raw-request ratchet forbids a new call
-that skips validation. Only ports attributed to the current worktree are listed: a port
-nothing attributes to it is not "on the project". "Enter URL…" opens a blank browser tab.
+**Triggers steer an open wheel.** `wheel-trigger-steering.ts` sits after the resolver's other rules.
+While the pad is captured it drops `A`, `B` and scroll, and turns a trigger's crossing of half
+travel into `confirm` (`R2`) or `back` (`L2`), which the wheel already understands. It remembers
+which triggers were pulled under a wheel and holds their scroll back until they are released, and a
+trigger held when the wheel opened never crosses upward, so it never fires. The overlay's two cues
+read their names from the same module, because raw control names live only under `controller-input/`.
 
 **Capture** (decision 004). From the sample that opens a wheel to the one that closes
 it:
@@ -261,7 +266,7 @@ it:
 
 Derived from the registry, never authored. The chip names the focused zone when there is
 more than one, `X` names where it goes, `A` and `B` carry the wording of whichever target
-would answer them, and while a wheel is open the bar shows what `A` and `B` do to the wheel.
+would answer them, and while a wheel is open the bar shows what `R2` and `L2` do to the wheel.
 No hint shows a control name as its own label.
 
 ## 12. Verification
@@ -279,3 +284,54 @@ No hint shows a control name as its own label.
   step becomes unreachable.
 - Not provable here: anything that needs the pad, the Retroid's trigger classification, or
   the rebuilt native module. `docs/evidence/manual-validation-plan.md` lists the run.
+
+## 13. Round 2: text entry, caret and sheets
+
+**Input visibility.** `gamepad/input-visibility/input-visibility-store.ts` holds one of three
+modes (`auto`, `shown`, `hidden`) and whether the strip holds anything. It is visible when `shown`,
+or `auto` with content; the wheel's toggle flips what is on screen now, and a new draft after the
+strip was put away returns it to `auto`. The provider owns the store, and `useInputVisibility`
+reads it as always visible when no pad is attached, so a touch user's screen is unchanged. The
+terminal's dock hides its input bar with `display: none` (the route parity pins changed by one host
+element and one string, diffed against the previous pin), and the chat view mounts its composer only
+while it is visible; a raised keyboard keeps either up.
+
+**Caret.** `session/composer-text-editing.ts` is pure: clamp, step by character (never into a
+surrogate pair), step by line, delete the word before the caret (Ctrl+W's rule), and set a dictated
+phrase at the caret with the spacing it needs. The caret lives in
+`use-mobile-native-chat-composer-caret.ts`, above the composer beside its draft, so a hidden or
+remounted composer keeps its place; it defaults to the end, so nothing changes for anyone who never
+moves it, and without a pad dictation still appends. With a pad attached the composer draws
+`MobileNativeChatComposerCaretField` (a block over the character after the caret, so nothing
+reflows) instead of the text input, and a touch swaps the real input in with a controlled
+selection at the caret. `use-composer-edit-binding.ts` registers the D-pad and `B` in the agent
+zone at card priority, above the transcript's scroll, only while there is a draft and no prompt is
+waiting; its `B` declines when there is nothing to delete. Terminal: `use-terminal-controller-binding`
+sends Ctrl+W for `B` while the strip is up.
+
+**Sheets.** Every sheet is a `Modal` (a Dialog window), which the controller tap, attached to the
+activity's window, never sees. `useModalNativeFocus` asks, after the sheet has had a moment to show,
+for `requestNativeFocusWithin` on a non-flattened view that holds the sheet's controls. The Kotlin
+side picks the first focusable view with no focusable view inside it (a scroll view is focusable
+too, and focus on a container leaves the D-pad nowhere to go) and asks from touch mode, which the
+first pad press has not left. `NativeFocusRing` draws a ring as that window's foreground on whatever
+takes focus and gives the old foreground back, including when the view leaves the window, because
+React Native recycles native views. The backdrop is `focusable={false}`.
+
+**Host screen.** `list` joins `FOCUS_ZONES` ahead of `agent` (no screen has both). The workspace list
+registers as `list`, the header's buttons are `HostHeaderControl` stops in `header`, and a zone's `B`
+returns to whichever of `agent` and `list` is present, labelled with its name. `use-root-back-binding`
+goes back where nothing else claims `B`.
+
+## 14. Round 2: the engine's mode queries
+
+esbuild 0.25 lowers `x ||= {}` for `chrome74`; with syntax minification it dropped `let x` and kept
+the assignment, so `requestMode` threw `i is not defined` inside the parser. xterm then lost the rest
+of the write, and opencode sends its mode queries (`CSI ? Ps $ p`) in the same write as the switch
+to the alternate screen and the mouse modes. The pane never learned it was in a TUI with the mouse
+on, so controller scroll had nothing to route. Found by running the generated page in headless Chrome
+against a transcript captured from the real opencode in a pty: with the queries present the page
+posted no `modes` message and no wheel reports; without them it posted `any`/SGR and the reports.
+`build-terminal-webview-engine.mjs` keeps whitespace and identifier minification and turns syntax
+minification off, `terminal-webview-engine-mode-queries.test.ts` runs the engine, and the payload
+pin was refreshed. The generated file is untracked, so the fix lives in the build script.

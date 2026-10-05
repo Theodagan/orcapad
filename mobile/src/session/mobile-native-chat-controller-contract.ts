@@ -25,6 +25,11 @@ export type MobileNativeChatController = {
   nativeChatAgent: string | null
   chatComposerText: string
   setChatComposerText: Dispatch<SetStateAction<string>>
+  /** Where the caret is in the draft; the end unless someone moved it. */
+  chatComposerCaret: number
+  setChatComposerCaret: (caret: number) => void
+  /** Dictation lands at the caret, not at the end. */
+  insertChatDictation: (transcript: string) => void
   getChatComposerEditGeneration: () => number
   chatPending: MobileNativeChatPendingMessage[]
   chatImagePreviewsByMessageId: Record<string, string[]>

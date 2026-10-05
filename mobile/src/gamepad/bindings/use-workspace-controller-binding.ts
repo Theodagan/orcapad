@@ -7,7 +7,9 @@ import {
 } from './controller-scroll-rate'
 import { nextSelectedId, selectedItem } from './list-selection'
 import { flattenSectionOrder, type OrderedSection } from './workspace-list-order'
-import { focusTargetFor, type IntentHandlerEntry } from './surface-binding'
+import { FOCUS_PRIORITY } from '../focus/focus-zones'
+import { useZoneFocused } from '../zones/use-zone-focused'
+import { focusTargetFor, type IntentHandlerEntry, type SurfaceBinding } from './surface-binding'
 import { useSurfaceBinding } from './use-surface-binding'
 
 /**
@@ -58,7 +60,7 @@ export function useWorkspaceControllerBinding<T>(
     setSelectedId((current) => (connected ? (current ?? firstId) : null))
   }, [connected, firstId])
 
-  const binding = useMemo(() => {
+  const binding = useMemo<SurfaceBinding>(() => {
     const move = (direction: 'up' | 'down'): void => {
       setSelectedId((current) => nextSelectedId(order, idOf, current, direction))
     }
@@ -106,9 +108,17 @@ export function useWorkspaceControllerBinding<T>(
     ]
     // No wheel action yet: every workspace action worth naming is either destructive or belongs
     // to a surface `003` has not bound, and WHEEL-R7 keeps trials away from both.
-    return { focusTarget: focusTargetFor('workspace-list', entries), wheelActions: [] }
+    return {
+      focusTarget: {
+        ...focusTargetFor('workspace-list', entries),
+        zone: 'list',
+        priority: FOCUS_PRIORITY.surface
+      },
+      wheelActions: []
+    }
   }, [order, idOf, selectedId, onOpen, onBack, integrator])
 
   useSurfaceBinding(binding)
-  return selectedId
+  // The ring follows the pad: while it is pointed at the header, no row is where `A` would act.
+  return useZoneFocused('list') ? selectedId : null
 }

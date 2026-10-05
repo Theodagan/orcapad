@@ -3,9 +3,10 @@ import type { ControllerIntentKind } from '../controller-input/controller-intent
 /**
  * The parts of a screen the controller can be pointed at, in the order `X` walks them (`005`
  * USE-R4). A zone only exists while something mounted has declared it, so a screen with one
- * zone has nothing to switch to.
+ * zone has nothing to switch to. `list` is the main content of a list screen (the workspaces of a
+ * host) and `agent` the main content of a session; no screen has both.
  */
-export const FOCUS_ZONES = ['agent', 'shortcuts', 'header', 'panels'] as const
+export const FOCUS_ZONES = ['list', 'agent', 'shortcuts', 'header', 'panels'] as const
 
 export type FocusZone = (typeof FOCUS_ZONES)[number]
 

@@ -1,14 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNativeChatControllerBinding } from './use-native-chat-controller-binding'
-import {
-  ActivityIndicator,
-  FlatList,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
-  Pressable,
-  Text,
-  View
-} from 'react-native'
+import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
 import { ArrowDown, ChevronsDownUp, ChevronsUpDown, Square } from 'lucide-react-native'
@@ -25,7 +17,10 @@ import {
   mobileNativeChatEmptyState,
   type MobileNativeChatPendingItem
 } from './mobile-native-chat-render-data'
+import { useMobileNativeChatComposerVisibility } from './use-mobile-native-chat-composer-visibility'
+import { useMobileNativeChatHistoryPaging } from './use-mobile-native-chat-history-paging'
 import { useMobileNativeChatPinchGesture } from './use-mobile-native-chat-pinch-gesture'
+import { useMobileNativeChatSendHandler } from './use-mobile-native-chat-send-handler'
 import { useMobileNativeChatTailFollow } from './use-mobile-native-chat-tail-follow'
 import { useMobileNativeChatTurnDisclosure } from './use-mobile-native-chat-turn-disclosure'
 import { useSettledMobileNativeChatInputLock } from './use-mobile-native-chat-input-lease'
@@ -87,6 +82,9 @@ type Props = {
   /** Controlled composer text (owned by the route so dictation can write to it). */
   composerText: string
   onComposerTextChange: (text: string) => void
+  /** Where the caret is in the draft, so the pad and dictation edit the same place. */
+  composerCaret: number
+  onComposerCaretChange: (caret: number) => void
   onAttachImage?: () => void
   /** Pending image attachments shown as composer thumbnails until the next send. */
   attachments?: PendingNativeChatImage[]
@@ -162,6 +160,8 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
     imagePreviewsByMessageId,
     composerText,
     onComposerTextChange,
+    composerCaret,
+    onComposerCaretChange,
     onAttachImage,
     attachments,
     onRemoveAttachment,
@@ -191,6 +191,10 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
     keyboardInset = 0
   } = props
   const insets = useSafeAreaInsets()
+  const composerVisible = useMobileNativeChatComposerVisibility({
+    hasDraft: composerText.trim().length > 0 || (attachments?.length ?? 0) > 0,
+    keyboardInset
+  })
   const [toolsExpanded, setToolsExpanded] = useState(false)
   // Lift the composer clear of the keyboard, plus the bottom safe-area so it
   // never sits under the home indicator / nav bar (mirrors the terminal dock).
@@ -233,38 +237,15 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
     scrollBy
   })
 
-  const handleSend = useCallback(
-    async (text: string): Promise<boolean> => {
-      const accepted = await onSend(text)
-      if (!accepted) {
-        return false
-      }
-      // The route-owned banner outlives this send; a success must retire it too,
-      // or a stale "Message not sent" sits above the delivered message.
-      onClearSendError?.()
-      // Always jump to the newest message when the user sends.
-      jumpToTail()
-      return true
-    },
-    [onSend, onClearSendError, jumpToTail]
-  )
+  const handleSend = useMobileNativeChatSendHandler({ onSend, onClearSendError, jumpToTail })
 
-  const loadEarlier = useCallback(() => {
-    detachFromTail()
-    onLoadEarlier?.()
-  }, [detachFromTail, onLoadEarlier])
-
-  const onScroll = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const { contentOffset } = e.nativeEvent
-      recordScrollMetrics(e.nativeEvent)
-      // Near the top — page in older history.
-      if (contentOffset.y < 60 && hasMore && !loadingEarlier) {
-        loadEarlier()
-      }
-    },
-    [hasMore, loadingEarlier, loadEarlier, recordScrollMetrics]
-  )
+  const { onScroll, loadEarlier } = useMobileNativeChatHistoryPaging({
+    hasMore,
+    loadingEarlier,
+    onLoadEarlier,
+    detachFromTail,
+    recordScrollMetrics
+  })
 
   // Per-turn status rows: one live indicator while the turn runs, then a settled
   // "Worked for N" row. The structured lane owns them; the bridge lane keeps its
@@ -431,37 +412,44 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
           <Text style={styles.sendErrorText}>{sendErrorMessage}</Text>
         </View>
       ) : null}
-      <MobileNativeChatComposer
-        structuredCommands={
-          structuredActivityUi ? (sessionOptions?.controller.conversationCommands ?? []) : undefined
-        }
-        value={composerText}
-        onChangeText={onComposerTextChange}
-        onSend={handleSend}
-        sendSurfaceId={sendSurfaceId}
-        {...{ getSendCompletionGeneration, getComposerEditGeneration }}
-        agent={agent}
-        sessionOptions={sessionOptions}
-        onAttachImage={onAttachImage}
-        attachments={attachments}
-        onRemoveAttachment={onRemoveAttachment}
-        isAttaching={isAttaching}
-        onMicPress={onMicPress}
-        micActive={micActive}
-        dictationMode={dictationMode}
-        onMicPressIn={onMicPressIn}
-        onMicPressOut={onMicPressOut}
-        disabled={lockReason !== null}
-        placeholder={
-          lockReason === 'disconnected'
-            ? 'Reconnecting…'
-            : lockReason === 'waiting'
-              ? 'Waiting for terminal…'
-              : 'Message, @files, /commands'
-        }
-        filePaths={filePaths}
-        onNeedFiles={onNeedFiles}
-      />
+      {composerVisible ? (
+        <MobileNativeChatComposer
+          structuredCommands={
+            structuredActivityUi
+              ? (sessionOptions?.controller.conversationCommands ?? [])
+              : undefined
+          }
+          value={composerText}
+          onChangeText={onComposerTextChange}
+          onSend={handleSend}
+          sendSurfaceId={sendSurfaceId}
+          {...{ getSendCompletionGeneration, getComposerEditGeneration }}
+          agent={agent}
+          sessionOptions={sessionOptions}
+          onAttachImage={onAttachImage}
+          attachments={attachments}
+          onRemoveAttachment={onRemoveAttachment}
+          isAttaching={isAttaching}
+          onMicPress={onMicPress}
+          micActive={micActive}
+          dictationMode={dictationMode}
+          onMicPressIn={onMicPressIn}
+          onMicPressOut={onMicPressOut}
+          disabled={lockReason !== null}
+          placeholder={
+            lockReason === 'disconnected'
+              ? 'Reconnecting…'
+              : lockReason === 'waiting'
+                ? 'Waiting for terminal…'
+                : 'Message, @files, /commands'
+          }
+          filePaths={filePaths}
+          onNeedFiles={onNeedFiles}
+          caret={composerCaret}
+          onCaretChange={onComposerCaretChange}
+          editSuspended={ask != null || permission != null || question != null}
+        />
+      ) : null}
     </View>
   )
 }

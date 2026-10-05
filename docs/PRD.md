@@ -56,9 +56,10 @@ Wheel assignments and segment contents remain deliberately open for UX iteration
 | LB / RB | Previous / next tab — current project |
 | Y + LB/RB (hold) | Previous / next worktree or project |
 | Left stick (motion) | Open Wheel 1 — experiment preset: back to menu, new worktree |
-| Right stick (motion) | Open Wheel 2 — experiment preset: close, stop, launch agent, open web page |
-| A | Confirm — commits held wheel direction, or general confirm |
-| B | Reject / back |
+| Right stick (motion) | Open Wheel 2 — experiment preset: launch agent, chat / terminal, stop, show / hide input, close |
+| A | Confirm (not used while a wheel is open) |
+| B | Reject / back; deletes a word while a draft is being edited |
+| R2 / L2 with a wheel open | Select what is lit / back out (otherwise scroll) |
 | X | Switch zone — agent, shortcuts, header, panels |
 | Y (tap) | Toggle dictation |
 | R3 | Unassigned |

@@ -27,6 +27,7 @@ type Tick = {
 }
 
 function overlayElement(tick: Tick): ReturnType<typeof createElement> {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the overlay reads only the fields this fake supplies.
   const controller = {
     showNativeChat: tick.show ?? true,
     nativeChatSession: { messages: tick.messages ?? [], status: 'ready' },
@@ -38,7 +39,9 @@ function overlayElement(tick: Tick): ReturnType<typeof createElement> {
     chatPending: [],
     chatImagePreviewsByMessageId: {},
     chatComposerText: '',
-    setChatComposerText: vi.fn()
+    setChatComposerText: vi.fn(),
+    chatComposerCaret: 0,
+    setChatComposerCaret: vi.fn()
   } as unknown as MobileNativeChatController
   return createElement(MobileNativeChatOverlay, {
     controller,

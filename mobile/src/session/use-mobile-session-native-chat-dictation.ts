@@ -106,9 +106,7 @@ export function useMobileSessionNativeChatDictation(
     onTranscript: (text) => {
       // Why: dictation belongs to the visible composer — native chat consumes it locally, terminal mode keeps live-input routing.
       if (showNativeChatRef.current) {
-        nativeChatController.setChatComposerText((current) =>
-          appendBufferedDictation(current, text)
-        )
+        nativeChatController.insertChatDictation(text)
         showToast('Dictation inserted')
         return
       }

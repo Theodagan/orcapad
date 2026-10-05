@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
+import { WHEEL_TRIGGER_NAMES } from '../controller-input/wheel-trigger-steering'
 import { useController } from '../controller-provider'
 import { colors, radii, spacing, typography } from '../../theme/mobile-theme'
 import type { WheelController } from './use-wheel-controller'
@@ -9,6 +10,10 @@ import type { WheelController } from './use-wheel-controller'
  * (`005` USE-R11), touch included: the layer takes the touches and does nothing with them, so a
  * finger cannot reach the screen the wheel is currently steering around. An accidental open is
  * still harmless because the wheel closes the moment the stick returns to centre.
+ *
+ * The highlight says what is chosen, so the middle of the dial is empty. The two triggers that
+ * answer it are named on the edge of the screen each one sits under, the way a swipe deck names
+ * its two sides: `L2` to back out on the left, `R2` to take what is lit on the right.
  *
  * Plain state, no worklets. `002` §4 gates Reanimated on "where profiling shows a benefit", and
  * there is no profile yet — CTRL-T8 is the task that produces one. Adding worklets first would
@@ -44,8 +49,8 @@ export function WheelOverlay({ controller }: { readonly controller: WheelControl
   const locked = view.state.locked
   const lockedSegment = view.segments.find((segment) => segment.id === locked) ?? null
   const radius = view.segments.length > MANY_SEGMENTS ? RADIUS_MANY : RADIUS_FEW
-  const centre = lockedSegment?.label ?? view.message ?? view.title ?? 'Move the stick'
-  const centreDisabled = lockedSegment?.availability === 'unavailable'
+  const canSelect = lockedSegment !== null && lockedSegment.availability !== 'unavailable'
+  const selectWord = lockedSegment?.opens === true ? 'Open' : 'Select'
 
   return (
     <View
@@ -55,6 +60,7 @@ export function WheelOverlay({ controller }: { readonly controller: WheelControl
       pointerEvents="auto"
       style={styles.backdrop}
     >
+      {view.title === null ? null : <Text style={styles.title}>{view.title}</Text>}
       <View style={[styles.dial, { height: radius * 2, width: radius * 2 }]}>
         {view.segments.map((segment) => {
           const isLocked = segment.id === locked
@@ -81,16 +87,54 @@ export function WheelOverlay({ controller }: { readonly controller: WheelControl
             </View>
           )
         })}
-        <View pointerEvents="none" style={styles.hub} testID="wheel-hub">
-          <Text
-            numberOfLines={2}
-            style={[styles.hubText, centreDisabled ? styles.hubTextDisabled : null]}
-          >
-            {centre}
-          </Text>
-          <Text style={styles.hubHint}>{view.state.path.length > 0 ? 'B back' : 'B cancel'}</Text>
-        </View>
+        {view.segments.length === 0 && view.message !== null ? (
+          <Text style={styles.message}>{view.message}</Text>
+        ) : null}
       </View>
+      <TriggerCue
+        control={WHEEL_TRIGGER_NAMES.back}
+        label={view.state.path.length > 0 ? 'Back' : 'Cancel'}
+        side="left"
+        tone={colors.statusRed}
+      />
+      <TriggerCue
+        control={WHEEL_TRIGGER_NAMES.select}
+        dimmed={!canSelect}
+        label={selectWord}
+        side="right"
+        tone={colors.statusGreen}
+      />
+    </View>
+  )
+}
+
+/** One trigger and what it does, pinned to the bottom corner on its own side of the screen. */
+function TriggerCue({
+  control,
+  label,
+  side,
+  tone,
+  dimmed = false
+}: {
+  readonly control: string
+  readonly label: string
+  readonly side: 'left' | 'right'
+  readonly tone: string
+  readonly dimmed?: boolean
+}): ReactNode {
+  return (
+    <View
+      pointerEvents="none"
+      testID={`wheel-cue:${side}`}
+      style={[
+        styles.cue,
+        side === 'left' ? styles.cueLeft : styles.cueRight,
+        { borderColor: tone },
+        dimmed ? styles.cueDimmed : null
+      ]}
+    >
+      <Text style={[styles.cueControl, { backgroundColor: tone }]}>{control}</Text>
+      <Text style={[styles.cueLabel, { color: tone }]}>{label}</Text>
     </View>
   )
 }
@@ -127,13 +171,38 @@ const styles = StyleSheet.create({
   segmentDisabled: { opacity: 0.4 },
   label: { color: colors.textSecondary, fontSize: typography.bodySize },
   labelLocked: { color: colors.textPrimary, fontSize: typography.bodySize, fontWeight: '700' },
-  hub: { alignItems: 'center', gap: spacing.xs, maxWidth: 112, position: 'absolute' },
-  hubText: {
-    color: colors.textPrimary,
+  message: { color: colors.textMuted, fontSize: typography.bodySize, textAlign: 'center' },
+  title: {
+    color: colors.textSecondary,
     fontSize: typography.bodySize,
     fontWeight: '700',
-    textAlign: 'center'
+    position: 'absolute',
+    top: spacing.xl
   },
-  hubTextDisabled: { color: colors.textMuted },
-  hubHint: { color: colors.textMuted, fontSize: typography.metaSize }
+  cue: {
+    alignItems: 'center',
+    backgroundColor: colors.bgPanel,
+    borderRadius: radii.card,
+    borderWidth: 3,
+    bottom: spacing.xl,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    position: 'absolute'
+  },
+  cueLeft: { left: spacing.lg },
+  cueRight: { right: spacing.lg },
+  // Dimmed, never hidden, for the same reason a disabled segment is: the layout must not move.
+  cueDimmed: { opacity: 0.4 },
+  cueControl: {
+    borderRadius: radii.card,
+    color: colors.onAccent,
+    fontSize: typography.bodySize,
+    fontWeight: '800',
+    overflow: 'hidden',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2
+  },
+  cueLabel: { fontSize: typography.bodySize, fontWeight: '800', textTransform: 'uppercase' }
 })

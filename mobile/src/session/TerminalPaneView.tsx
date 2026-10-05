@@ -4,6 +4,7 @@ import {
   useTerminalControllerBinding,
   type TerminalWheelAction
 } from '../gamepad/bindings/use-terminal-controller-binding'
+import { useInputVisibility } from '../gamepad/input-visibility/use-input-visibility'
 import { TerminalWebView } from '../terminal/TerminalWebView'
 import type {
   MobileTerminalTheme,
@@ -81,9 +82,11 @@ export function TerminalPaneView({
     webViewRef.current?.scrollLines(lines)
   }, [])
 
+  const input = useInputVisibility()
   useTerminalControllerBinding({
     handle,
     enabled: controllerFocused,
+    editingText: input.visible,
     scrollLines,
     sendKey: onControllerKey,
     actions: controllerActions ?? NO_CONTROLLER_ACTIONS

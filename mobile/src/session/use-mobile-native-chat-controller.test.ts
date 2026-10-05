@@ -121,6 +121,7 @@ vi.mock('./use-mobile-native-chat-drafts', () => ({
     }
   }
 }))
+vi.mock('react-native', () => ({ StyleSheet: { create: <T>(styles: T) => styles }, View: 'View' }))
 vi.mock('./use-mobile-native-chat-prompts', () => ({
   useMobileNativeChatPrompts: () => promptsState
 }))

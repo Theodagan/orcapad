@@ -1,17 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import {
-  ActivityIndicator,
-  Image,
-  Keyboard,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View
-} from 'react-native'
-import { ArrowUp, ImagePlus, Mic, Square, X } from 'lucide-react-native'
+import { ActivityIndicator, Keyboard, Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { ArrowUp, ImagePlus, Mic, Square } from 'lucide-react-native'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { useComposerEditBinding } from '../gamepad/bindings/use-composer-edit-binding'
 import { useComposerSendBinding } from '../gamepad/bindings/use-composer-send-binding'
+import { useControllerBinding } from '../gamepad/controller-provider'
 import { getVerifiedNativeChatCommands } from '../../../src/shared/native-chat-agent-profiles'
 import { structuredSlashCommands } from '../../../src/shared/structured-agent-session-composer'
 import type { AgentSessionConversationCommand } from '../../../src/shared/agent-session-conversation-command'
@@ -31,6 +24,13 @@ import {
   type MobileNativeChatSessionOptionPickersProps
 } from './MobileNativeChatSessionOptionPickers'
 import type { PendingNativeChatImage } from './mobile-native-chat-image-attachment'
+import { MobileNativeChatComposerAttachments } from './MobileNativeChatComposerAttachments'
+import { MobileNativeChatComposerCaretField } from './MobileNativeChatComposerCaretField'
+import {
+  deleteWordBefore,
+  moveCaretHorizontally,
+  moveCaretVertically
+} from './composer-text-editing'
 
 const NO_FILE_PATHS: string[] = []
 const NO_ATTACHMENTS: PendingNativeChatImage[] = []
@@ -40,6 +40,11 @@ type Props = {
   /** Controlled composer text — owned by the parent so dictation can write to it. */
   value: string
   onChangeText: (text: string) => void
+  /** Where the caret is in `value`, owned above so dictation and the pad edit the same place. */
+  caret: number
+  onCaretChange: (caret: number) => void
+  /** Something more urgent than the draft (a permission prompt) has the D-pad. */
+  editSuspended?: boolean
   onSend: (text: string) => Promise<boolean>
   /** Changes whenever the route focuses a different chat composer surface. */
   sendSurfaceId: string
@@ -73,6 +78,9 @@ type Props = {
 export function MobileNativeChatComposer({
   value,
   onChangeText,
+  caret: cursor,
+  onCaretChange,
+  editSuspended = false,
   onSend,
   sendSurfaceId,
   getSendCompletionGeneration,
@@ -94,13 +102,26 @@ export function MobileNativeChatComposer({
   filePaths = NO_FILE_PATHS,
   onNeedFiles
 }: Props): React.JSX.Element {
-  const [cursor, setCursor] = useState(0)
+  // With a pad attached the draft is drawn with a caret the D-pad moves, and the keyboard is the
+  // exception: a touch on the draft hands over to the real input until it loses focus.
+  const { connected: padAttached } = useControllerBinding()
+  const [touchEditing, setTouchEditing] = useState(false)
+  const caretMode = padAttached && !touchEditing
+  const setCursor = onCaretChange
   // Transiently drives the native caret after a mid-text autocomplete insert,
   // then released on the next selection change so manual caret placement still
   // works (a permanently controlled `selection` breaks it in React Native).
   const [pendingSelection, setPendingSelection] = useState<{ start: number; end: number } | null>(
     null
   )
+  // What the native input last said, so a caret moved from outside (dictation) can be told apart.
+  const reportedCaretRef = useRef(cursor)
+  useEffect(() => {
+    if (!caretMode && cursor !== reportedCaretRef.current) {
+      reportedCaretRef.current = cursor
+      setPendingSelection({ start: cursor, end: cursor })
+    }
+  }, [caretMode, cursor])
   const sendingRef = useRef(false)
   const mountedRef = useRef(true)
   const sendSurfaceIdRef = useRef(sendSurfaceId)
@@ -123,7 +144,11 @@ export function MobileNativeChatComposer({
     !isAttaching &&
     !sessionOptionDispatching
 
-  const trigger = useMemo(() => detectAutocompleteTrigger(value, cursor), [value, cursor])
+  // The suggestions are picked by touch, so a draft the pad is editing has none.
+  const trigger = useMemo(
+    () => (caretMode ? null : detectAutocompleteTrigger(value, cursor)),
+    [caretMode, value, cursor]
+  )
   const suggestions = useMemo<ComposerSuggestion[]>(() => {
     if (!trigger) {
       return []
@@ -214,62 +239,68 @@ export function MobileNativeChatComposer({
 
   // `A` sends the draft (`005` USE-R3); the composer's own `canSend` decides whether it may.
   useComposerSendBinding({ composerKey: sendSurfaceId, canSend, onSend: () => void handleSend() })
+  // The D-pad moves the caret and `B` deletes a word, as in a terminal's prompt.
+  useComposerEditBinding({
+    composerKey: sendSurfaceId,
+    active: caretMode && !editSuspended && value.length > 0,
+    onMoveHorizontal: (direction) => setCursor(moveCaretHorizontally(value, cursor, direction)),
+    onMoveVertical: (direction) => setCursor(moveCaretVertically(value, cursor, direction)),
+    onDeleteWord: () => {
+      const edit = deleteWordBefore(value, cursor)
+      if (edit === null) {
+        return false
+      }
+      onChangeText(edit.text)
+      setCursor(edit.caret)
+      return true
+    }
+  })
 
   return (
     <View>
       {suggestions.length > 0 ? (
         <MobileNativeChatComposerSuggestions suggestions={suggestions} onPick={pickSuggestion} />
       ) : null}
-      {attachments.length > 0 ? (
-        <ScrollView
-          horizontal
-          keyboardShouldPersistTaps="always"
-          showsHorizontalScrollIndicator={false}
-          style={styles.attachmentStrip}
-          contentContainerStyle={styles.attachmentStripContent}
-        >
-          {attachments.map((attachment) => (
-            <View key={attachment.id} style={styles.attachmentThumb}>
-              <Image
-                source={{ uri: attachment.previewUri }}
-                style={styles.attachmentImage}
-                resizeMode="cover"
-              />
-              {onRemoveAttachment ? (
-                <Pressable
-                  accessibilityLabel="Remove image"
-                  style={styles.attachmentRemove}
-                  onPress={() => onRemoveAttachment(attachment.id)}
-                  hitSlop={8}
-                >
-                  <X size={12} color={colors.textPrimary} strokeWidth={2.6} />
-                </Pressable>
-              ) : null}
-            </View>
-          ))}
-        </ScrollView>
-      ) : null}
+      <MobileNativeChatComposerAttachments
+        attachments={attachments}
+        onRemoveAttachment={onRemoveAttachment}
+      />
       <View style={styles.composerInset} testID="native-chat-composer-inset">
         <View style={styles.bar} testID="native-chat-composer">
-          <TextInput
-            style={styles.input}
-            value={value}
-            onChangeText={handleChange}
-            // Controlled only transiently right after an autocomplete insert.
-            selection={pendingSelection ?? undefined}
-            onSelectionChange={(e) => {
-              setCursor(e.nativeEvent.selection.end)
-              setPendingSelection(null)
-            }}
-            placeholder={placeholder}
-            placeholderTextColor={colors.textMuted}
-            selectionColor={colors.accentBlue}
-            multiline
-            // Why: never revoke `editable` — iOS resigns first responder on a focused
-            // field, so a transient lock would yank the keyboard mid-typing (#10681).
-            // The lock gates sending; the draft survives and rides the next send.
-            textAlignVertical="top"
-          />
+          {caretMode ? (
+            <MobileNativeChatComposerCaretField
+              value={value}
+              caret={cursor}
+              placeholder={placeholder}
+              onPress={() => {
+                setPendingSelection({ start: cursor, end: cursor })
+                setTouchEditing(true)
+              }}
+            />
+          ) : (
+            <TextInput
+              style={styles.input}
+              value={value}
+              onChangeText={handleChange}
+              autoFocus={touchEditing}
+              onBlur={() => setTouchEditing(false)}
+              // Controlled only transiently right after an autocomplete insert.
+              selection={pendingSelection ?? undefined}
+              onSelectionChange={(e) => {
+                reportedCaretRef.current = e.nativeEvent.selection.end
+                setCursor(e.nativeEvent.selection.end)
+                setPendingSelection(null)
+              }}
+              placeholder={placeholder}
+              placeholderTextColor={colors.textMuted}
+              selectionColor={colors.accentBlue}
+              multiline
+              // Why: never revoke `editable` — iOS resigns first responder on a focused
+              // field, so a transient lock would yank the keyboard mid-typing (#10681).
+              // The lock gates sending; the draft survives and rides the next send.
+              textAlignVertical="top"
+            />
+          )}
           <View style={styles.actionRow} testID="native-chat-composer-actions">
             {onAttachImage ? (
               <Pressable
@@ -338,45 +369,6 @@ export function MobileNativeChatComposer({
 }
 
 const styles = StyleSheet.create({
-  attachmentStrip: {
-    maxHeight: 76,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
-    backgroundColor: colors.bgPanel
-  },
-  attachmentStripContent: {
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm
-  },
-  attachmentThumb: {
-    width: 60,
-    height: 60,
-    borderRadius: radii.button,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderSubtle,
-    backgroundColor: colors.bgRaised
-  },
-  attachmentImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: radii.button
-  },
-  attachmentRemove: {
-    // Inset inside the thumb: Android drops touches outside the parent's bounds,
-    // so an overhanging badge would lose part of its tap target.
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.bgRaised,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderSubtle
-  },
   composerInset: {
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,

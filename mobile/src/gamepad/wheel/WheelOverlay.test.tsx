@@ -110,11 +110,15 @@ describe('WheelOverlay', () => {
     })
   }
 
-  function hubText(): string {
-    const hub = renderer?.root.findAll((node) => node.props.testID === 'wheel-hub')[0]
-    return (hub?.findAll((node) => node.type === 'Text') ?? [])
-      .map((node) => node.children.join(''))
-      .join(' | ')
+  /** What a cue says, control first: `L2 | Cancel`. Null when the cue is not drawn. */
+  function cueText(side: 'left' | 'right'): string | null {
+    const cue = renderer?.root.findAll((node) => node.props.testID === `wheel-cue:${side}`)[0]
+    return cue === undefined
+      ? null
+      : cue
+          .findAll((node) => node.type === 'Text')
+          .map((node) => node.children.join(''))
+          .join(' | ')
   }
 
   it('renders nothing while the wheel is closed', () => {
@@ -161,7 +165,7 @@ describe('WheelOverlay', () => {
     ).toHaveLength(0)
   })
 
-  it('says what the locked segment is in the middle, and how to leave', () => {
+  it('leaves the middle empty: the highlight says what is chosen', () => {
     let controller: WheelController | null = null
     mount(createWheelRegistry(), (c) => (controller = c))
 
@@ -169,7 +173,61 @@ describe('WheelOverlay', () => {
       controller?.intercept(up)
     })
 
-    expect(hubText()).toBe('North | B cancel')
+    expect(renderer?.root.findAll((node) => node.props.testID === 'wheel-hub') ?? []).toHaveLength(
+      0
+    )
+  })
+
+  it('names the two triggers, one on each side of the screen', () => {
+    let controller: WheelController | null = null
+    mount(createWheelRegistry(), (c) => (controller = c))
+
+    act(() => {
+      controller?.intercept(up)
+    })
+
+    expect(cueText('left')).toBe('L2 | Cancel')
+    expect(cueText('right')).toBe('R2 | Select')
+  })
+
+  it('dims the select cue while nothing selectable is lit', () => {
+    let controller: WheelController | null = null
+    mount(createWheelRegistry(), (c) => (controller = c))
+
+    act(() => {
+      controller?.intercept(up)
+    })
+    const opacityOf = (side: 'left' | 'right'): unknown =>
+      renderer?.root
+        .findAll((node) => node.props.testID === `wheel-cue:${side}`)[0]
+        ?.props.style.flat()
+        .find((entry: unknown) => entry !== null && typeof entry === 'object' && 'opacity' in entry)
+        ?.opacity
+
+    // Nothing is registered under the preset's ids, so the lit segment is unavailable.
+    expect(opacityOf('right')).toBe(0.4)
+    expect(opacityOf('left')).toBeUndefined()
+  })
+
+  it('says Back, not Cancel, one level down inside a menu', () => {
+    const registry = createWheelRegistry()
+    registry.register({
+      id: 'noop.one',
+      label: 'North',
+      availability: 'available',
+      menu: () => [{ id: 'child', label: 'Child', availability: 'available', run: () => {} }]
+    })
+    let controller: WheelController | null = null
+    mount(registry, (c) => (controller = c))
+
+    act(() => {
+      controller?.intercept(up)
+    })
+    act(() => {
+      controller?.intercept({ kind: 'confirm' })
+    })
+
+    expect(cueText('left')).toBe('L2 | Back')
   })
 
   it('closes when the stick returns to centre', () => {
@@ -228,6 +286,7 @@ describe('WheelOverlay', () => {
     const faded = renderer?.root.findAll(
       (node) =>
         node.type === 'View' &&
+        String(node.props.testID ?? '').startsWith('wheel-segment:') &&
         node.props.style?.some?.(
           (s: unknown) => s !== null && typeof s === 'object' && 'opacity' in s
         )

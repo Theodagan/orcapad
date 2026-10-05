@@ -31,14 +31,15 @@ function setup() {
     })
   }
   /** The agent zone, which a session always has beside its header. */
-  const mountAgent = () =>
+  const mountMain = (zone: 'agent' | 'list') =>
     registry.register({
-      id: 'agent',
-      zone: 'agent',
+      id: zone,
+      zone,
       accepts: new Set(['confirm']),
       handle: vi.fn()
     })
-  return { registry, store, add, activated, revealed, mountAgent }
+  const mountAgent = () => mountMain('agent')
+  return { registry, store, add, activated, revealed, mountAgent, mountMain }
 }
 
 describe('zone item store', () => {
@@ -244,10 +245,37 @@ describe('zone item store', () => {
   })
 
   it('says in the hint bar’s words what A and B do here', () => {
-    const { add, registry } = setup()
+    const { add, registry, mountAgent } = setup()
+    mountAgent()
     add('header', 'a', { home: true })
     registry.focusZone('header')
 
     expect(registry.snapshot().labels).toMatchObject({ confirm: 'Open', back: 'Agent' })
+  })
+
+  it('names the list, not the agent, where a list screen has a header', () => {
+    const { add, registry, mountMain } = setup()
+    mountMain('list')
+    add('header', 'a', { home: true })
+    registry.focusZone('header')
+
+    expect(registry.snapshot().labels.back).toBe('List')
+  })
+
+  it('B goes back to the list on a list screen', () => {
+    const { add, registry, mountMain } = setup()
+    mountMain('list')
+    add('header', 'a', { home: true })
+    registry.focusZone('header')
+
+    expect(registry.dispatch(back)).toBe(true)
+    expect(registry.focusedZone()).toBe('list')
+  })
+
+  it('leaves B unlabelled when there is nothing to go back to, so the bar says plain Back', () => {
+    const { add, registry } = setup()
+    add('header', 'a', { home: true })
+
+    expect(registry.snapshot().labels.back).toBeUndefined()
   })
 })

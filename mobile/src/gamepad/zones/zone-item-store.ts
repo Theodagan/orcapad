@@ -33,9 +33,15 @@ type ZonePolicy = {
   readonly labels: IntentLabels
 }
 
-const NAVIGATION_LABELS = { 'move-selection': 'Move', 'move-horizontal': 'Move', back: 'Agent' }
+const NAVIGATION_LABELS = { 'move-selection': 'Move', 'move-horizontal': 'Move' }
+
+/** What a row of buttons belongs to, and so where `B` takes the pad back to. */
+const MAIN_ZONES = ['agent', 'list'] as const
+
+const MAIN_ZONE_NAME = { agent: 'Agent', list: 'List' } as const
 
 const ZONE_POLICY: Record<FocusZone, ZonePolicy> = {
+  list: { entry: 'last', wrap: false, labels: {} },
   agent: { entry: 'last', wrap: false, labels: {} },
   shortcuts: { entry: 'last', wrap: true, labels: { ...NAVIGATION_LABELS, confirm: 'Press' } },
   header: { entry: 'home', wrap: false, labels: { ...NAVIGATION_LABELS, confirm: 'Open' } },
@@ -94,12 +100,21 @@ export function createZoneItemStore(registry: FocusRegistry): ZoneItemStore {
       }
     }
 
+    const mainZone = (): (typeof MAIN_ZONES)[number] | undefined => {
+      const present = registry.zones()
+      return MAIN_ZONES.find((candidate) => present.includes(candidate))
+    }
+
     return {
       id: `zone:${zone}`,
       zone,
       priority: FOCUS_PRIORITY.surface,
       accepts: new Set(['move-selection', 'move-horizontal', 'confirm', 'back']),
-      labels: policy.labels,
+      // Read when the hint bar asks, because the main zone may mount after this one does.
+      get labels() {
+        const main = mainZone()
+        return main === undefined ? policy.labels : { ...policy.labels, back: MAIN_ZONE_NAME[main] }
+      },
       handle: (intent) => {
         if (intent.kind === 'confirm') {
           current()?.activate()
@@ -108,12 +123,13 @@ export function createZoneItemStore(registry: FocusRegistry): ZoneItemStore {
         } else if (intent.kind === 'move-horizontal') {
           move(intent.direction)
         } else if (intent.kind === 'back') {
-          // B leaves a row of buttons for the thing they belong to. With no agent to go back to it
+          // B leaves a row of buttons for the thing they belong to. With nothing to go back to it
           // is not this zone's to answer, and falls through to leaving the screen.
-          if (!registry.snapshot().zones.includes('agent')) {
+          const main = mainZone()
+          if (main === undefined) {
             return DECLINED
           }
-          registry.focusZone('agent')
+          registry.focusZone(main)
         }
         return undefined
       }

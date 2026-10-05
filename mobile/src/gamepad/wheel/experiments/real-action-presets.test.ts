@@ -294,12 +294,13 @@ describe('the navigation wheel (005 USE-R9)', () => {
 describe('the agent wheel (005 USE-R10)', () => {
   const preset = REAL_ACTION_PRESETS['agent-actions']
 
-  it('is the right wheel, replacing the canned replies with four actions and no handoff', () => {
+  it('is the right wheel: launch, the two toggles, stop and close, with no handoff or web page', () => {
     expect(preset.wheel).toBe(2)
     expect(preset.segments.map((segment) => segment.label)).toEqual([
       'Launch agent',
-      'Open web page',
+      'Chat / terminal',
       'Stop agent',
+      'Show / hide input',
       'Close agent'
     ])
     expect(Object.keys(REAL_ACTION_PRESETS)).not.toContain('agent-replies')
@@ -309,13 +310,15 @@ describe('the agent wheel (005 USE-R10)', () => {
     expect(preset.trial.destructivePolicy).toBe('includes-destructive')
   })
 
-  it('keeps the two destructive choices apart from the two that open another wheel', () => {
+  it('keeps the two destructive choices from touching each other', () => {
     const angle = (id: string) => preset.segments.find((segment) => segment.id === id)?.centerAngle
-    const spread = (a: string, b: string) => Math.abs((angle(a) ?? 0) - (angle(b) ?? 0))
+    const turnBetween = Math.abs((angle('stop') ?? 0) - (angle('close') ?? 0))
+    const fifth = (Math.PI * 2) / preset.segments.length
 
-    // Stop (south) and close (west) are each a quarter turn from the nearest opener.
-    expect(spread('stop', 'launch')).toBeGreaterThanOrEqual(Math.PI / 2)
-    expect(spread('close', 'web')).toBeGreaterThanOrEqual(Math.PI / 2)
+    // A harmless choice sits between them, whichever way round the dial you go.
+    expect(Math.min(turnBetween, Math.PI * 2 - turnBetween)).toBeGreaterThanOrEqual(
+      fifth * 2 - 1e-9
+    )
   })
 
   it('cancels on every segment off a session, where nothing is mounted to answer', () => {

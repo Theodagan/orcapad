@@ -30,8 +30,9 @@ export type ControllerRuntime = {
   /**
    * Moves Android's own input focus onto a view, so the platform's focus highlight and
    * scroll-into-view follow the pad's cursor. Best effort, and inert without the native call.
+   * `within` focuses the first control inside the view instead, which is how a sheet is entered.
    */
-  readonly requestNativeFocus: (node: View | null) => void
+  readonly requestNativeFocus: (node: View | null, within?: boolean) => void
 }
 
 /**
@@ -43,13 +44,14 @@ export type ControllerRuntime = {
 function nativeFocusRequester(
   module: NonNullable<typeof orcaGamepad>
 ): ControllerRuntime['requestNativeFocus'] {
-  return (node) => {
-    if (Platform.OS !== 'android' || node === null || module.requestNativeFocus === undefined) {
+  return (node, within = false) => {
+    const request = within ? module.requestNativeFocusWithin : module.requestNativeFocus
+    if (Platform.OS !== 'android' || node === null || request === undefined) {
       return
     }
     const tag = findNodeHandle(node)
     if (tag !== null) {
-      module.requestNativeFocus(tag).catch(() => {})
+      request(tag).catch(() => {})
     }
   }
 }

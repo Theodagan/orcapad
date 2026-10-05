@@ -21,6 +21,7 @@ import Animated, {
   interpolate,
   Extrapolation
 } from 'react-native-reanimated'
+import { useModalNativeFocus } from '../gamepad/focus/modal-native-focus'
 import { spacing } from '../theme/mobile-theme'
 import { resolveBottomDrawerFillHeight } from './bottom-drawer-fill-height'
 import { resolveBottomDrawerKeyboardInset } from './bottom-drawer-keyboard-inset'
@@ -80,6 +81,8 @@ export function MountedBottomDrawer({
   // transforms below) is unchanged, so phone behavior stays identical.
   const { isWideLayout, modalMaxWidth } = useResponsiveLayout()
   const insideModalHost = useInsideBottomDrawerModalHost()
+  // With a pad attached the sheet takes its focus when it opens, so the D-pad has somewhere to start.
+  const sheetFocusRef = useModalNativeFocus(visible && interactive)
   const fillHeight = fillAvailable
     ? resolveBottomDrawerFillHeight({
         screenHeight,
@@ -375,10 +378,19 @@ export function MountedBottomDrawer({
           // their backdrop so only the top interactive drawer dims the canvas.
           style={[styles.backdrop, interactive ? backdropStyle : { opacity: 0 }]}
         >
-          {interactive ? <Pressable style={styles.backdropPressable} onPress={dismiss} /> : null}
+          {interactive ? (
+            // Not a focus stop: it is the first view in the window, and `A` on it would close the sheet.
+            <Pressable focusable={false} style={styles.backdropPressable} onPress={dismiss} />
+          ) : null}
         </Animated.View>
 
-        <View style={[styles.anchor, isWideLayout && styles.anchorWide]} pointerEvents="box-none">
+        <View
+          ref={sheetFocusRef}
+          // Not flattened away: the pad's focus request needs a native view to start from.
+          collapsable={false}
+          style={[styles.anchor, isWideLayout && styles.anchorWide]}
+          pointerEvents="box-none"
+        >
           <Animated.View
             // Why: remount per window hand-back — see the windowEpoch effect.
             key={windowEpoch}

@@ -4,6 +4,7 @@
 **Status:** applied in `005` USE-T10, pending human ratification
 **Supersedes:** `004` LOOP-T4 and LOOP-AC4 (canned replies on the right wheel)
 **Amends:** `002` WHEEL-R7 for the agent preset only
+**Amended by:** `007` (Open web page is removed; Chat / terminal and Show / hide input are added)
 
 ## What the specifications said
 

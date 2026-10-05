@@ -1,6 +1,8 @@
 import { createElement, type ReactNode } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { ControllerReader } from '../gamepad/controller-input/controller-reader'
+import { neutralSample, type ControllerSample } from '../gamepad/controller-input/controller-sample'
 import { ControllerProvider } from '../gamepad/controller-provider'
 import { AGENT_WHEEL_ACTION_IDS } from '../gamepad/bindings/agent-wheel-action-ids'
 import { createWheelRegistry, isMenuBinding } from '../gamepad/wheel/wheel-registry'
@@ -17,6 +19,25 @@ vi.mock('./mobile-new-tab-agent-loader', () => ({ loadMobileNewTabAgentOptions: 
 vi.mock('./mobile-terminal-tab-agent', () => ({
   resolveMobileTerminalTabAgentId: (tab: { agent?: string }) => tab.agent ?? null
 }))
+// Chat is on offer for a tab that runs an agent, which is all the toggle's rule needs here.
+vi.mock('./mobile-native-chat-eligibility', () => ({
+  resolveMobileNativeChat: (tab: { agent?: string }) => (tab.agent ? { agent: tab.agent } : null)
+}))
+
+function fakeReader(): { reader: ControllerReader; publish: (sample: ControllerSample) => void } {
+  const listeners = new Set<(sample: ControllerSample) => void>()
+  return {
+    reader: {
+      support: () => 'available',
+      current: () => neutralSample(0),
+      subscribe: (listener) => {
+        listeners.add(listener)
+        return () => listeners.delete(listener)
+      }
+    },
+    publish: (sample) => listeners.forEach((listener) => listener(sample))
+  }
+}
 
 type Tab = { id: string; type: 'agent-session' | 'terminal' | 'markdown'; agent?: string }
 
@@ -24,25 +45,21 @@ function fakeController(overrides: Record<string, unknown> = {}) {
   const sendRequest = vi.fn()
   const handleCloseSessionTab = vi.fn()
   const handleCreateTerminal = vi.fn()
-  const handleCreateBrowser = vi.fn()
+  const toggleTabChatView = vi.fn()
   const activeSessionTab: Tab = { id: 't1', type: 'agent-session' }
   const controller = {
     client: { sendRequest },
     worktreeId: 'repo-1::/work/tree',
     connState: 'connected',
     activeSessionTab,
+    showNativeChat: false,
+    nativeChatTranscriptIsLocalReadable: true,
+    toggleTabChatView,
     handleCloseSessionTab,
     handleCreateTerminal,
-    handleCreateBrowser,
     ...overrides
   }
-  return {
-    controller,
-    sendRequest,
-    handleCloseSessionTab,
-    handleCreateTerminal,
-    handleCreateBrowser
-  }
+  return { controller, sendRequest, handleCloseSessionTab, handleCreateTerminal, toggleTabChatView }
 }
 
 type FakeController = ReturnType<typeof fakeController>['controller']
@@ -55,8 +72,9 @@ describe('session wheel actions', () => {
     loadOptions.mockReset()
   })
 
-  function mount(controller: FakeController) {
+  function mount(controller: FakeController, options: { padAttached?: boolean } = {}) {
     const registry = createWheelRegistry()
+    const { reader, publish } = fakeReader()
     function Harness(): ReactNode {
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook reads a handful of fields, all of which the fake supplies.
       useSessionWheelActions(controller as unknown as MobileSessionController)
@@ -66,11 +84,14 @@ describe('session wheel actions', () => {
       renderer = create(
         createElement(
           ControllerProvider,
-          { registerWheelAction: registry.register },
+          { registerWheelAction: registry.register, reader },
           createElement(Harness)
         )
       )
     })
+    if (options.padAttached === true) {
+      act(() => publish(neutralSample(1, true)))
+    }
     return registry
   }
 
@@ -150,59 +171,67 @@ describe('session wheel actions', () => {
     })
   })
 
-  describe('web', () => {
-    const scanResult = {
-      platform: 'darwin',
-      scannedAt: 0,
-      ports: [
-        {
-          id: 'p',
-          kind: 'workspace',
-          bindHost: '0.0.0.0',
-          connectHost: 'localhost',
-          port: 5173,
-          processName: 'vite',
-          protocol: 'http',
-          owner: {
-            worktreeId: 'repo-1::/work/tree',
-            repoId: 'repo-1',
-            displayName: 'w',
-            path: '/w',
-            confidence: 'cwd'
-          }
-        }
-      ]
-    }
+  describe('toggle view', () => {
+    const chatTab = { id: 'c', type: 'terminal', agent: 'claude' }
 
-    it('scans the repo and offers its open ports, then a way to enter an address', async () => {
-      const { controller, sendRequest, handleCreateBrowser } = fakeController()
-      sendRequest.mockResolvedValue({ ok: true, result: scanResult })
+    it('switches the tab between chat and terminal through the tab menu’s own toggle', () => {
+      const { controller, toggleTabChatView } = fakeController({ activeSessionTab: chatTab })
       const registry = mount(controller)
 
-      const web = registry.lookup(AGENT_WHEEL_ACTION_IDS.web)
-      const entries = web !== null && isMenuBinding(web) ? await web.menu() : []
+      const toggle = registry.lookup(AGENT_WHEEL_ACTION_IDS.toggleView)
+      expect(toggle?.availability).toBe('available')
+      if (toggle !== null && !isMenuBinding(toggle)) {
+        toggle.run()
+      }
 
-      expect(sendRequest).toHaveBeenCalledWith('workspacePorts.scan', { repoId: 'repo-1' })
-      expect(entries.map((entry) => entry.label)).toEqual([':5173 vite', 'Enter URL…'])
-      entries[0]?.run()
-      expect(handleCreateBrowser).toHaveBeenCalledWith('http://localhost:5173')
+      expect(toggleTabChatView).toHaveBeenCalledWith('c')
     })
 
-    it('still offers the address entry when the scan fails', async () => {
-      const { controller, sendRequest } = fakeController()
-      sendRequest.mockResolvedValue({ ok: false, error: { message: 'no' } })
-      const registry = mount(controller)
+    it('names where it goes, not where you are', () => {
+      const terminal = mount(fakeController({ activeSessionTab: chatTab }).controller)
+      expect(terminal.lookup(AGENT_WHEEL_ACTION_IDS.toggleView)?.label).toBe('Chat view')
+      act(() => renderer?.unmount())
 
-      const web = registry.lookup(AGENT_WHEEL_ACTION_IDS.web)
-      const entries = web !== null && isMenuBinding(web) ? await web.menu() : []
+      const chat = mount(
+        fakeController({ activeSessionTab: chatTab, showNativeChat: true }).controller
+      )
+      expect(chat.lookup(AGENT_WHEEL_ACTION_IDS.toggleView)?.label).toBe('Terminal view')
+    })
 
-      expect(entries.map((entry) => entry.label)).toEqual(['Enter URL…'])
+    it('is unavailable where there is only one view', () => {
+      // A structured agent session is a chat with no terminal behind it.
+      const structured = mount(fakeController().controller)
+      expect(structured.lookup(AGENT_WHEEL_ACTION_IDS.toggleView)?.availability).toBe('unavailable')
+      act(() => renderer?.unmount())
+
+      const plain = mount(
+        fakeController({ activeSessionTab: { id: 'p', type: 'terminal' } }).controller
+      )
+      expect(plain.lookup(AGENT_WHEEL_ACTION_IDS.toggleView)?.availability).toBe('unavailable')
+    })
+  })
+
+  describe('toggle input', () => {
+    it('shows and hides the text-entry strip, and says which it will do', () => {
+      const { controller } = fakeController()
+      const registry = mount(controller, { padAttached: true })
+      const toggle = registry.lookup(AGENT_WHEEL_ACTION_IDS.toggleInput)
+
+      expect(toggle?.availability).toBe('available')
+      expect(toggle?.label).toBe('Show input')
+      act(() => {
+        if (toggle !== null && !isMenuBinding(toggle)) {
+          void toggle.run()
+        }
+      })
+
+      expect(registry.lookup(AGENT_WHEEL_ACTION_IDS.toggleInput)?.label).toBe('Hide input')
     })
   })
 
   it('retracts all of it when the session goes', () => {
     const registry = mount(fakeController().controller)
-    expect(registry.ids()).toHaveLength(3)
+    expect(registry.ids()).toHaveLength(4)
 
     act(() => renderer?.unmount())
     renderer = null

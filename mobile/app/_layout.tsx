@@ -23,6 +23,7 @@ import { createWheelRegistry } from '../src/gamepad/wheel/wheel-registry'
 import { createActiveDictationRegistry } from '../src/gamepad/bindings/active-dictation'
 import { ACTIVE_WHEEL_TRIAL } from '../src/gamepad/wheel/experiments/active-wheel-trial'
 import { navigationWheelActions } from '../src/gamepad/bindings/navigation-wheel-actions'
+import { useRootBackBinding } from '../src/gamepad/bindings/use-root-back-binding'
 import { hostStackHostRoute } from '../src/navigation/host-stack-navigation'
 import { NavigatorScreenGate } from '../src/navigation/navigator-screen-gate'
 import { hostNewWorktreeRoute } from '../src/host-route-action-state'
@@ -64,6 +65,21 @@ void registerPushDismissalTask().catch(() => {})
 Notifications.setNotificationHandler({
   handleNotification: foregroundNotificationBehavior
 })
+
+/** `B` leaves any screen that has no use for it, which is most of them. Must sit inside the provider. */
+function RootBackBinding(): null {
+  const router = useRouter()
+  useRootBackBinding({
+    goBack: () => {
+      if (!router.canGoBack()) {
+        return false
+      }
+      router.back()
+      return true
+    }
+  })
+  return null
+}
 
 export default function RootLayout() {
   // Whichever layouts are being tried, from experiment data. Not a default: WHEEL-T9 is where a
@@ -306,6 +322,7 @@ export default function RootLayout() {
             <Stack.Screen name="h" options={{ headerShown: false }} />
           </Stack>
         </View>
+        <RootBackBinding />
         <ActionHintBar wheelOpen={wheel.view.state.kind === 'open'} />
         <ControllerConnectionNotice />
       </ControllerProvider>
