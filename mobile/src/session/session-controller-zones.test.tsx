@@ -173,20 +173,19 @@ describe('the session chrome, driven by a pad', () => {
       return createElement(ZoneFrame, { zone: 'agent' })
     }
 
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the chrome reads a fixed list of fields, all of which the fake supplies.
+    const headerController = header as unknown as MobileSessionController
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the shortcut row reads a fixed list of fields, all of which the fake supplies.
+    const dockController = dock as unknown as MobileSessionController
+
     act(() => {
       renderer = create(
         createElement(
           ControllerProvider,
           { reader, requestNativeFocus },
           createElement(Agent),
-          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the chrome reads a fixed list of fields, all of which the fake supplies.
-          createElement(MobileSessionHeader, {
-            controller: header as unknown as MobileSessionController
-          }),
-          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the shortcut row reads a fixed list of fields, all of which the fake supplies.
-          createElement(MobileSessionAccessoryKeys, {
-            controller: dock as unknown as MobileSessionController
-          })
+          createElement(MobileSessionHeader, { controller: headerController }),
+          createElement(MobileSessionAccessoryKeys, { controller: dockController })
         ),
         { createNodeMock: (element) => ({ label: element.props.accessibilityLabel }) }
       )
