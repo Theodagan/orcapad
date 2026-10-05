@@ -85,9 +85,13 @@ const HEAD_NATIVE_REMOVAL_SHA256 =
 const HEAD_TIMER_CREATION_SHA256 =
   '1a31b625e2174c3db77272249843196d2b6b06ab1e654a96d8f7858e3082e66b'
 const HEAD_TIMER_CLEANUP_SHA256 = 'c73f1d1c2cc89642f3d727d6f3b6b81860a9d6f34234541a2065ec3d1a8cd116'
+// Re-pinned in 005 round 2: the dock's input bar sits in a `View` that is `display: 'none'` while a
+// pad is attached and nothing asks for it. One host element and one string (`none`); a probe diffed
+// the facts against the previous pin and showed nothing else, and the leaf and style facts are the
+// same. Hidden rather than unmounted so the bar's refs and the live input's state stay put.
 const HEAD_RUNTIME_STRING_SHA256 =
-  '17cd6cdcfbd87ff113703b54ac06d6e6d2653ffb02f45e399402c77421ab3e1b'
-const HEAD_HOST_JSX_SHA256 = '5ff0f12acca5262f23ba07b7e579724f181e21b1c2e1961e5a5e20570bca8f76'
+  '4cd3f4335943be31bc744718b9a34e5e14b8b863fb6d0750e50c53ce2cc22735'
+const HEAD_HOST_JSX_SHA256 = '650472427e8b559d4372ebee81905bcfda235793f9a5e8bea91b2534d20306e3'
 // Re-pinned in 005: `controllerFocused` and `onControllerKey` on TerminalPaneView, which is how a
 // pane learns whether it is the one on screen. Then the controller zones: each header and shortcut
 // stop is a `ZoneItem` around the same host element, the `ControllerFocusRing` it shows when
@@ -532,10 +536,10 @@ describe('mobile session route extraction parity', () => {
 
   it('preserves runtime strings, styles, and the expanded JSX tree', () => {
     const strings = readRuntimeStrings()
-    expect(strings).toHaveLength(584)
+    expect(strings).toHaveLength(585)
     expect(hash(strings)).toBe(HEAD_RUNTIME_STRING_SHA256)
     const jsx = readJsxFacts(readDefinitions())
-    expect(jsx.host).toHaveLength(124)
+    expect(jsx.host).toHaveLength(125)
     expect(hash(jsx.host)).toBe(HEAD_HOST_JSX_SHA256)
     expect(jsx.leaf).toHaveLength(88)
     expect(hash(jsx.leaf)).toBe(HEAD_LEAF_JSX_SHA256)
