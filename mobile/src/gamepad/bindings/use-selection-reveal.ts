@@ -2,16 +2,10 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import type { ViewToken } from 'react-native'
 
 /**
- * Keeps the controller's selected row on screen (`005` USE-R5). A D-pad that moves a selection the
- * list does not follow is a cursor nobody can see, so when the selection leaves the viewport the
- * list is asked to bring it back, centred so there is lead on both sides.
- *
- * It scrolls only when the selected row is outside the viewport. Stick scrolling and touch move
- * the list without moving the selection, so neither is ever fought. Spread the returned props onto
- * the `FlatList` or `SectionList`; the surface supplies how its list scrolls to an id.
- *
- * `onScrollToIndexFailed` answers true only for a jump this hook asked for, so a list that has a
- * failure handler of its own for other jumps can hand it the rest.
+ * Brings the controller's selected row back on screen, centred, when it leaves the viewport (`005`
+ * USE-R5). It never acts while the row is visible, so stick and touch scrolling are not fought.
+ * `onScrollToIndexFailed` answers true only for a jump this hook asked for, so a list with its own
+ * failure handler can hand it the rest.
  */
 
 /** A row counts as on screen once nearly all of it is, so a half-clipped row is brought in. */
