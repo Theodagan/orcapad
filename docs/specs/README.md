@@ -15,6 +15,8 @@ Mobile already implements.
 | 001 | [Controller input](./001-controller-input/) | 000 | Sections 3, 4, 7 |
 | 002 | [Context Wheel](./002-context-wheel/) | 000, 001 | Sections 2, 3, 7, 8 |
 | 003 | [Existing surface bindings](./003-existing-surface-bindings/) | 000, 001, 002 | Sections 4, 5, 6 |
+| 004 | [The controller-only loop](./004-controller-only-loop/) | 001, 002, 003 | Sections 4, 5 |
+| 005 | [Controller usability pass](./005-controller-usability/) | 001, 002, 003, 004 | Sections 3, 4 |
 
 Build order:
 
@@ -28,6 +30,10 @@ Build order:
 003 existing-surface bindings
           |
 002 real-action presets, device trials, and decision gate
+          |
+004 the controller-only loop closes on paper
+          |
+005 usability pass: the first device session's findings
 ```
 
 ## Product decisions

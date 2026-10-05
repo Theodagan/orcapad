@@ -1,5 +1,11 @@
 # 004 - The Controller-Only Loop
 
+> **Amended by `005`.** The first device session found this loop closed on paper and not in
+> use. Dictation moved from `R3` to a tap of `Y`, `X` became the zone switch, and the canned
+> replies of LOOP-R3 and LOOP-AC4 were revoked with the right wheel's old contents. See
+> `docs/decisions/controller-contract/` (002, 003, 006). The text below is left as it was
+> written.
+
 ## Purpose
 
 `000`–`003` built the mechanism: input, wheel, and bindings into every existing

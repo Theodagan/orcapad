@@ -47,6 +47,9 @@ PRD or an earlier specification took, and is recorded under
   that zone, and its name in the hint bar. Zones do not get their own colours.
 - **An open wheel captures all input.** Nothing reaches the Orca UI while a wheel
   is showing: not an intent, not a native key, not a touch.
+- **Hand off is out of scope.** In Orca a hand-off moves a session from one agent
+  to another without losing context. Orca Mobile does not expose that, so there is
+  nothing for the wheel to reach, and the right wheel has four segments.
 
 ## Scope
 
@@ -100,19 +103,31 @@ zone, `X` does nothing and no hint is offered.
 
 | Zone | Contains | D-pad | `A` | `B` |
 | --- | --- | --- | --- | --- |
-| Agent | the agent chat or terminal and its composer | arrow keys (USE-R6) | Enter | Escape |
+| Agent | the agent chat or terminal and its composer | arrow keys in a terminal (USE-R6); scroll, or move the cursor of an open question, in a chat | Enter in a terminal; in a chat, answer a waiting permission, else send the composed message | Escape in a terminal; in a chat, dismiss a waiting prompt |
 | Shortcuts | the quick keys and commands under the agent | move across them | press the highlighted one | back to the agent zone |
 | Header | back, status, panel buttons, tabs, new tab | move across them | activate the highlighted one | back to the agent zone |
 | Panels | the open files, source control or pull request panel | move through its rows | open or toggle the row | close the panel, back to the agent zone |
 
-The agent zone is the default. The zone is remembered while the screen is up.
+The agent zone is the default. The zone is remembered while the screen is up, and a
+zone that is a row of buttons remembers its cursor, except the header, which starts
+from the active tab each time.
+
+Opening a panel with `A` on its header button moves the controller into it, so the
+buttons that opened it do not keep driving the header. Closing it returns to the
+agent.
 
 ### USE-R5 - Focus is always visible
 
 Whatever the D-pad has selected, in any zone, on any screen, is unmistakable at a
 glance and on a dark background, without relying on colour alone, and without
 moving the layout when it appears. One ring, defined once. Where the platform has
-a native focus for the element, the ring and the native focus agree.
+a native focus for the element, the ring and the native focus agree: on Android the
+element under the cursor is also given the platform's input focus, so its own focus
+highlight, scroll-into-view and screen-reader cursor follow the pad.
+
+The zone itself is bordered in the same accent, slightly, and its name is in the hint
+bar. A cursor is drawn only in the zone the pad is pointed at; a ring in a zone the
+buttons will not reach would lie about where they go.
 
 ### USE-R6 - The agent zone speaks keys
 
@@ -132,7 +147,8 @@ setup or permission is reported where the controller user can see it.
 
 `L1`/`R1` cycle the tabs of the current workspace from every zone and every
 surface of the session screen, wrapping, and doing nothing with a single tab.
-`Y` with `L1`/`R1` still moves between worktrees.
+`Y` with `L1`/`R1` keeps moving between worktrees on the workspace list. It is not
+bound inside a session; see "Known gaps".
 
 ### USE-R9 - The left wheel
 
@@ -141,19 +157,24 @@ Two segments: **Back to menu** (the workspace list of the current host) and
 
 ### USE-R10 - The right wheel
 
-Five segments, replacing the canned replies:
+Four segments, replacing the canned replies:
 
 | Segment | Does |
 | --- | --- |
-| Close the agent | closes the current agent, through the existing close path |
-| Stop the agent | interrupts it immediately, through the existing stop path |
-| Hand off | hands the session to another agent, through the host's handoff |
-| Launch an agent | opens a second wheel of every available agent |
-| Open a web page | opens a second wheel of the project's open ports, plus "Enter a URL" |
+| Close the agent | closes the current agent, through the existing tab-close path |
+| Stop the agent | interrupts the running turn: Escape in a terminal, the chat's own stop in a chat |
+| Launch an agent | opens a second wheel of every agent the new-tab drawer offers |
+| Open a web page | opens a second wheel of the project's open ports, plus "Enter URL…" |
 
-A segment that cannot run where the user is renders disabled and cancels.
-Close and stop are destructive: the preset says so (WHEEL-R7) and the product
-decision above is recorded where the gate reads it.
+Hand off was asked for and is out of scope (see the product decision above).
+
+A segment that cannot run where the user is renders disabled and cancels. Stop is
+offered by the surface that can stop, so it is available in a terminal and in a chat
+that has a turn to stop, and nowhere else. Close and stop are destructive: the preset says so (WHEEL-R7), and the
+decision to ship them is recorded where the promotion gate reads it.
+
+"Enter URL…" opens a blank browser tab, which is what New tab, Browser does. The
+address is typed there; the controller has no text entry of its own.
 
 ### USE-R11 - An open wheel captures all input
 
@@ -162,7 +183,8 @@ Orca UI. Every intent is taken by the wheel, including the other stick's, scroll
 tab and zone buttons, the D-pad, and `Y`. The native layer stops forwarding
 controller keys to the view tree, so the platform's own focus cannot move
 underneath. Touches are swallowed by the overlay. A button pressed while a wheel
-is open never acts after it closes.
+is open never acts after it closes. A controller that disconnects mid-gesture cancels
+the wheel, so the overlay can never be left holding a screen nothing can reach.
 
 ### USE-R12 - Hints tell the truth
 
@@ -193,7 +215,7 @@ that an open wheel swallows touches for as long as it is open (USE-R11).
   worktrees and never toggles dictation; `R3` does nothing.
 - **USE-AC7** - `L1`/`R1` cycle tabs with focus in each zone.
 - **USE-AC8** - The left wheel has exactly its two segments; the right wheel has
-  exactly its five; committing each reaches the intended existing path.
+  exactly its four; committing each reaches the intended existing path.
 - **USE-AC9** - The second-level wheels list the live agents and ports, show
   loading, empty and error states, and cancel with no side effect.
 - **USE-AC10** - With a wheel open, a property test over every intent kind shows
@@ -205,6 +227,26 @@ that an open wheel swallows touches for as long as it is open (USE-R11).
 - **USE-AC12** - Every touch entry point `003` listed still reaches its action.
 - **USE-AC13** - The reachability audit of `004` is updated to the new contract
   and still fails when a step becomes unreachable.
+
+## Known gaps
+
+Stated here rather than discovered later.
+
+- **Nothing in this pass has been run on a device.** Every behaviour is proven by
+  composed tests; the Retroid run in `docs/evidence/manual-validation-plan.md` is what
+  ratifies it. The native changes (capture, native focus) compile under Gradle
+  (`:orca-gamepad:compileDebugKotlin`) but need a rebuilt APK and have not run on a device.
+- **Trigger input is unverified on the Retroid.** Whether `L2`/`R2` arrive as an
+  analog axis or as digital buttons is read from the device; both are handled, and
+  neither has been seen.
+- **`Y` with `L1`/`R1` is not bound inside a session.** It moves between worktrees
+  on the workspace list only.
+- **"Enter URL…" opens a blank browser tab.** There is no controller text entry.
+- **Source control and pull request panels have no controller bindings.** They open
+  docked from the header, and are driven by touch.
+- **Native focus can still wander in the agent zone.** Android moves its own focus on
+  an unconsumed D-pad press. The cursor in the header, shortcut and panel zones and
+  in every list pulls it back; in the agent zone nothing does.
 
 ## Non-goals
 
