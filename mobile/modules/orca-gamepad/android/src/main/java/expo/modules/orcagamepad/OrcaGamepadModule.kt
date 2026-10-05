@@ -78,9 +78,14 @@ class OrcaGamepadModule : Module() {
     // highlight and scroll-into-view follow the controller's cursor (`005` USE-R6). React Native
     // 0.83 only honours `View.focus()` behind a feature flag that is off, and its accessibility
     // focus call announces without moving anything. Answers false for a view that cannot take
-    // focus, which is a normal outcome rather than an error.
+    // focus, which is a normal outcome rather than an error. A view in another window (a `Modal`'s
+    // Dialog) gets a ring drawn for it, because nothing else draws focus there.
     AsyncFunction("requestNativeFocus") { viewTag: Int ->
-      appContext.findView<View>(viewTag)?.requestFocus() ?: false
+      val view = appContext.findView<View>(viewTag)
+      if (view != null && view.rootView !== appContext.currentActivity?.window?.decorView) {
+        NativeFocusRing.watch(view)
+      }
+      view?.requestFocus() ?: false
     }.runOnQueue(Queues.MAIN)
 
     OnDestroy {
