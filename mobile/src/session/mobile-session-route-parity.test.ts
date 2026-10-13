@@ -69,12 +69,13 @@ const HOST_COMPONENT_NAMES = new Set([
 // Re-pinned in 005: one more callback in that hook (`explainDictationUnavailable`, so a press with
 // nowhere for the words is refused out loud), and two toast strings with the `connected` checks
 // that choose between them. Effects, nested functions and every host element are unchanged.
-const HEAD_MAIN_HOOK_SHA256 = '9bd13cd9bd8e1f5c69b23841687781bd1ee98bdf8e5e81118f174666ecd3e7c7'
-const HEAD_HOOK_BINDING_SHA256 = 'eca65b095da992f8a9169e3d6a2c3e995b62af93cded89e451f22316b11c3a04'
+// Re-pinned for the dictation status notice and direct stop/cancel actions.
+const HEAD_MAIN_HOOK_SHA256 = 'b1eada746b8e0ee9df9a9b62765ad3e0134467ab20303de7e451ec249cd11a97'
+const HEAD_HOOK_BINDING_SHA256 = 'aea8bf24af70ff0d83514e0eda3a5109749c9931a15ad44b446fa61c9f679504'
 const HEAD_CALLBACK_IDENTITY_SHA256 =
   'd69eb72e69873a6444dc13b0c500b22bd79cb21607403e9b62f75006945ad498'
-const HEAD_CALLBACK_BODY_SHA256 = '6cd9096b01ab4ec9bccf780cb73f9dbaa04c422dad8e72dfb532e9a46dd8416d'
-const HEAD_EFFECT_SHA256 = '73d80845e0a4b6363cfb4bb55551af97965b1f676b97adf0b2a8504219b9a501'
+const HEAD_CALLBACK_BODY_SHA256 = 'dffada6778af6a32c17b4d703926eb3b2723b7af405fc159afd4136ed7ac327a'
+const HEAD_EFFECT_SHA256 = '0a9abe81da1200afeb5973771896041811058faa2a7cd51fa955616270daa460'
 const HEAD_CONTENT_HOOK_SHA256 = '9c3b612fef3f370d66873aefdbe1d701f20cb64ded31fef5cc45fde6f8189581'
 const HEAD_NESTED_FUNCTION_SHA256 =
   '97ce5457d8059974f500022a4382ff687074e26843d6c1525be938d6c0537928'
@@ -83,14 +84,14 @@ const HEAD_NATIVE_REGISTRATION_SHA256 =
 const HEAD_NATIVE_REMOVAL_SHA256 =
   '4c994574675a2a0f9c607b3ea89ab7a2ed5a83f7c72fa42342ddcb5f00fc3f4f'
 const HEAD_TIMER_CREATION_SHA256 =
-  '1a31b625e2174c3db77272249843196d2b6b06ab1e654a96d8f7858e3082e66b'
-const HEAD_TIMER_CLEANUP_SHA256 = 'c73f1d1c2cc89642f3d727d6f3b6b81860a9d6f34234541a2065ec3d1a8cd116'
+  '6f28fc750c9ac646fb788a3ba49822e9ef89320c4f91b5081ac903a623f6d654'
+const HEAD_TIMER_CLEANUP_SHA256 = 'ffbe5cc9b19d65867b04d3b3364defedfb058fcd4d40902c6b1f056c80d82a30'
 // Re-pinned in 005 round 2: the dock's input bar sits in a `View` that is `display: 'none'` while a
 // pad is attached and nothing asks for it. One host element and one string (`none`); a probe diffed
 // the facts against the previous pin and showed nothing else, and the leaf and style facts are the
 // same. Hidden rather than unmounted so the bar's refs and the live input's state stay put.
 const HEAD_RUNTIME_STRING_SHA256 =
-  '4cd3f4335943be31bc744718b9a34e5e14b8b863fb6d0750e50c53ce2cc22735'
+  'cc8f63e466dbff5cae42ee9e31f507055efccd7b8dabac800c7272b21e00992e'
 // Re-pinned in 005 focus mode: the header is one line while focus mode is on, so the tab strip and its
 // pinned buttons are built once and placed either in their own row or beside the title. A probe diffed
 // the facts against the previous pin: the same elements, the tab and button stops now come before the
@@ -499,13 +500,13 @@ describe('mobile session route extraction parity', () => {
     const contentBindings = CONTENT_COMPONENT_NAMES.flatMap(
       (name) => readHookFacts(name, definitions).bindings
     )
-    expect(main.hooks).toHaveLength(271)
+    expect(main.hooks).toHaveLength(273)
     expect(hash(main.hooks)).toBe(HEAD_MAIN_HOOK_SHA256)
     expect(hash(main.bindings)).toBe(HEAD_HOOK_BINDING_SHA256)
     expect(main.callbacks).toHaveLength(78)
     expect(hash(main.callbacks)).toBe(HEAD_CALLBACK_IDENTITY_SHA256)
     expect(hash(main.callbackBodies)).toBe(HEAD_CALLBACK_BODY_SHA256)
-    expect(main.effects).toHaveLength(24)
+    expect(main.effects).toHaveLength(25)
     expect(hash(main.effects)).toBe(HEAD_EFFECT_SHA256)
     expect(contentBindings).toHaveLength(14)
     expect(hash(contentBindings)).toBe(HEAD_CONTENT_HOOK_SHA256)
@@ -521,13 +522,13 @@ describe('mobile session route extraction parity', () => {
     expect(hash(native.registrations)).toBe(HEAD_NATIVE_REGISTRATION_SHA256)
     expect(native.removals).toHaveLength(9)
     expect(hash(native.removals)).toBe(HEAD_NATIVE_REMOVAL_SHA256)
-    expect(native.creations.filter((fact) => fact.startsWith('setTimeout'))).toHaveLength(7)
+    expect(native.creations.filter((fact) => fact.startsWith('setTimeout'))).toHaveLength(8)
     expect(native.creations.filter((fact) => fact.startsWith('setInterval'))).toHaveLength(1)
     expect(
       native.creations.filter((fact) => fact.startsWith('requestAnimationFrame'))
     ).toHaveLength(1)
     expect(hash(native.creations)).toBe(HEAD_TIMER_CREATION_SHA256)
-    expect(native.cleanups.filter((fact) => fact.startsWith('clearTimeout'))).toHaveLength(11)
+    expect(native.cleanups.filter((fact) => fact.startsWith('clearTimeout'))).toHaveLength(12)
     expect(native.cleanups.filter((fact) => fact.startsWith('clearInterval'))).toHaveLength(1)
     expect(native.cleanups.filter((fact) => fact.startsWith('cancelAnimationFrame'))).toHaveLength(
       1
@@ -544,7 +545,7 @@ describe('mobile session route extraction parity', () => {
 
   it('preserves runtime strings, styles, and the expanded JSX tree', () => {
     const strings = readRuntimeStrings()
-    expect(strings).toHaveLength(585)
+    expect(strings).toHaveLength(588)
     expect(hash(strings)).toBe(HEAD_RUNTIME_STRING_SHA256)
     const jsx = readJsxFacts(readDefinitions())
     expect(jsx.host).toHaveLength(125)

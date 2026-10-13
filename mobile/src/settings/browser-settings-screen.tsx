@@ -10,6 +10,8 @@ import {
   type MobileTerminalLinkOpenMode
 } from '../storage/preferences'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { ZoneItem } from '../gamepad/zones/ZoneItem'
+import { ControllerFocusRing } from '../gamepad/focus/ControllerFocusRing'
 
 const LINK_MODE_OPTIONS: PickerOption<MobileTerminalLinkOpenMode>[] = [
   {
@@ -72,14 +74,25 @@ export default function BrowserSettingsScreen({
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.sm }]}>
       <View style={styles.topRow}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          style={styles.backButton}
-          onPress={onBack ?? (() => router.back())}
+        <ZoneItem
+          zone="header"
+          id="browser-settings:back"
+          order={0}
+          onActivate={onBack ?? (() => router.back())}
         >
-          <ChevronLeft size={22} color={colors.textSecondary} />
-        </Pressable>
+          {({ focused, focusRef }) => (
+            <Pressable
+              ref={focusRef}
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+              style={styles.backButton}
+              onPress={onBack ?? (() => router.back())}
+            >
+              <ChevronLeft size={22} color={colors.textSecondary} />
+              {focused ? <ControllerFocusRing /> : null}
+            </Pressable>
+          )}
+        </ZoneItem>
         <Text style={styles.heading}>Browser</Text>
       </View>
 
@@ -94,19 +107,30 @@ export default function BrowserSettingsScreen({
           </Text>
         )}
         <View style={[styles.section, styles.sectionTopGap]}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Open terminal links"
-            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-            onPress={() => setPickerOpen(true)}
+          <ZoneItem
+            zone="list"
+            id="browser-settings:link-mode"
+            order={0}
+            onActivate={() => setPickerOpen(true)}
           >
-            <Globe size={16} color={colors.textSecondary} />
-            <View style={styles.rowContent}>
-              <Text style={styles.rowLabel}>Open terminal links</Text>
-              <Text style={styles.rowSublabel}>{linkModeLabel(linkMode)}</Text>
-            </View>
-            <ChevronRight size={16} color={colors.textMuted} />
-          </Pressable>
+            {({ focused, focusRef }) => (
+              <Pressable
+                ref={focusRef}
+                accessibilityRole="button"
+                accessibilityLabel="Open terminal links"
+                style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+                onPress={() => setPickerOpen(true)}
+              >
+                <Globe size={16} color={colors.textSecondary} />
+                <View style={styles.rowContent}>
+                  <Text style={styles.rowLabel}>Open terminal links</Text>
+                  <Text style={styles.rowSublabel}>{linkModeLabel(linkMode)}</Text>
+                </View>
+                <ChevronRight size={16} color={colors.textMuted} />
+                {focused ? <ControllerFocusRing /> : null}
+              </Pressable>
+            )}
+          </ZoneItem>
         </View>
       </ScrollView>
 

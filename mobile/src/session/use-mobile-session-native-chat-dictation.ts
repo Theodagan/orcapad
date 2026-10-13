@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { useFocusEffect } from 'expo-router'
 import { useMobileDictation } from '../hooks/use-mobile-dictation'
 import { useDictationBinding } from '../gamepad/bindings/use-dictation-binding'
@@ -99,6 +99,14 @@ export function useMobileSessionNativeChatDictation(
   const chatCanDictate =
     showNativeChat && connState === 'connected' && nativeChatOverlayInputLockReason == null
   const dictationEnabled = canSend || chatCanDictate
+  const [dictationNotice, setDictationNotice] = useState<string | null>(null)
+  useEffect(() => {
+    if (dictationNotice === null) {
+      return
+    }
+    const timer = setTimeout(() => setDictationNotice(null), 5000)
+    return () => clearTimeout(timer)
+  }, [dictationNotice])
 
   const dictation = useMobileDictation({
     client,
@@ -139,9 +147,11 @@ export function useMobileSessionNativeChatDictation(
     },
     onError: (err) => {
       dictationRouteContextRef.current = null
-      // Dictation not set up on desktop → open the setup sheet instead of a dead-end toast.
+      setDictationNotice(
+        isDictationSetupRequiredError(err.message) ? 'Dictation needs setup' : err.message
+      )
+      // The pill offers setup without hiding its five-second hint beneath a native sheet.
       if (isDictationSetupRequiredError(err.message)) {
-        setShowDictationSetup(true)
         return
       }
       triggerError()
@@ -150,6 +160,7 @@ export function useMobileSessionNativeChatDictation(
   })
 
   const startDictation = useCallback(() => {
+    setDictationNotice(null)
     const routeContext = activeHandle
       ? { handle: activeHandle, liveInputEnabled: liveInputTerminalHandles.has(activeHandle) }
       : null
@@ -159,9 +170,9 @@ export function useMobileSessionNativeChatDictation(
         dictationRouteContextRef.current = null
       }
       const message = err instanceof Error ? err.message : String(err)
-      // The same answer `onError` gives: not set up on the desktop opens the setup sheet.
+      setDictationNotice(isDictationSetupRequiredError(message) ? 'Dictation needs setup' : message)
+      // The same setup hint as onError; the pill opens the sheet on demand.
       if (isDictationSetupRequiredError(message)) {
-        setShowDictationSetup(true)
         return
       }
       triggerError()
@@ -179,7 +190,7 @@ export function useMobileSessionNativeChatDictation(
     if (dictation.isProcessing) {
       cancelDictation()
     } else if (dictation.isStarting) {
-      // The start request is still settling; a second toggle is intentionally ignored.
+      cancelDictation()
     } else if (dictation.isRecording) {
       void dictation.stop()
     } else {
@@ -219,7 +230,12 @@ export function useMobileSessionNativeChatDictation(
     activity: dictationActivityOf(dictation.status),
     toggle: handleDictationToggle,
     canStart: dictationEnabled,
-    onUnavailable: explainDictationUnavailable
+    onUnavailable: explainDictationUnavailable,
+    notice: dictationNotice,
+    onNoticeAction:
+      dictationNotice === 'Dictation needs setup' ? () => setShowDictationSetup(true) : undefined,
+    stop: () => void dictation.stop(),
+    cancel: cancelDictation
   })
 
   const refreshDictationMode = useCallback(async () => {

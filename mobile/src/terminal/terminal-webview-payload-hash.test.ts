@@ -15,8 +15,9 @@ import { XTERM_HTML } from './terminal-webview-html'
 // declaration in xterm's requestMode and every mode query (opencode's first write) threw. The page
 // was loaded in headless Chrome against a real opencode transcript after the edit, and
 // terminal-webview-engine-mode-queries.test.ts runs the engine itself.
-const EXPECTED_SHA256 = '3b1576c11eb9855360952e7ad39f4532ea3593e02d3e7be88972fba8bc6340e9'
-const EXPECTED_LENGTH = 735435
+// Re-pinned for elapsed-time momentum, cached drag geometry, and frame-coalesced TUI input.
+const EXPECTED_SHA256 = '02071b95c2f65bffe4ebda18e4cc49acd247bc99904175e88007b14834b1dc5c'
+const EXPECTED_LENGTH = 736247
 
 describe('terminal WebView payload', () => {
   it('composes the expected document', () => {

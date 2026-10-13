@@ -22,6 +22,7 @@ export default function SettingsMenuScreen({
 
       <MobileSettingsSection
         spaced
+        orderOffset={100}
         items={[
           {
             label: 'Privacy Policy',

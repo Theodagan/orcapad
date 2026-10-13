@@ -4,6 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react-native'
 import { colors, spacing, typography } from '../theme/mobile-theme'
+import { ControllerFocusRing } from '../gamepad/focus/ControllerFocusRing'
+import { ZoneItem } from '../gamepad/zones/ZoneItem'
 
 export function MobileSettingsFrame({
   children,
@@ -17,14 +19,25 @@ export function MobileSettingsFrame({
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.sm }]}>
       <View style={styles.topRow}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          style={styles.backButton}
-          onPress={onBack ?? (() => router.back())}
+        <ZoneItem
+          zone="header"
+          id="settings:back"
+          order={0}
+          onActivate={onBack ?? (() => router.back())}
         >
-          <ChevronLeft size={22} color={colors.textSecondary} />
-        </Pressable>
+          {({ focused, focusRef }) => (
+            <Pressable
+              ref={focusRef}
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+              style={styles.backButton}
+              onPress={onBack ?? (() => router.back())}
+            >
+              <ChevronLeft size={22} color={colors.textSecondary} />
+              {focused ? <ControllerFocusRing /> : null}
+            </Pressable>
+          )}
+        </ZoneItem>
         <Text style={styles.heading}>Settings</Text>
       </View>
       <ScrollView
@@ -47,28 +60,43 @@ export type MobileSettingsMenuItem = {
 
 export function MobileSettingsSection({
   items,
-  spaced = false
+  spaced = false,
+  orderOffset = 0
 }: {
   items: MobileSettingsMenuItem[]
   spaced?: boolean
+  orderOffset?: number
 }) {
   return (
     <View style={[styles.section, spaced && styles.sectionSpacer]}>
       {items.map(({ label, icon: Icon, onPress, external, disabled }, index) => (
         <View key={label}>
           {index > 0 && <View style={styles.separator} />}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={label}
-            accessibilityState={{ disabled: Boolean(disabled) }}
+          <ZoneItem
+            zone="list"
+            id={`settings:${label}`}
+            row={orderOffset + index}
+            order={0}
             disabled={disabled}
-            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-            onPress={onPress}
+            onActivate={onPress}
           >
-            <Icon size={16} color={colors.textSecondary} />
-            <Text style={styles.rowLabel}>{label}</Text>
-            {!external && <ChevronRight size={16} color={colors.textMuted} />}
-          </Pressable>
+            {({ focused, focusRef }) => (
+              <Pressable
+                ref={focusRef}
+                accessibilityRole="button"
+                accessibilityLabel={label}
+                accessibilityState={{ disabled: Boolean(disabled) }}
+                disabled={disabled}
+                style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+                onPress={onPress}
+              >
+                <Icon size={16} color={colors.textSecondary} />
+                <Text style={styles.rowLabel}>{label}</Text>
+                {!external && <ChevronRight size={16} color={colors.textMuted} />}
+                {focused ? <ControllerFocusRing /> : null}
+              </Pressable>
+            )}
+          </ZoneItem>
         </View>
       ))}
     </View>

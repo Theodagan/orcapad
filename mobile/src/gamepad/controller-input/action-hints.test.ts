@@ -58,7 +58,7 @@ describe('action hints', () => {
     const hints = actionHintsFor(accepting('toggle-dictation', 'switch-zone'))
 
     expect(hints).toEqual([
-      { control: 'X', label: 'Zone' },
+      { control: 'X+D-pad', label: 'Zone' },
       { control: 'Y', label: 'Dictate' }
     ])
   })

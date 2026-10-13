@@ -20,6 +20,10 @@ export type DictationActivity = 'idle' | 'starting' | 'recording' | 'processing'
 /** The mounted session's dictation, as the controller layer needs to see it. */
 export type ActiveDictation = {
   readonly activity: DictationActivity
+  readonly notice?: string | null
+  readonly onNoticeAction?: () => void
+  readonly stop?: () => void
+  readonly cancel?: () => void
   /** The existing toggle behind the mic button, so the controller and a tap do the same thing. */
   readonly toggle: () => void
   /** Whether a start has somewhere to put the words. A stop never needs one. */

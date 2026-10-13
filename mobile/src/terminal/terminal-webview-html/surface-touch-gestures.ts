@@ -44,8 +44,24 @@ export const TERMINAL_HTML_SURFACE_TOUCH_GESTURES = `  ${TERMINAL_TAP_DISPATCH_J
   var ts = {
     lastX: 0, lastY: 0, lastTime: 0, velY: 0,
     accumDelta: 0, momentumId: null, isPinching: false,
-    pinchDist: 0, pinchScale: 0, pinchSurfX: 0, pinchSurfY: 0
+    pinchDist: 0, pinchScale: 0, pinchSurfX: 0, pinchSurfY: 0,
+    surfaceWidth: 0
   };
+
+  var pendingTuiLines = 0;
+  var tuiFrame = null;
+  var tuiX = 0, tuiY = 0;
+  function queueTouchTuiScroll(lines, x, y) {
+    pendingTuiLines += lines;
+    tuiX = x; tuiY = y;
+    if (tuiFrame !== null) return;
+    tuiFrame = requestAnimationFrame(function() {
+      tuiFrame = null;
+      var pending = pendingTuiLines;
+      pendingTuiLines = 0;
+      if (pending && shouldRouteScrollToTerminalInput()) routeScrollLines(pending, tuiX, tuiY);
+    });
+  }
 
   function updateTouchVelocity(deltaY, dt) {
     if (dt <= 0) return;
@@ -74,6 +90,7 @@ export const TERMINAL_HTML_SURFACE_TOUCH_GESTURES = `  ${TERMINAL_TAP_DISPATCH_J
 
     targetSurface.addEventListener('touchstart', function(e) {
       if (dispatcherShouldBlockSurface()) return;
+      ts.surfaceWidth = term && term.element ? term.element.scrollWidth : 0;
       if (ts.momentumId) {
         cancelAnimationFrame(ts.momentumId);
         ts.momentumId = null;
@@ -133,7 +150,7 @@ export const TERMINAL_HTML_SURFACE_TOUCH_GESTURES = `  ${TERMINAL_TAP_DISPATCH_J
         // scroll so scrollback stays reachable at any text size; calling the
         // never-defined contentWiderThanViewport() here threw and killed all
         // single-finger scrolling, scrollback included.
-        if (term.element && term.element.scrollWidth * getTotalScale() > window.innerWidth + 1) {
+        if (ts.surfaceWidth * getTotalScale() > window.innerWidth + 1) {
           panX += x - ts.lastX;
           clampPan();
           updateTransform();
@@ -149,7 +166,7 @@ export const TERMINAL_HTML_SURFACE_TOUCH_GESTURES = `  ${TERMINAL_TAP_DISPATCH_J
           var lines = Math.trunc(ts.accumDelta / effectiveCellH);
           if (lines !== 0) {
             ts.accumDelta -= lines * effectiveCellH;
-            routeScrollLines(lines, x, y);
+            queueTouchTuiScroll(lines, x, y);
           }
         } else {
           if (enqueueNormalBufferScrollDelta(deltaY)) {
@@ -195,10 +212,13 @@ export const TERMINAL_HTML_SURFACE_TOUCH_GESTURES = `  ${TERMINAL_TAP_DISPATCH_J
         var vel = ts.velY;
         var FRICTION = 0.972;
         var MIN_VEL = 0.012;
-        function momentumStep() {
-          vel *= FRICTION;
+        var lastFrame = null;
+        function momentumStep(frameTime) {
+          var elapsed = lastFrame === null ? 16 : Math.min(Math.max(frameTime - lastFrame, 0), 50);
+          lastFrame = frameTime;
+          vel *= Math.pow(FRICTION, elapsed / 16);
           if (Math.abs(vel) < MIN_VEL) { ts.momentumId = null; return; }
-          var delta = vel * 16;
+          var delta = vel * elapsed;
           if (shouldRouteScrollToTerminalInput()) {
             resetSmoothScrollOffset();
             var effectiveCellH = getCellHeight() * getTotalScale();
@@ -206,7 +226,7 @@ export const TERMINAL_HTML_SURFACE_TOUCH_GESTURES = `  ${TERMINAL_TAP_DISPATCH_J
             var lines = Math.trunc(ts.accumDelta / effectiveCellH);
             if (lines !== 0) {
               ts.accumDelta -= lines * effectiveCellH;
-              routeScrollLines(lines, ts.lastX, ts.lastY);
+              queueTouchTuiScroll(lines, ts.lastX, ts.lastY);
             }
           } else {
             if (!applyNormalBufferScrollDelta(delta)) {

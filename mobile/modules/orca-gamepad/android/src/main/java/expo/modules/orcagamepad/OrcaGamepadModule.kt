@@ -353,7 +353,8 @@ class OrcaGamepadModule : Module() {
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
-      if (isControllerSource(event.source) && isCaptured()) {
+      if (isControllerSource(event.source)) {
+        // The sample owns gamepad axes; WebViews must never translate a stick into arrow keys.
         onMotion(event, false)
         return true
       }

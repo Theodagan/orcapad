@@ -229,6 +229,17 @@ describe('zones (005 USE-R4)', () => {
     expect(registry.focusedZone()).toBe('agent')
   })
 
+  it('moves to visual neighbors with X+arrows and does not wrap', () => {
+    const { registry, agent } = session()
+    expect(registry.dispatch({ kind: 'switch-zone', direction: 'up' })).toBe(true)
+    expect(registry.focusedZone()).toBe('header')
+    expect(registry.dispatch({ kind: 'switch-zone', direction: 'up' })).toBe(false)
+    expect(registry.dispatch({ kind: 'switch-zone', direction: 'down' })).toBe(true)
+    expect(registry.focusedZone()).toBe('agent')
+    expect(registry.dispatch({ kind: 'switch-zone', direction: 'right' })).toBe(false)
+    expect(agent.handle).not.toHaveBeenCalled()
+  })
+
   it('does nothing with one zone, and says so', () => {
     const registry = createFocusRegistry()
     registry.register(inZone('agent', 'agent', ['confirm']))

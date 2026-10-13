@@ -261,11 +261,11 @@ export function useMobileDictation(options: UseMobileDictationOptions): UseMobil
     activeIdRef.current = null
     finishingIdRef.current = null
     closeDictationAudio(dictationId)
+    setStatus('idle')
+    setError(null)
     if (client && dictationId) {
       await client.sendRequest('speech.dictation.cancel', { dictationId }).catch(() => undefined)
     }
-    setStatus('idle')
-    setError(null)
   }, [closeDictationAudio])
 
   useMobileDictationForegroundKeepAwake(keepAwakeOwner, activeIdRef)

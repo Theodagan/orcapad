@@ -16,7 +16,7 @@ export type ControllerIntent =
   | { readonly kind: 'cycle-tab'; readonly direction: 'previous' | 'next' }
   | { readonly kind: 'cycle-workspace'; readonly direction: 'previous' | 'next' }
   | { readonly kind: 'wheel-motion'; readonly wheel: 1 | 2; readonly x: number; readonly y: number }
-  | { readonly kind: 'switch-zone' }
+  | { readonly kind: 'switch-zone'; readonly direction?: 'up' | 'down' | 'left' | 'right' }
   | { readonly kind: 'confirm' }
   | { readonly kind: 'back' }
   | { readonly kind: 'toggle-dictation' }

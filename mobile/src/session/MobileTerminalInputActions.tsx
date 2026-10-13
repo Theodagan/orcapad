@@ -62,8 +62,12 @@ export function MobileTerminalInputActions({
         )}
       </Pressable>
       <Pressable
-        style={[buttonStyle, dictationActive && activeButtonStyle, !canSend && disabledButtonStyle]}
-        disabled={!canSend}
+        style={[
+          buttonStyle,
+          dictationActive && activeButtonStyle,
+          !canSend && !dictationActive && !dictation.isProcessing && disabledButtonStyle
+        ]}
+        disabled={!canSend && !dictationActive && !dictation.isProcessing}
         onPress={dictationMode === 'toggle' ? onDictationToggle : undefined}
         onPressIn={dictationMode === 'hold' ? onDictationPressIn : undefined}
         onPressOut={dictationMode === 'hold' ? onDictationPressOut : undefined}

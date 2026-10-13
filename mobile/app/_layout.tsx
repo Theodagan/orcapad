@@ -14,6 +14,7 @@ import { OrcaLogo } from '../src/components/OrcaLogo'
 import { RpcClientProvider } from '../src/transport/client-context'
 import { ControllerProvider } from '../src/gamepad/controller-provider'
 import { ControllerConnectionNotice } from '../src/gamepad/controller-connection/ControllerConnectionNotice'
+import { MobileDictationStatusPill } from '../src/session/MobileDictationStatusPill'
 import { ActionHintBar } from '../src/gamepad/ActionHintBar'
 import { createControllerRuntime } from '../src/gamepad/controller-input/controller-runtime'
 import { useCancelWheelOnDisconnect } from '../src/gamepad/wheel/use-cancel-wheel-on-disconnect'
@@ -333,6 +334,7 @@ export default function RootLayout() {
         <FocusModeSystemBars />
         <ActionHintBar wheelOpen={wheel.view.state.kind === 'open'} />
         <ControllerConnectionNotice />
+        <MobileDictationStatusPill />
       </ControllerProvider>
     </RpcClientProvider>
   )

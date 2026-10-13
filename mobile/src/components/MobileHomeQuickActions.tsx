@@ -5,6 +5,8 @@ import type { HostProfile } from '../transport/types'
 import { hostEndpointLabel } from '../transport/host-endpoint-label'
 import { colors, radii, spacing } from '../theme/mobile-theme'
 import { PickerModal } from './PickerModal'
+import { ZoneItem } from '../gamepad/zones/ZoneItem'
+import { ControllerFocusRing } from '../gamepad/focus/ControllerFocusRing'
 
 type Props = {
   connectedHosts: HostProfile[]
@@ -70,32 +72,51 @@ export function MobileHomeQuickActions(props: Props) {
     <>
       <Text style={styles.sectionHeading}>Quick Actions</Text>
       <View style={styles.quickActions}>
-        <Pressable
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.quickAction, pressed && styles.quickActionPressed]}
-          onPress={props.onPairDesktop}
-        >
-          <View style={styles.quickActionIcon}>
-            <QrCode size={16} color={colors.textSecondary} />
-          </View>
-          <Text style={styles.quickActionLabel}>Pair Desktop</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ disabled: !canCreateWorkspace }}
+        <ZoneItem zone="panels" id="home:pair" row={0} order={0} onActivate={props.onPairDesktop}>
+          {({ focused, focusRef }) => (
+            <Pressable
+              ref={focusRef}
+              accessibilityRole="button"
+              style={({ pressed }) => [styles.quickAction, pressed && styles.quickActionPressed]}
+              onPress={props.onPairDesktop}
+            >
+              <View style={styles.quickActionIcon}>
+                <QrCode size={16} color={colors.textSecondary} />
+              </View>
+              <Text style={styles.quickActionLabel}>Pair Desktop</Text>
+              {focused ? <ControllerFocusRing /> : null}
+            </Pressable>
+          )}
+        </ZoneItem>
+        <ZoneItem
+          zone="panels"
+          id="home:new-workspace"
+          row={0}
+          order={1}
           disabled={!canCreateWorkspace}
-          style={({ pressed }) => [
-            styles.quickAction,
-            !canCreateWorkspace && styles.quickActionDisabled,
-            pressed && styles.quickActionPressed
-          ]}
-          onPress={handleCreateWorkspace}
+          onActivate={handleCreateWorkspace}
         >
-          <View style={styles.quickActionIcon}>
-            <Plus size={16} color={colors.textSecondary} />
-          </View>
-          <Text style={styles.quickActionLabel}>New Workspace</Text>
-        </Pressable>
+          {({ focused, focusRef }) => (
+            <Pressable
+              ref={focusRef}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !canCreateWorkspace }}
+              disabled={!canCreateWorkspace}
+              style={({ pressed }) => [
+                styles.quickAction,
+                !canCreateWorkspace && styles.quickActionDisabled,
+                pressed && styles.quickActionPressed
+              ]}
+              onPress={handleCreateWorkspace}
+            >
+              <View style={styles.quickActionIcon}>
+                <Plus size={16} color={colors.textSecondary} />
+              </View>
+              <Text style={styles.quickActionLabel}>New Workspace</Text>
+              {focused ? <ControllerFocusRing /> : null}
+            </Pressable>
+          )}
+        </ZoneItem>
       </View>
       <PickerModal
         visible={hostPickerVisible}
