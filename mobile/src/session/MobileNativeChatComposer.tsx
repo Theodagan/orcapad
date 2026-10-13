@@ -25,7 +25,7 @@ import {
 } from './MobileNativeChatSessionOptionPickers'
 import type { PendingNativeChatImage } from './mobile-native-chat-image-attachment'
 import { MobileNativeChatComposerAttachments } from './MobileNativeChatComposerAttachments'
-import { MobileNativeChatComposerCaretField } from './MobileNativeChatComposerCaretField'
+import { DraftCaretField } from './DraftCaretField'
 import {
   deleteWordBefore,
   moveCaretHorizontally,
@@ -280,8 +280,10 @@ export function MobileNativeChatComposer({
       <View style={styles.composerInset} testID="native-chat-composer-inset">
         <View style={styles.bar} testID="native-chat-composer">
           {caretMode ? (
-            <MobileNativeChatComposerCaretField
+            <DraftCaretField
               value={value}
+              accessibilityLabel="Message draft"
+              testID="native-chat-composer-caret-field"
               caret={cursor}
               placeholder={placeholder}
               onPress={() => {

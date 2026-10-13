@@ -2,6 +2,7 @@ import { useEffect, useCallback, useState } from 'react'
 import { useFocusEffect } from 'expo-router'
 import { useMobileDictation } from '../hooks/use-mobile-dictation'
 import { useDictationBinding } from '../gamepad/bindings/use-dictation-binding'
+import { useControllerBinding } from '../gamepad/controller-provider'
 import { dictationActivityOf } from '../gamepad/bindings/dictation-activity'
 import { triggerError } from '../platform/haptics'
 import {
@@ -31,6 +32,7 @@ export function useMobileSessionNativeChatDictation(
     connState,
     agentSessionPromptCancelSupported,
     setInput,
+    terminalDraftCaret,
     liveInputTerminalHandles,
     activeHandle,
     activeSessionTabId,
@@ -48,6 +50,7 @@ export function useMobileSessionNativeChatDictation(
     showToast,
     resetLiveInputFocus
   } = scope
+  const { connected: padAttached } = useControllerBinding()
   const nativeChatScopeKey = mobileNativeChatScopeKey(hostId, worktreeId, activeSessionTabId)
   const nativeChatSendError = useMobileNativeChatSendError({
     scopeKey: nativeChatScopeKey,
@@ -142,7 +145,12 @@ export function useMobileSessionNativeChatDictation(
         })()
         return
       }
-      setInput((current) => appendBufferedDictation(current, route.text))
+      // With a pad the words land at the caret it placed; by touch they append as they always have.
+      if (padAttached) {
+        terminalDraftCaret.insertDictation(route.text)
+      } else {
+        setInput((current) => appendBufferedDictation(current, route.text))
+      }
       showToast('Dictation inserted')
     },
     onError: (err) => {
@@ -162,7 +170,10 @@ export function useMobileSessionNativeChatDictation(
   const startDictation = useCallback(() => {
     setDictationNotice(null)
     const routeContext = activeHandle
-      ? { handle: activeHandle, liveInputEnabled: liveInputTerminalHandles.has(activeHandle) }
+      ? {
+          handle: activeHandle,
+          liveInputEnabled: liveInputTerminalHandles.has(activeHandle)
+        }
       : null
     dictationRouteContextRef.current = routeContext
     void dictation.start().catch((err) => {
