@@ -1,5 +1,6 @@
 import { orcaGamepad } from '../../../modules/orca-gamepad'
 import { createAbsentControllerReader, type ControllerReader } from './controller-reader'
+import { multicastControllerReader } from './multicast-controller-reader'
 import { toControllerSample } from './native-controller-sample'
 
 const SAMPLE_INTERVAL_MS = 8
@@ -33,7 +34,8 @@ export function createNativeControllerReader(): ControllerReader {
     return createAbsentControllerReader()
   }
   const native = orcaGamepad
-  return {
+  // Multicast: a second subscriber's unsubscribe would otherwise stop the native layer for both.
+  return multicastControllerReader({
     support: () => 'available',
     current: () => toControllerSample(native.currentSample()),
     subscribe: (listener) => {
@@ -46,5 +48,5 @@ export function createNativeControllerReader(): ControllerReader {
         native.stop()
       }
     }
-  }
+  })
 }

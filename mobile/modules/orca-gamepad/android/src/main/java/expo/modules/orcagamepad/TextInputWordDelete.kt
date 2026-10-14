@@ -54,7 +54,7 @@ object TextInputWordDelete {
    * the sheet.
    */
   val keyListener = View.OnKeyListener { view, keyCode, event ->
-    if (keyCode != KeyEvent.KEYCODE_BUTTON_B || !isControllerSource(event.source)) {
+    if (keyCode != KeyEvent.KEYCODE_BUTTON_B || !isControllerEvent(event)) {
       return@OnKeyListener false
     }
     val field = visibleField(view) ?: return@OnKeyListener false

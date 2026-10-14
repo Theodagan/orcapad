@@ -23,6 +23,7 @@ export type NativeControllerSample = {
   readonly sampledAt: number
   /** True when the focused view took the event before the controller layer saw it. */
   readonly consumedByViewTree: boolean
+  /** Read by `currentSample` only; pushed samples carry `'unsampled'`. */
   readonly focusedView: string
 }
 

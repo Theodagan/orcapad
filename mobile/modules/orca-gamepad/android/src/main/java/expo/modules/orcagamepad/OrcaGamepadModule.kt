@@ -5,6 +5,7 @@ import android.hardware.input.InputManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -37,11 +38,19 @@ class OrcaGamepadModule : Module() {
   private val axes = mutableMapOf<String, Float>()
   private var activeDeviceId: Int? = null
   private var consumedByViewTree = false
-  private var focusedView = "none"
+  /** Attached game controllers and their resolved axes, refreshed when the device set changes. */
+  private val axesByDevice = mutableMapOf<Int, DeviceAxes>()
 
   /** Motion arrives at device sample rate; the bridge is paced, button edges never are. */
   private var minimumIntervalMs: Long = 8
   private var lastEmitAt: Long = 0
+  private val mainHandler = Handler(Looper.getMainLooper())
+  private var trailingEmitPending = false
+  // A throttled sample is sent once the interval is up, so the last motion before a stop is never lost.
+  private val trailingEmit = Runnable {
+    trailingEmitPending = false
+    emit(force = true)
+  }
 
   /**
    * True while an open wheel owns the pad. Controller events are then reported and never forwarded
@@ -55,20 +64,32 @@ class OrcaGamepadModule : Module() {
     Events(EVENT_SAMPLE, EVENT_DEVICES)
 
     Function("listControllers") { describeControllers() }
-    Function("currentSample") { sampleBundle() }
+    Function("currentSample") { sampleBundle(withFocus = true) }
 
+    // Synchronous for JavaScript, but the work runs on the main thread, where every input event
+    // is handled, so the held state is only ever touched from one thread.
     Function("start") { intervalMs: Int ->
-      minimumIntervalMs = intervalMs.toLong()
-      resetState()
-      startTap()
-      startDeviceListener()
+      // Here rather than posted, so a `setInputCaptured` call right after start is not undone.
+      inputCaptured = false
+      mainHandler.post {
+        minimumIntervalMs = intervalMs.toLong()
+        resetState()
+        startTap()
+        startDeviceListener()
+      }
       true
     }
 
     Function("stop") {
-      stopTap()
-      stopDeviceListener()
-      resetState()
+      // Nothing is owning the pad across a restart either.
+      inputCaptured = false
+      mainHandler.post {
+        mainHandler.removeCallbacks(trailingEmit)
+        trailingEmitPending = false
+        stopTap()
+        stopDeviceListener()
+        resetState()
+      }
       true
     }
 
@@ -115,23 +136,70 @@ class OrcaGamepadModule : Module() {
       true
     }.runOnQueue(Queues.MAIN)
 
+    // A backgrounded app gets no release for a button held as it left.
+    OnActivityEntersBackground {
+      if (tap != null) {
+        releaseHeldInput()
+      }
+    }
+
     OnDestroy {
+      mainHandler.removeCallbacks(trailingEmit)
       stopTap()
       stopDeviceListener()
     }
   }
 
+  /** Leaves `inputCaptured` alone: it is reset synchronously, and this runs posted after it. */
   private fun resetState() {
-    // Nothing is owning the pad across a restart either.
-    inputCaptured = false
-    // A disconnect must not leave a button held forever, so neutral is the only safe baseline.
+    clearHeldInput()
+    refreshControllers()
+    activeDeviceId = axesByDevice.keys.firstOrNull()
+  }
+
+  /** A disconnect must not leave a button held forever, so neutral is the only safe baseline. */
+  private fun clearHeldInput() {
     for (button in ALL_BUTTONS) {
       buttons[button] = 0f
     }
     for (axis in ALL_AXES) {
       axes[axis] = 0f
     }
-    activeDeviceId = connectedControllers().firstOrNull()?.id
+  }
+
+  /** For when releases can no longer reach the tap: capture and the active pad are kept. */
+  private fun releaseHeldInput() {
+    clearHeldInput()
+    emit(force = true)
+  }
+
+  private fun refreshControllers(): List<InputDevice> {
+    val controllers = connectedControllers()
+    axesByDevice.clear()
+    for (device in controllers) {
+      axesByDevice[device.id] = deviceAxesOf(device)
+    }
+    return controllers
+  }
+
+  private fun axesOf(deviceId: Int): DeviceAxes {
+    axesByDevice[deviceId]?.let { return it }
+    val device = deviceOf(deviceId)
+    val resolved = deviceAxesOf(device)
+    // An unknown device is not cached, so it is resolved properly once Android knows it.
+    if (device != null) {
+      axesByDevice[deviceId] = resolved
+    }
+    return resolved
+  }
+
+  /**
+   * The pad that last spoke is the active one. Not filtered by device: some handhelds report
+   * their buttons and their sticks as two input devices, and both are the same pad.
+   */
+  private fun acceptsDevice(deviceId: Int): Boolean {
+    activeDeviceId = deviceId
+    return true
   }
 
   private fun connectedControllers(): List<InputDevice> =
@@ -149,6 +217,8 @@ class OrcaGamepadModule : Module() {
     val installed = WindowCallbackTap(
       delegate = delegate,
       isCaptured = { inputCaptured },
+      // A sheet is a window of its own: releases go there, never through this tap.
+      onFocusLost = { releaseHeldInput() },
       focusedTextInput = {
         TextInputWordDelete.visibleField(appContext.currentActivity?.currentFocus)
       },
@@ -179,18 +249,35 @@ class OrcaGamepadModule : Module() {
       return
     }
     val manager = inputManager() ?: return
+    // Keyboards, mice and sensors come and go too; only a game controller is news here.
     val listener = object : InputManager.InputDeviceListener {
-      override fun onInputDeviceAdded(deviceId: Int) = onDevicesChanged()
-      override fun onInputDeviceRemoved(deviceId: Int) {
-        if (deviceId == activeDeviceId) {
-          // Buttons held at the moment the pad vanished would otherwise stay held.
-          resetState()
-          emit(force = true)
+      override fun onInputDeviceAdded(deviceId: Int) {
+        if (InputDevice.getDevice(deviceId)?.let { isGameController(it) } == true) {
+          onDevicesChanged()
         }
-        onDevicesChanged()
       }
 
-      override fun onInputDeviceChanged(deviceId: Int) = onDevicesChanged()
+      override fun onInputDeviceRemoved(deviceId: Int) {
+        if (!axesByDevice.containsKey(deviceId)) {
+          return
+        }
+        if (deviceId == activeDeviceId) {
+          // Buttons held at the moment the pad vanished would otherwise stay held.
+          clearHeldInput()
+          activeDeviceId = null
+          onDevicesChanged(forceEmit = true)
+        } else {
+          onDevicesChanged()
+        }
+      }
+
+      override fun onInputDeviceChanged(deviceId: Int) {
+        if (axesByDevice.containsKey(deviceId) ||
+          InputDevice.getDevice(deviceId)?.let { isGameController(it) } == true
+        ) {
+          onDevicesChanged()
+        }
+      }
     }
     deviceListener = listener
     manager.registerInputDeviceListener(listener, Handler(Looper.getMainLooper()))
@@ -202,8 +289,9 @@ class OrcaGamepadModule : Module() {
     deviceListener = null
   }
 
-  private fun onDevicesChanged() {
-    val controllers = connectedControllers()
+  private fun onDevicesChanged(forceEmit: Boolean = false) {
+    val wasConnected = activeDeviceId != null
+    val controllers = refreshControllers()
     Log.d(TAG, "controllers: " + controllers.joinToString { "${it.name}#${it.id}" }.ifEmpty { "none" })
     // MVP keeps the first controller active; a second pad connecting does not steal the session.
     if (activeDeviceId == null || controllers.none { it.id == activeDeviceId }) {
@@ -212,10 +300,14 @@ class OrcaGamepadModule : Module() {
     sendEvent(EVENT_DEVICES, Bundle().apply {
       putParcelableArrayList("controllers", ArrayList(controllers.map { describe(it) }))
     })
+    // A pad that reconnects is reported now, not at its first button press.
+    if (forceEmit || wasConnected != (activeDeviceId != null)) {
+      emit(force = true)
+    }
   }
 
   private fun onKeyEvent(event: KeyEvent, consumed: Boolean) {
-    if (!isControllerSource(event.source)) {
+    if (!isControllerEvent(event)) {
       return
     }
     if (event.repeatCount > 0) {
@@ -230,58 +322,89 @@ class OrcaGamepadModule : Module() {
       Log.d(TAG, "unmapped ${KeyEvent.keyCodeToString(event.keyCode)} (${event.keyCode})")
       return
     }
-    activeDeviceId = event.deviceId
+    if (!acceptsDevice(event.deviceId)) {
+      return
+    }
     consumedByViewTree = consumed
-    focusedView = focusedViewName()
     if (button != null) {
       buttons[button] = pressed
-      Log.d(TAG, "button $button=$pressed consumed=$consumed focus=$focusedView")
+      Log.d(TAG, "button $button=$pressed consumed=$consumed")
     }
     // Only when the pad declares no trigger axis: otherwise the axis is authoritative and this
     // key event is the same press counted twice.
-    if (digitalTrigger != null && resolveAxis(deviceOf(event.deviceId), digitalTrigger) == null) {
+    if (digitalTrigger != null && axesOf(event.deviceId).idOf(digitalTrigger) == NO_AXIS) {
       axes[digitalTrigger] = pressed
     }
     emit(force = true)
   }
 
   private fun onMotionEvent(event: MotionEvent, consumed: Boolean) {
-    if (!isControllerSource(event.source)) {
+    if (!isControllerEvent(event) || !acceptsDevice(event.deviceId)) {
       return
     }
-    activeDeviceId = event.deviceId
     consumedByViewTree = consumed
-    focusedView = focusedViewName()
-    val device = deviceOf(event.deviceId)
-    for (axis in ALL_AXES) {
-      axes[axis] = axisValue(event, device, axis)
+    val resolved = axesOf(event.deviceId)
+    for (index in ALL_AXES.indices) {
+      val id = resolved.ids[index]
+      axes[ALL_AXES[index]] = if (id == NO_AXIS) 0f else event.getAxisValue(id)
     }
-    hatDirections(event, device)?.forEach { (direction, value) -> buttons[direction] = value }
-    emit(force = false)
+    var hatChanged = false
+    if (resolved.hasHat) {
+      val x = event.getAxisValue(MotionEvent.AXIS_HAT_X)
+      val y = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
+      hatChanged = setHat("dpad-left", hatPressure(x, negative = true)) or
+        setHat("dpad-right", hatPressure(x, negative = false)) or
+        setHat("dpad-up", hatPressure(y, negative = true)) or
+        setHat("dpad-down", hatPressure(y, negative = false))
+    }
+    // A hat D-pad is a button: its edges are never paced away, a release least of all.
+    emit(force = hatChanged)
+  }
+
+  /** Whether the pressure changed. */
+  private fun setHat(direction: String, value: Float): Boolean {
+    if (buttons[direction] == value) {
+      return false
+    }
+    buttons[direction] = value
+    return true
   }
 
   private fun focusedViewName(): String =
     appContext.currentActivity?.window?.currentFocus?.javaClass?.simpleName ?: "none"
 
   private fun emit(force: Boolean) {
-    val now = System.currentTimeMillis()
-    if (!force && now - lastEmitAt < minimumIntervalMs) {
+    val now = SystemClock.uptimeMillis()
+    val wait = minimumIntervalMs - (now - lastEmitAt)
+    if (!force && wait > 0) {
+      if (!trailingEmitPending) {
+        trailingEmitPending = true
+        mainHandler.postDelayed(trailingEmit, wait)
+      }
       return
     }
+    if (trailingEmitPending) {
+      mainHandler.removeCallbacks(trailingEmit)
+      trailingEmitPending = false
+    }
     lastEmitAt = now
-    sendEvent(EVENT_SAMPLE, sampleBundle())
+    sendEvent(EVENT_SAMPLE, sampleBundle(withFocus = false))
   }
 
-  private fun sampleBundle(): Bundle {
+  /**
+   * `withFocus` reads the focused view, which only the interception check asks for: reading it on
+   * every motion sample was work nobody used.
+   */
+  private fun sampleBundle(withFocus: Boolean): Bundle {
     val buttonBundle = Bundle().apply { buttons.forEach { (name, value) -> putFloat(name, value) } }
     val axisBundle = Bundle().apply { axes.forEach { (name, value) -> putFloat(name, value) } }
     return Bundle().apply {
       putBoolean("connected", activeDeviceId != null)
       putBundle("buttons", buttonBundle)
       putBundle("axes", axisBundle)
-      putDouble("sampledAt", System.currentTimeMillis().toDouble())
+      putDouble("sampledAt", SystemClock.uptimeMillis().toDouble())
       putBoolean("consumedByViewTree", consumedByViewTree)
-      putString("focusedView", focusedView)
+      putString("focusedView", if (withFocus) focusedViewName() else UNSAMPLED_FOCUS)
     }
   }
 
@@ -307,6 +430,7 @@ class OrcaGamepadModule : Module() {
   private class WindowCallbackTap(
     private val delegate: Window.Callback,
     private val isCaptured: () -> Boolean,
+    private val onFocusLost: () -> Unit,
     /** The text field with focus that the user can see, if any: `B` edits it instead of going back. */
     private val focusedTextInput: () -> EditText?,
     private val onKey: (KeyEvent, Boolean) -> Unit,
@@ -315,8 +439,15 @@ class OrcaGamepadModule : Module() {
     /** Keys the view tree saw go down, so a release that arrives under a wheel is still delivered. */
     private val forwardedKeys = mutableSetOf<Int>()
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+      delegate.onWindowFocusChanged(hasFocus)
+      if (!hasFocus) {
+        onFocusLost()
+      }
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-      val fromPad = isControllerSource(event.source)
+      val fromPad = isControllerEvent(event)
       if (fromPad && isCaptured()) {
         // Reported to JavaScript, not forwarded. A key the view tree already saw go down still
         // gets its release, or it would stay pressed beneath the wheel.
@@ -329,9 +460,12 @@ class OrcaGamepadModule : Module() {
       if (fromPad && event.keyCode == KeyEvent.KEYCODE_BUTTON_B) {
         val field = focusedTextInput()
         if (field != null) {
-          // Neither forwarded nor reported: JavaScript would take it for Back and leave the screen.
+          // The press is neither forwarded nor reported: JavaScript would take it for Back and leave
+          // the screen. The release is reported, so a `B` that went down elsewhere does not stay held.
           if (event.action == KeyEvent.ACTION_DOWN) {
             TextInputWordDelete.deleteWordBefore(field)
+          } else if (event.action == KeyEvent.ACTION_UP) {
+            onKey(event, true)
           }
           return true
         }
@@ -349,11 +483,11 @@ class OrcaGamepadModule : Module() {
       // one place it has to act. An unconsumed `BUTTON_B` comes back as `KEYCODE_BACK`, so a
       // bound `B` would navigate twice. `001` §7 makes an unhandled intent a no-op, which is the
       // behaviour this preserves — not the system's guess at what the button meant.
-      return consumed || (isControllerSource(event.source) && event.keyCode in FALLBACK_KEY_CODES)
+      return consumed || (fromPad && event.keyCode in FALLBACK_KEY_CODES)
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
-      if (isControllerSource(event.source)) {
+      if (isControllerEvent(event)) {
         // The sample owns gamepad axes; WebViews must never translate a stick into arrow keys.
         onMotion(event, false)
         return true
@@ -368,5 +502,7 @@ class OrcaGamepadModule : Module() {
     const val TAG = "OrcaGamepad"
     const val EVENT_SAMPLE = "onControllerSample"
     const val EVENT_DEVICES = "onControllerDevices"
+    /** Pushed samples skip the focus lookup; `currentSample` reads it on demand. */
+    const val UNSAMPLED_FOCUS = "unsampled"
   }
 }

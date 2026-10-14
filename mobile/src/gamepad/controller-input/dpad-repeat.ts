@@ -1,6 +1,10 @@
 import type { ControllerIntent } from './controller-intent'
-import type { ControllerButton, ControllerSample } from './controller-sample'
-import { DPAD_NAVIGATION_BINDINGS } from './dpad-navigation-bindings'
+import type { ControllerSample } from './controller-sample'
+import {
+  DPAD_NAVIGATION_BINDINGS,
+  dpadIntent,
+  type DpadNavigationBinding
+} from './dpad-navigation-bindings'
 import { isDown, wentDown } from './sample-edges'
 
 /**
@@ -20,42 +24,31 @@ export type DpadRepeatTiming = {
 export type DpadRepeater = (
   previous: ControllerSample,
   next: ControllerSample,
-  captured: boolean
+  captured: boolean,
+  zoneModifierHeld?: boolean
 ) => readonly ControllerIntent[]
 
-function intentOf(button: ControllerButton): ControllerIntent | null {
-  const binding = DPAD_NAVIGATION_BINDINGS.find((candidate) => candidate.button === button)
-  if (binding === undefined) {
-    return null
-  }
-  if (binding.intent === 'move-selection') {
-    return binding.direction === 'up' || binding.direction === 'down'
-      ? { kind: 'move-selection', direction: binding.direction }
-      : null
-  }
-  return binding.direction === 'left' || binding.direction === 'right'
-    ? { kind: 'move-horizontal', direction: binding.direction }
-    : null
-}
-
 export function createDpadRepeater(timing: DpadRepeatTiming): DpadRepeater {
-  let held: { readonly button: ControllerButton; readonly since: number; lastAt: number } | null =
-    null
+  let held: {
+    readonly binding: DpadNavigationBinding
+    readonly since: number
+    lastAt: number
+  } | null = null
 
-  return (previous, next, captured) => {
+  return (previous, next, captured, zoneModifierHeld = false) => {
     if (!next.connected || captured) {
       held = null
       return []
     }
-    for (const { button } of DPAD_NAVIGATION_BINDINGS) {
-      if (wentDown(previous, next, button)) {
-        held = { button, since: next.sampledAt, lastAt: next.sampledAt }
+    for (const binding of DPAD_NAVIGATION_BINDINGS) {
+      if (wentDown(previous, next, binding.button)) {
+        held = { binding, since: next.sampledAt, lastAt: next.sampledAt }
       }
     }
     if (held === null) {
       return []
     }
-    if (!isDown(next, held.button)) {
+    if (!isDown(next, held.binding.button)) {
       held = null
       return []
     }
@@ -66,7 +59,7 @@ export function createDpadRepeater(timing: DpadRepeatTiming): DpadRepeater {
       return []
     }
     held.lastAt = next.sampledAt
-    const intent = intentOf(held.button)
+    const intent = dpadIntent(held.binding, zoneModifierHeld)
     return intent === null ? [] : [intent]
   }
 }

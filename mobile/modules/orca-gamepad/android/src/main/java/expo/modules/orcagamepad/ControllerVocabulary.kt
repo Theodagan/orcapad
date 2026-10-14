@@ -1,6 +1,7 @@
 package expo.modules.orcagamepad
 
 import android.view.InputDevice
+import android.view.InputEvent
 import android.view.KeyEvent
 import android.view.MotionEvent
 
@@ -79,14 +80,23 @@ private val AXIS_CANDIDATES: Map<String, List<Int>> = mapOf(
 )
 
 /**
- * Whether an event came from a pad at all. Source bits, not a device list: the same reason the
- * key table is keyed by `KEYCODE_*`. Shared with the window tap, which needs the answer before
- * it can decide whether suppressing a fallback is its business.
+ * Whether an event came from a pad at all. Source bits first, not a device list: the same reason
+ * the key table is keyed by `KEYCODE_*`. `SOURCE_DPAD` alone is not enough — a keyboard's arrow
+ * keys report it — so a D-pad-only event counts only when its device is a game controller.
  */
-fun isControllerSource(source: Int): Boolean =
-  source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
-    source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK ||
-    source and InputDevice.SOURCE_DPAD == InputDevice.SOURCE_DPAD
+fun isControllerEvent(event: InputEvent): Boolean {
+  val source = event.source
+  if ((source and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD ||
+    (source and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK
+  ) {
+    return true
+  }
+  if ((source and InputDevice.SOURCE_DPAD) != InputDevice.SOURCE_DPAD) {
+    return false
+  }
+  val device = event.device ?: return false
+  return isGameController(device)
+}
 
 fun isGameController(device: InputDevice): Boolean =
   device.supportsSource(InputDevice.SOURCE_GAMEPAD) ||
@@ -114,27 +124,28 @@ fun flatOf(device: InputDevice?, name: String): Float {
   return device?.getMotionRange(axis)?.flat ?: 0f
 }
 
-fun axisValue(event: MotionEvent, device: InputDevice?, name: String): Float {
-  val axis = resolveAxis(device, name) ?: return 0f
-  return event.getAxisValue(axis)
-}
+const val NO_AXIS = -1
 
 /**
- * A hat-reported D-pad, as button pressures. Returns null when the pad has no hat, in which case
- * it is sending `KEYCODE_DPAD_*` instead and the key path already covers it.
+ * A device's resolved axes, looked up once: `getMotionRange` walks the device's range list, and
+ * motion arrives at device sample rate. `ids` follows `ALL_AXES`, with `NO_AXIS` for an absent one.
  */
-fun hatDirections(event: MotionEvent, device: InputDevice?): Map<String, Float>? {
-  if (device != null && device.getMotionRange(MotionEvent.AXIS_HAT_X) == null &&
-    device.getMotionRange(MotionEvent.AXIS_HAT_Y) == null
-  ) {
-    return null
+class DeviceAxes(val ids: IntArray, val hasHat: Boolean) {
+  fun idOf(name: String): Int {
+    val index = ALL_AXES.indexOf(name)
+    return if (index < 0) NO_AXIS else ids[index]
   }
-  val x = event.getAxisValue(MotionEvent.AXIS_HAT_X)
-  val y = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
-  return mapOf(
-    "dpad-left" to if (x < -0.5f) 1f else 0f,
-    "dpad-right" to if (x > 0.5f) 1f else 0f,
-    "dpad-up" to if (y < -0.5f) 1f else 0f,
-    "dpad-down" to if (y > 0.5f) 1f else 0f
-  )
+}
+
+fun deviceAxesOf(device: InputDevice?): DeviceAxes = DeviceAxes(
+  ids = IntArray(ALL_AXES.size) { index -> resolveAxis(device, ALL_AXES[index]) ?: NO_AXIS },
+  // An unknown device is read as having a hat, as before: its value is then simply 0.
+  hasHat = device == null || device.getMotionRange(MotionEvent.AXIS_HAT_X) != null ||
+    device.getMotionRange(MotionEvent.AXIS_HAT_Y) != null
+)
+
+/** One hat direction as a button pressure; `negative` picks left/up over right/down. */
+fun hatPressure(value: Float, negative: Boolean): Float {
+  val pressed = if (negative) value < -0.5f else value > 0.5f
+  return if (pressed) 1f else 0f
 }

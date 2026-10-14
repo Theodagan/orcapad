@@ -12,6 +12,7 @@ import {
   DEFAULT_CONTROLLER_POLICY,
   type ControllerPolicy
 } from './controller-resolver'
+import { DPAD_NAVIGATION_BINDINGS, dpadIntent } from './dpad-navigation-bindings'
 
 // Built by walking the vocabulary rather than the literal's keys, so no assertion is needed to
 // narrow a string into a member.
@@ -372,5 +373,29 @@ describe('a held D-pad direction repeats like an arrow key (005)', () => {
 
     resolver(held(0))
     expect(resolver(held(500))).toEqual([])
+  })
+})
+
+describe('a resolver that replaces another', () => {
+  it('reads a button already down in the last sample as held, not as a fresh press', () => {
+    const resolver = createControllerIntentResolver(DEFAULT_CONTROLLER_POLICY, sample({ a: 1 }))
+
+    expect(resolver(sample({ a: 1 }))).toEqual([])
+    expect(resolver(sample())).toEqual([])
+    expect(resolver(sample({ a: 1 }))).toEqual([{ kind: 'confirm' }])
+  })
+})
+
+describe('dpadIntent', () => {
+  it('maps each D-pad binding to its movement, and to a zone switch with X held', () => {
+    expect(DPAD_NAVIGATION_BINDINGS.map((binding) => dpadIntent(binding, false))).toEqual([
+      { kind: 'move-selection', direction: 'up' },
+      { kind: 'move-selection', direction: 'down' },
+      { kind: 'move-horizontal', direction: 'left' },
+      { kind: 'move-horizontal', direction: 'right' }
+    ])
+    expect(DPAD_NAVIGATION_BINDINGS.map((binding) => dpadIntent(binding, true))).toEqual(
+      DPAD_NAVIGATION_BINDINGS.map(({ direction }) => ({ kind: 'switch-zone', direction }))
+    )
   })
 })
