@@ -167,6 +167,15 @@ export function useMobileSessionNativeChatDictation(
     }
   })
 
+  // The hook's start/stop/cancel are stable; the object around them is not.
+  const {
+    start: beginDictation,
+    stop: stopDictationRecording,
+    cancel: cancelDictationRecording,
+    isStarting: dictationStarting,
+    isRecording: dictationRecording,
+    isProcessing: dictationProcessing
+  } = dictation
   const startDictation = useCallback(() => {
     setDictationNotice(null)
     const routeContext = activeHandle
@@ -176,7 +185,7 @@ export function useMobileSessionNativeChatDictation(
         }
       : null
     dictationRouteContextRef.current = routeContext
-    void dictation.start().catch((err) => {
+    void beginDictation().catch((err) => {
       if (dictationRouteContextRef.current === routeContext) {
         dictationRouteContextRef.current = null
       }
@@ -189,41 +198,48 @@ export function useMobileSessionNativeChatDictation(
       triggerError()
       showToast(message)
     })
-  }, [activeHandle, dictation, liveInputTerminalHandles, triggerError, showToast])
+  }, [activeHandle, beginDictation, liveInputTerminalHandles, triggerError, showToast])
 
   const cancelDictation = useCallback(() => {
     dictationRouteContextRef.current = null
-    void dictation.cancel()
-  }, [dictation])
+    void cancelDictationRecording()
+  }, [cancelDictationRecording])
 
   // Toggle mode: one tap starts, the next stops; long-press cancels mid-record.
   const handleDictationToggle = useCallback(() => {
-    if (dictation.isProcessing) {
+    if (dictationProcessing) {
       cancelDictation()
-    } else if (dictation.isStarting) {
+    } else if (dictationStarting) {
       cancelDictation()
-    } else if (dictation.isRecording) {
-      void dictation.stop()
+    } else if (dictationRecording) {
+      void stopDictationRecording()
     } else {
       startDictation()
     }
-  }, [cancelDictation, dictation, startDictation])
+  }, [
+    cancelDictation,
+    dictationProcessing,
+    dictationRecording,
+    dictationStarting,
+    startDictation,
+    stopDictationRecording
+  ])
 
   // Hold mode: press starts, release stops — like a walkie-talkie.
   const handleDictationPressIn = useCallback(() => {
-    if (!dictation.isStarting && !dictation.isRecording && !dictation.isProcessing) {
+    if (!dictationStarting && !dictationRecording && !dictationProcessing) {
       startDictation()
     }
-  }, [dictation, startDictation])
+  }, [dictationProcessing, dictationRecording, dictationStarting, startDictation])
 
   const handleDictationPressOut = useCallback(() => {
-    if (dictation.isRecording) {
-      void dictation.stop()
-    } else if (dictation.isStarting) {
+    if (dictationRecording) {
+      void stopDictationRecording()
+    } else if (dictationStarting) {
       // Released before recording began: cancel so we don't leave a live mic.
       cancelDictation()
     }
-  }, [cancelDictation, dictation])
+  }, [cancelDictation, dictationRecording, dictationStarting, stopDictationRecording])
 
   // A tap of `Y` reaches the same toggle the mic button does (BIND-R6, BIND-AC6). Nothing about
   // the microphone is reimplemented here — the hook above still owns all of it. A press with
@@ -237,15 +253,17 @@ export function useMobileSessionNativeChatDictation(
       1800
     )
   }, [connState, showToast])
+  // Stable callbacks, or the binding re-registers on every render.
+  const stopDictation = useCallback(() => void stopDictationRecording(), [stopDictationRecording])
+  const openDictationSetup = useCallback(() => setShowDictationSetup(true), [setShowDictationSetup])
   useDictationBinding({
     activity: dictationActivityOf(dictation.status),
     toggle: handleDictationToggle,
     canStart: dictationEnabled,
     onUnavailable: explainDictationUnavailable,
     notice: dictationNotice,
-    onNoticeAction:
-      dictationNotice === 'Dictation needs setup' ? () => setShowDictationSetup(true) : undefined,
-    stop: () => void dictation.stop(),
+    onNoticeAction: dictationNotice === 'Dictation needs setup' ? openDictationSetup : undefined,
+    stop: stopDictation,
     cancel: cancelDictation
   })
 

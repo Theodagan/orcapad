@@ -127,11 +127,7 @@ export function useMobileNativeChatController(args: {
     transcriptSettled: nativeChatSession.status === 'ready'
   })
 
-  const {
-    caret: chatComposerCaret,
-    setCaret: setChatComposerCaret,
-    insertDictation: insertChatDictation
-  } = useDraftCaret({
+  const chatDraftCaret = useDraftCaret({
     scopeKey: mobileNativeChatScopeKey(hostId, worktreeId, activeSessionTabId),
     text: chatComposerText,
     setText: setChatComposerText
@@ -287,9 +283,10 @@ export function useMobileNativeChatController(args: {
     nativeChatAgent: activeChatResolution?.agent ?? null,
     chatComposerText,
     setChatComposerText,
-    chatComposerCaret,
-    setChatComposerCaret,
-    insertChatDictation,
+    chatComposerCaret: chatDraftCaret.caret,
+    setChatComposerCaret: chatDraftCaret.setCaret,
+    chatComposerCaretPlacement: chatDraftCaret.placement,
+    insertChatDictation: chatDraftCaret.insertDictation,
     getChatComposerEditGeneration,
     chatPending,
     chatImagePreviewsByMessageId,

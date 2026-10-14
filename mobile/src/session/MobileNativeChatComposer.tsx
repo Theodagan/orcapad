@@ -4,7 +4,6 @@ import { ArrowUp, ImagePlus, Mic, Square } from 'lucide-react-native'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import { useComposerEditBinding } from '../gamepad/bindings/use-composer-edit-binding'
 import { useComposerSendBinding } from '../gamepad/bindings/use-composer-send-binding'
-import { useControllerBinding } from '../gamepad/controller-provider'
 import { getVerifiedNativeChatCommands } from '../../../src/shared/native-chat-agent-profiles'
 import { structuredSlashCommands } from '../../../src/shared/structured-agent-session-composer'
 import type { AgentSessionConversationCommand } from '../../../src/shared/agent-session-conversation-command'
@@ -26,6 +25,7 @@ import {
 import type { PendingNativeChatImage } from './mobile-native-chat-image-attachment'
 import { MobileNativeChatComposerAttachments } from './MobileNativeChatComposerAttachments'
 import { DraftCaretField } from './DraftCaretField'
+import { useComposerNativeCaret } from './use-composer-native-caret'
 import {
   deleteWordBefore,
   moveCaretHorizontally,
@@ -43,6 +43,8 @@ type Props = {
   /** Where the caret is in `value`, owned above so dictation and the pad edit the same place. */
   caret: number
   onCaretChange: (caret: number) => void
+  /** Bumps when dictation placed the caret, so the keyboard input follows it once. */
+  caretPlacement?: number
   /** Something more urgent than the draft (a permission prompt) has the D-pad. */
   editSuspended?: boolean
   /** The wheel asked for the keyboard: hand over to the real input. */
@@ -80,8 +82,9 @@ type Props = {
 export function MobileNativeChatComposer({
   value,
   onChangeText,
-  caret: cursor,
+  caret: caretProp,
   onCaretChange,
+  caretPlacement = 0,
   editSuspended = false,
   keyboardRequested = false,
   onSend,
@@ -105,35 +108,24 @@ export function MobileNativeChatComposer({
   filePaths = NO_FILE_PATHS,
   onNeedFiles
 }: Props): React.JSX.Element {
-  // With a pad attached the draft is drawn with a caret the D-pad moves, and the keyboard is the
-  // exception: a touch on the draft hands over to the real input until it loses focus.
-  const { connected: padAttached } = useControllerBinding()
-  const [touchEditing, setTouchEditing] = useState(false)
-  const caretMode = padAttached && !touchEditing
-  const setCursor = onCaretChange
-  // Transiently drives the native caret after a mid-text autocomplete insert,
-  // then released on the next selection change so manual caret placement still
-  // works (a permanently controlled `selection` breaks it in React Native).
-  const [pendingSelection, setPendingSelection] = useState<{ start: number; end: number } | null>(
-    null
-  )
-  // What the native input last said, so a caret moved from outside (dictation) can be told apart.
-  const reportedCaretRef = useRef(cursor)
-  useEffect(() => {
-    if (!caretMode && cursor !== reportedCaretRef.current) {
-      reportedCaretRef.current = cursor
-      setPendingSelection({ start: cursor, end: cursor })
-    }
-  }, [caretMode, cursor])
-  // A keyboard request hands the draft to the real input, caret where the pad left it.
-  const [seenKeyboardRequest, setSeenKeyboardRequest] = useState(false)
-  if (seenKeyboardRequest !== keyboardRequested) {
-    setSeenKeyboardRequest(keyboardRequested)
-    if (keyboardRequested) {
-      setPendingSelection({ start: cursor, end: cursor })
-      setTouchEditing(true)
-    }
-  }
+  const {
+    caretMode,
+    touchEditing,
+    cursor,
+    setCursor,
+    selection,
+    placeSelection,
+    onNativeSelection,
+    beginTouchEditing,
+    endTouchEditing,
+    forgetAfterSend
+  } = useComposerNativeCaret({
+    value,
+    caret: caretProp,
+    onCaretChange,
+    caretPlacement,
+    keyboardRequested
+  })
   const sendingRef = useRef(false)
   const mountedRef = useRef(true)
   const sendSurfaceIdRef = useRef(sendSurfaceId)
@@ -215,7 +207,7 @@ export function MobileNativeChatComposer({
     )
     onChangeText(nextText)
     setCursor(nextCursor)
-    setPendingSelection({ start: nextCursor, end: nextCursor })
+    placeSelection(nextCursor)
   }
 
   const handleSend = async (): Promise<void> => {
@@ -238,7 +230,7 @@ export function MobileNativeChatComposer({
         sendCompletionGeneration === getSendCompletionGeneration() &&
         composerEditGeneration === getComposerEditGeneration()
       ) {
-        setCursor(0)
+        forgetAfterSend()
         // Why: the turn is now the agent's — the keyboard would cover the reply.
         // A rejected send keeps it up so the handed-back draft stays editable.
         Keyboard.dismiss()
@@ -286,10 +278,7 @@ export function MobileNativeChatComposer({
               testID="native-chat-composer-caret-field"
               caret={cursor}
               placeholder={placeholder}
-              onPress={() => {
-                setPendingSelection({ start: cursor, end: cursor })
-                setTouchEditing(true)
-              }}
+              onPress={beginTouchEditing}
             />
           ) : (
             <TextInput
@@ -299,14 +288,10 @@ export function MobileNativeChatComposer({
               autoFocus={touchEditing}
               // Not Android's fullscreen keyboard: in landscape it hides the screen being typed into.
               disableFullscreenUI
-              onBlur={() => setTouchEditing(false)}
-              // Controlled only transiently right after an autocomplete insert.
-              selection={pendingSelection ?? undefined}
-              onSelectionChange={(e) => {
-                reportedCaretRef.current = e.nativeEvent.selection.end
-                setCursor(e.nativeEvent.selection.end)
-                setPendingSelection(null)
-              }}
+              onBlur={endTouchEditing}
+              // Controlled only transiently, right after an explicit placement.
+              selection={selection}
+              onSelectionChange={(e) => onNativeSelection(e.nativeEvent.selection.end)}
               placeholder={placeholder}
               placeholderTextColor={colors.textMuted}
               selectionColor={colors.accentBlue}

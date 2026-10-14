@@ -36,6 +36,8 @@ class OrcaGamepadModule : Module() {
 
   private val buttons = mutableMapOf<String, Float>()
   private val axes = mutableMapOf<String, Float>()
+  /** The axes as JavaScript last saw them, so resting jitter is not sent across the bridge. */
+  private val emittedAxes = mutableMapOf<String, Float>()
   private var activeDeviceId: Int? = null
   private var consumedByViewTree = false
   /** Attached game controllers and their resolved axes, refreshed when the device set changes. */
@@ -357,8 +359,16 @@ class OrcaGamepadModule : Module() {
         setHat("dpad-up", hatPressure(y, negative = true)) or
         setHat("dpad-down", hatPressure(y, negative = false))
     }
+    if (!hatChanged && axesAtRest()) {
+      return
+    }
     // A hat D-pad is a button: its edges are never paced away, a release least of all.
     emit(force = hatChanged)
+  }
+
+  /** Whether every axis is within jitter of what was last emitted. */
+  private fun axesAtRest(): Boolean = ALL_AXES.all { axis ->
+    kotlin.math.abs((axes[axis] ?: 0f) - (emittedAxes[axis] ?: 0f)) < AXIS_JITTER
   }
 
   /** Whether the pressure changed. */
@@ -388,6 +398,7 @@ class OrcaGamepadModule : Module() {
       trailingEmitPending = false
     }
     lastEmitAt = now
+    emittedAxes.putAll(axes)
     sendEvent(EVENT_SAMPLE, sampleBundle(withFocus = false))
   }
 
@@ -504,5 +515,6 @@ class OrcaGamepadModule : Module() {
     const val EVENT_DEVICES = "onControllerDevices"
     /** Pushed samples skip the focus lookup; `currentSample` reads it on demand. */
     const val UNSAMPLED_FOCUS = "unsampled"
+    const val AXIS_JITTER = 0.01f
   }
 }

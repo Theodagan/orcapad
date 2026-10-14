@@ -29,15 +29,35 @@ export function useDraftCaret(args: {
   setCaret: (caret: number) => void
   /** Sets a dictated phrase into the draft at the caret, and leaves the caret after it. */
   insertDictation: (transcript: string) => void
+  /** Bumps when dictation placed the caret, so a keyboard input knows to follow it once. */
+  placement: number
 } {
   const { scopeKey, text, setText } = args
   const { connected: padAttached } = useControllerBinding()
   const [carets, setCarets] = useState<Record<string, number>>({})
-  const caret = scopeKey === null ? 0 : clampCaret(text, carets[scopeKey] ?? text.length)
+  const [placement, setPlacement] = useState(0)
+  // Where the last dictation left the caret, keyed by the text it produced: the text arrives through
+  // a functional update, so the caret can only be claimed once that text renders.
+  const placedRef = useRef<{ scopeKey: string; text: string; caret: number } | null>(null)
+  const placed = placedRef.current
+  const pendingPlacement =
+    placed !== null && placed.scopeKey === scopeKey && placed.text === text ? placed.caret : null
+  const caret =
+    scopeKey === null ? 0 : clampCaret(text, pendingPlacement ?? carets[scopeKey] ?? text.length)
   const latest = useRef({ text, caret })
   useLayoutEffect(() => {
     latest.current = { text, caret }
   })
+
+  useLayoutEffect(() => {
+    const claimed = placedRef.current
+    if (claimed === null || claimed.scopeKey !== scopeKey || claimed.text !== text) {
+      return
+    }
+    placedRef.current = null
+    setCarets((previous) => ({ ...previous, [claimed.scopeKey]: claimed.caret }))
+    setPlacement((count) => count + 1)
+  }, [scopeKey, text])
 
   // A sent draft forgets where its caret was, so the next one starts at its end.
   useEffect(() => {
@@ -69,14 +89,23 @@ export function useDraftCaret(args: {
       if (scopeKey === null) {
         return
       }
-      // Without a pad nobody can have placed the caret on purpose, so words go where they always did.
-      const { text: current, caret: placed } = latest.current
-      const edit = insertDictationAt(current, padAttached ? placed : current.length, transcript)
-      setText(edit.text)
-      setCarets((previous) => ({ ...previous, [scopeKey]: edit.caret }))
+      // Functional, so words dictated before the last edit rendered are not built on a stale draft.
+      setText((current) => {
+        const pending = placedRef.current
+        const at =
+          pending !== null && pending.scopeKey === scopeKey && pending.text === current
+            ? pending.caret
+            : latest.current.text === current
+              ? latest.current.caret
+              : current.length
+        // Without a pad nobody can have placed the caret on purpose, so words go where they always did.
+        const edit = insertDictationAt(current, padAttached ? at : current.length, transcript)
+        placedRef.current = { scopeKey, text: edit.text, caret: edit.caret }
+        return edit.text
+      })
     },
     [scopeKey, setText, padAttached]
   )
 
-  return { caret, setCaret, insertDictation }
+  return { caret, setCaret, insertDictation, placement }
 }

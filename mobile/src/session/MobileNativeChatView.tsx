@@ -85,6 +85,8 @@ type Props = {
   /** Where the caret is in the draft, so the pad and dictation edit the same place. */
   composerCaret: number
   onComposerCaretChange: (caret: number) => void
+  /** Bumps when dictation placed the caret. */
+  composerCaretPlacement?: number
   onAttachImage?: () => void
   /** Pending image attachments shown as composer thumbnails until the next send. */
   attachments?: PendingNativeChatImage[]
@@ -162,6 +164,7 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
     onComposerTextChange,
     composerCaret,
     onComposerCaretChange,
+    composerCaretPlacement,
     onAttachImage,
     attachments,
     onRemoveAttachment,
@@ -448,6 +451,7 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
           caret={composerCaret}
           keyboardRequested={keyboardRequested}
           onCaretChange={onComposerCaretChange}
+          caretPlacement={composerCaretPlacement}
           editSuspended={ask != null || permission != null || question != null}
         />
       ) : null}
