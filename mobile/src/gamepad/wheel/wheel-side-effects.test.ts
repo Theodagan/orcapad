@@ -98,7 +98,7 @@ describe('only a commit can produce an invocation', () => {
     expect(state.kind).toBe('closed')
   })
 
-  it('B runs nothing and closes', () => {
+  it('L2 runs nothing and closes', () => {
     const { invoked, state } = drive([up, { kind: 'back' }])
 
     expect(invoked).toEqual([])
@@ -112,13 +112,13 @@ describe('only a commit can produce an invocation', () => {
     expect(state.kind).toBe('closed')
   })
 
-  it('A on an unavailable lock runs nothing', () => {
+  it('R2 on an unavailable lock runs nothing', () => {
     const disabled = preset({ segmentsFor: () => [segment('north', 0, 'unavailable')] })
 
     expect(drive([up, confirm], disabled).invoked).toEqual([])
   })
 
-  it('A on a segment that unmounted while locked runs nothing', () => {
+  it('R2 on a segment that unmounted while locked runs nothing', () => {
     // Opens on north, then the preset no longer offers it — the lock has no owner left.
     let segments: readonly WheelSegment[] = wheelOne
     const unmounting = preset({ segmentsFor: () => segments })
@@ -138,7 +138,7 @@ describe('only a commit can produce an invocation', () => {
     expect(state.kind).toBe('closed')
   })
 
-  it('A on an empty preset runs nothing', () => {
+  it('R2 on an empty preset runs nothing', () => {
     expect(drive([up, confirm], preset({ segmentsFor: () => [] })).invoked).toEqual([])
   })
 
@@ -146,7 +146,7 @@ describe('only a commit can produce an invocation', () => {
     expect(drive([up, { kind: 'motion', wheel: 2, x: 0, y: 1 }]).invoked).toEqual([])
   })
 
-  it('A and B with no wheel open run nothing', () => {
+  it('R2 and L2 with no wheel open run nothing', () => {
     expect(drive([confirm, { kind: 'back' }, { kind: 'disconnect' }]).invoked).toEqual([])
   })
 
@@ -195,7 +195,7 @@ describe('only a commit can produce an invocation', () => {
     expect(descended.invoked).toEqual([])
     expect(descended.state).toMatchObject({ kind: 'open', path: ['agent.launch'] })
 
-    // B inside the menu goes back to the parent wheel, running nothing; the next B closes.
+    // L2 inside the menu goes back to the parent wheel, running nothing; the next L2 closes.
     const outcomes = drive([up, confirm, { kind: 'back' }], menu)
     expect(outcomes.invoked).toEqual([])
     expect(outcomes.state).toMatchObject({ kind: 'open', path: [] })

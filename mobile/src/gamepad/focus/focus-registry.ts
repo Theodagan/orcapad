@@ -13,8 +13,6 @@ import { FOCUS_ZONES, ZONE_AGNOSTIC_INTENTS, type FocusZone } from './focus-zone
 export type FocusSnapshot = {
   readonly zones: readonly FocusZone[]
   readonly focusedZone: FocusZone | null
-  /** The next zone in the legacy ordering; directional movement uses the visual layout. */
-  readonly nextZone: FocusZone | null
   /** What a press can reach from the focused zone. */
   readonly reachable: ReadonlySet<ControllerIntentKind>
   /** The wording of whichever target would answer each reachable intent. */
@@ -40,10 +38,9 @@ export type FocusRegistry = {
   /** True when a target accepted and handled the intent. `switch-zone` is the registry's own. */
   readonly dispatch: (intent: ControllerIntent) => boolean
   readonly focusedZone: () => FocusZone | null
-  /** The zones something has declared, in walking order. Cheaper than a snapshot, which also reads every label. */
+  /** The zones something has declared, in `FOCUS_ZONES` order. Cheaper than a snapshot, which also reads every label. */
   readonly zones: () => readonly FocusZone[]
   readonly focusZone: (zone: FocusZone) => void
-  readonly cycleZone: () => FocusZone | null
   readonly subscribe: (listener: () => void) => () => void
   /** Referentially stable until something changes, so `useSyncExternalStore` can read it. */
   readonly snapshot: () => FocusSnapshot
@@ -144,13 +141,6 @@ export function createFocusRegistry(): FocusRegistry {
     return chosen !== null && present.includes(chosen) ? chosen : (present[0] ?? null)
   }
 
-  function nextOf(present: readonly FocusZone[], current: FocusZone | null): FocusZone | null {
-    if (present.length < 2 || current === null) {
-      return null
-    }
-    return present[(present.indexOf(current) + 1) % present.length] ?? null
-  }
-
   function ranked(zone: FocusZone | null): readonly FocusTarget[] {
     const rankOf = (target: FocusTarget): number =>
       target.zone === undefined ? 1 : target.zone === zone ? 0 : 2
@@ -183,14 +173,13 @@ export function createFocusRegistry(): FocusRegistry {
         }
       }
     }
-    const nextZone = nextOf(present, zone)
     if (
       zone !== null &&
       ZONE_DIRECTIONS.some((direction) => zoneToward(present, zone, direction) !== null)
     ) {
       reachable.add('switch-zone')
     }
-    return { zones: present, focusedZone: zone, nextZone, reachable, labels }
+    return { zones: present, focusedZone: zone, reachable, labels }
   }
 
   function focusZone(zone: FocusZone): void {
@@ -198,16 +187,6 @@ export function createFocusRegistry(): FocusRegistry {
       chosen = zone
       changed()
     }
-  }
-
-  function cycleZone(): FocusZone | null {
-    const next = nextOf(presentZones(), focusedZone())
-    if (next === null) {
-      return null
-    }
-    chosen = next
-    changed()
-    return next
   }
 
   function moveZone(direction: ZoneDirection): boolean {
@@ -263,7 +242,7 @@ export function createFocusRegistry(): FocusRegistry {
 
   function dispatch(intent: ControllerIntent): boolean {
     if (intent.kind === 'switch-zone') {
-      return intent.direction === undefined ? cycleZone() !== null : moveZone(intent.direction)
+      return moveZone(intent.direction)
     }
     const zone = focusedZone()
     for (const target of ranked(zone)) {
@@ -285,7 +264,6 @@ export function createFocusRegistry(): FocusRegistry {
     focusedZone,
     zones: presentZones,
     focusZone,
-    cycleZone,
     subscribe: (listener) => {
       listeners.add(listener)
       return () => {

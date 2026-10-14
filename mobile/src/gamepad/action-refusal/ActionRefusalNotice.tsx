@@ -21,22 +21,13 @@ export function ActionRefusalNotice({ store }: { readonly store: ActionRefusalSt
     return null
   }
   return (
-    <View pointerEvents="none" style={styles.container}>
-      <View accessibilityLiveRegion="polite" style={styles.notice}>
-        <Text style={styles.text}>{refusal.message}</Text>
-      </View>
+    <View pointerEvents="none" accessibilityLiveRegion="polite" style={styles.notice}>
+      <Text style={styles.text}>{refusal.message}</Text>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: spacing.xl
-  },
   notice: {
     backgroundColor: colors.bgRaised,
     borderColor: colors.borderSubtle,

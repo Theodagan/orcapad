@@ -99,8 +99,8 @@ describe('agent controller binding', () => {
     it('no longer answers a stop intent at all, because no control sends one', () => {
       const agent = mount()
 
-      // The intent vocabulary has no `stop`; X is the zone switch.
-      expect(agent.dispatch({ kind: 'switch-zone' })).toBe(false)
+      // The intent vocabulary has no `stop`; Start runs Stop as a wheel action instead.
+      expect(agent.dispatch({ kind: 'switch-zone', direction: 'up' })).toBe(false)
       expect(agent.onStop).not.toHaveBeenCalled()
     })
   })

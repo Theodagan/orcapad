@@ -26,22 +26,13 @@ export function ControllerConnectionNotice(): ReactNode {
   }
 
   return (
-    <View pointerEvents="none" style={styles.container}>
-      <View style={styles.notice}>
-        <Text style={styles.text}>Controller disconnected — touch still works</Text>
-      </View>
+    <View pointerEvents="none" style={styles.notice}>
+      <Text style={styles.text}>Controller disconnected — touch still works</Text>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: spacing.xl
-  },
   notice: {
     backgroundColor: colors.bgRaised,
     borderColor: colors.borderSubtle,

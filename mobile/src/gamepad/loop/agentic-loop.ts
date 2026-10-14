@@ -1,5 +1,5 @@
 import type { ControllerIntentKind } from '../controller-input/controller-intent'
-import type { BoundSurface } from '../bindings/controller-binding-evidence'
+import type { BoundSurface } from '../evidence/controller-binding-evidence'
 
 /**
  * The cycle an agentic coding session actually is, as data.

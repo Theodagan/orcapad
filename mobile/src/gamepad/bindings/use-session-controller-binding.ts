@@ -12,7 +12,7 @@ import { useSurfaceBinding } from './use-surface-binding'
  * handover intact (BIND-R4, `003` §4).
  *
  * The target is named for the session it belongs to. That is the "active session identity" of
- * `003` §2: `X` reaches the focused session because the binding that answers it is mounted
+ * `003` §2: a press reaches the focused session because the binding that answers it is mounted
  * inside this one, not because anything keeps a separate record of which session is current.
  */
 

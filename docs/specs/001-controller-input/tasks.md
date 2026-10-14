@@ -111,4 +111,4 @@ on one.
   failure. Turning it back into a gate is one line — the `skipIf` below the
   record lookup — and the task checkbox is the tracker until then.
 
-  **Verify:** `pnpm --dir mobile test src/gamepad/controller-input/controller-evidence.test.ts`
+  **Verify:** `pnpm --dir mobile test src/gamepad/evidence/controller-evidence.test.ts`

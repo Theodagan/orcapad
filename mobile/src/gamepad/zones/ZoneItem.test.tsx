@@ -95,7 +95,12 @@ describe('a zone item', () => {
       })
     })
     const press = (kind: 'switch-zone' | 'confirm' | 'back'): void => {
-      act(() => void controller?.dispatchIntent({ kind }))
+      act(
+        () =>
+          void controller?.dispatchIntent(
+            kind === 'switch-zone' ? { kind, direction: 'up' } : { kind }
+          )
+      )
     }
     return {
       seen,

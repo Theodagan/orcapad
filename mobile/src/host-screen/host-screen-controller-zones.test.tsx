@@ -169,25 +169,25 @@ describe('the host screen, driven by a pad', () => {
     return { ...host, opened, left, selected, dispatch, frames, ringed }
   }
 
-  it('starts on the list, and X walks to the header and back', () => {
+  it('starts on the list, and X+Up walks to the header and X+Down back', () => {
     const screen = mount()
     expect(screen.frames()).toEqual(['zone-frame:list'])
     expect(screen.selected.id).toBe('wt-1')
 
-    screen.dispatch({ kind: 'switch-zone' })
+    screen.dispatch({ kind: 'switch-zone', direction: 'up' })
     expect(screen.frames()).toEqual(['zone-frame:header'])
     // The row cursor leaves with the pad.
     expect(screen.selected.id).toBeNull()
     expect(screen.ringed()).toBe('Filter workspaces')
 
-    screen.dispatch({ kind: 'switch-zone' })
+    screen.dispatch({ kind: 'switch-zone', direction: 'down' })
     expect(screen.frames()).toEqual(['zone-frame:list'])
     expect(screen.selected.id).toBe('wt-1')
   })
 
   it('opens the filter on A, from where the header starts', () => {
     const screen = mount()
-    screen.dispatch({ kind: 'switch-zone' })
+    screen.dispatch({ kind: 'switch-zone', direction: 'up' })
 
     screen.dispatch({ kind: 'confirm' })
 
@@ -197,7 +197,7 @@ describe('the host screen, driven by a pad', () => {
 
   it('moves along the toolbar with the D-pad and presses what it is on', () => {
     const screen = mount()
-    screen.dispatch({ kind: 'switch-zone' })
+    screen.dispatch({ kind: 'switch-zone', direction: 'up' })
 
     screen.dispatch({ kind: 'move-horizontal', direction: 'right' })
     expect(screen.ringed()).toBe('Sort by Recent')
@@ -211,7 +211,7 @@ describe('the host screen, driven by a pad', () => {
 
   it('reaches the row above the toolbar, and presses Back to hosts', () => {
     const screen = mount()
-    screen.dispatch({ kind: 'switch-zone' })
+    screen.dispatch({ kind: 'switch-zone', direction: 'up' })
 
     screen.dispatch({ kind: 'move-selection', direction: 'up' })
     expect(screen.ringed()).toBe('Back to hosts')
@@ -222,7 +222,7 @@ describe('the host screen, driven by a pad', () => {
 
   it('B returns to the list instead of leaving the screen', () => {
     const screen = mount()
-    screen.dispatch({ kind: 'switch-zone' })
+    screen.dispatch({ kind: 'switch-zone', direction: 'up' })
 
     screen.dispatch({ kind: 'back' })
 
@@ -232,7 +232,7 @@ describe('the host screen, driven by a pad', () => {
 
   it('still scrolls and cycles the list from the header', () => {
     const screen = mount()
-    screen.dispatch({ kind: 'switch-zone' })
+    screen.dispatch({ kind: 'switch-zone', direction: 'up' })
 
     expect(screen.dispatch({ kind: 'cycle-workspace', direction: 'next' })).toBe(true)
   })

@@ -88,7 +88,7 @@ describe('PRD wheel rules', () => {
     expect(outcomes.some((outcome) => outcome.kind === 'commit')).toBe(false)
   })
 
-  it('rule 4 — A commits the currently locked segment', () => {
+  it('rule 4 — R2 commits the currently locked segment', () => {
     expect(reduce(openOnNorth, { kind: 'confirm' })).toEqual({
       kind: 'commit',
       wheel: 1,
@@ -154,7 +154,7 @@ describe('the transition table', () => {
 })
 
 describe('failure behaviour (002 §6)', () => {
-  it('opens an empty preset with no lock, and A cancels', () => {
+  it('opens an empty preset with no lock, and R2 cancels', () => {
     const empty = preset({ segmentsFor: () => [] })
     const opened = stateAfter(reduce(CLOSED_WHEEL, UP, empty))
 
@@ -162,7 +162,7 @@ describe('failure behaviour (002 §6)', () => {
     expect(reduce(opened, { kind: 'confirm' }, empty)).toEqual({ kind: 'cancel', spent: spent(1) })
   })
 
-  it('cancels A on an unavailable lock rather than delegating it', () => {
+  it('cancels R2 on an unavailable lock rather than delegating it', () => {
     const disabled = preset({ segmentsFor: () => [segment('north', 0, 'unavailable')] })
 
     expect(reduce(openOnNorth, { kind: 'confirm' }, disabled)).toEqual({
@@ -345,7 +345,7 @@ describe('a wheel that opens a wheel (005 USE-R10)', () => {
     expect(swung).not.toHaveProperty('held')
   })
 
-  it('does not commit from a descent with nothing locked: A cancels it', () => {
+  it('does not commit from a descent with nothing locked: R2 cancels it', () => {
     const inside = stateAfter(reduce(onOpener, { kind: 'confirm' }, nested))
 
     expect(reduce(inside, { kind: 'confirm' }, nested)).toEqual({
@@ -403,7 +403,7 @@ describe('a wheel that opens a wheel (005 USE-R10)', () => {
     expect(stateAfter(reduce(inside, UP, empty))).toMatchObject({ kind: 'open', locked: null })
   })
 
-  it('pages like a menu: each page is one more level, and B steps back a page', () => {
+  it('pages like a menu: each page is one more level, and L2 steps back a page', () => {
     const page2 = inMenu('codex', ['agent.launch', 'agent.launch#2'])
 
     expect(reduce(page2, { kind: 'back' }, nested)).toEqual({

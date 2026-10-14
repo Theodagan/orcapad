@@ -63,4 +63,4 @@
 
   **Needs:** LOOP-T6, BIND-T10
 
-  **Verify:** `pnpm --dir mobile test src/gamepad/bindings/controller-binding-evidence.test.ts`
+  **Verify:** `pnpm --dir mobile test src/gamepad/evidence/controller-binding-evidence.test.ts`

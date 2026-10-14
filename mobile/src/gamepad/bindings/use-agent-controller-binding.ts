@@ -17,8 +17,8 @@ import { useSurfaceBinding } from './use-surface-binding'
  * prompt on screen they are not accepted at all, rather than accepted and dropped — an intent
  * nothing answers falls through to whatever is behind it, and hints stay honest (`001` §7).
  *
- * Stopping is no longer on `X`: that became the zone switch (`005` USE-R4). The chat still decides
- * with `canStop` whether a turn can be stopped, and the wheel action below follows it.
+ * Stop is a wheel action, run from DO or Start (`012`); the chat decides with `canStop` whether a
+ * turn can be stopped, and the action below follows it.
  */
 
 /** One D-pad press moves the transcript about three lines, like an arrow key in a reader. */

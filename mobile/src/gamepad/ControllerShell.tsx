@@ -7,6 +7,7 @@ import { hostStackHostRoute } from '../navigation/host-stack-navigation'
 import { hostNewWorktreeRoute } from '../host-route-action-state'
 import { ControllerProvider } from './controller-provider'
 import { ControllerConnectionNotice } from './controller-connection/ControllerConnectionNotice'
+import { ControllerNoticeStack } from './ControllerNoticeStack'
 import { ActionHintBar } from './ActionHintBar'
 import { createControllerRuntime } from './controller-input/controller-runtime'
 import { useCancelWheelOnDisconnect } from './wheel/use-cancel-wheel-on-disconnect'
@@ -137,8 +138,10 @@ export function ControllerShell({
       <RootBackBinding />
       <FocusModeSystemBars />
       <ActionHintBar wheel={wheel.view} actions={wheelRegistry} />
-      <ControllerConnectionNotice />
-      <ActionRefusalNotice store={actionRefusals} />
+      <ControllerNoticeStack>
+        <ControllerConnectionNotice />
+        <ActionRefusalNotice store={actionRefusals} />
+      </ControllerNoticeStack>
       <MobileDictationStatusPill />
     </ControllerProvider>
   )

@@ -145,7 +145,7 @@ function textOf(node: ReactTestInstance | string): string {
   return typeof node === 'string' ? node : node.children.map(textOf).join('')
 }
 
-type Press = 'switch-zone' | 'confirm' | 'back'
+type Press = 'confirm' | 'back'
 
 describe('the session chrome, driven by a pad', () => {
   let renderer: ReactTestRenderer | null = null
@@ -228,6 +228,7 @@ describe('the session chrome, driven by a pad', () => {
           ) ?? []
         ).length > 0,
       press: (kind: Press) => dispatch({ kind }),
+      zone: (direction: 'up' | 'down') => dispatch({ kind: 'switch-zone', direction }),
       move: (direction: 'left' | 'right') => dispatch({ kind: 'move-horizontal', direction }),
       moveVertically: (direction: 'up' | 'down') => dispatch({ kind: 'move-selection', direction }),
       rings,
@@ -242,17 +243,18 @@ describe('the session chrome, driven by a pad', () => {
     expect(screen.frames()).toEqual(['zone-frame:agent'])
     expect(screen.rings()).toHaveLength(0)
 
-    screen.press('switch-zone')
+    screen.zone('down')
     expect(screen.frames()).toEqual(['zone-frame:shortcuts'])
     expect(screen.rings()).toHaveLength(1)
     expect(screen.ringed()).toBe('Switch to desktop mode')
 
-    screen.press('switch-zone')
+    screen.zone('up')
+    screen.zone('up')
     expect(screen.frames()).toEqual(['zone-frame:header'])
     expect(screen.rings()).toHaveLength(1)
     expect(screen.ringed()).toBe('tests')
 
-    screen.press('switch-zone')
+    screen.zone('down')
     expect(screen.frames()).toEqual(['zone-frame:agent'])
     expect(screen.rings()).toHaveLength(0)
   })
@@ -260,7 +262,7 @@ describe('the session chrome, driven by a pad', () => {
   it('draws no ring and no frame for a user with no pad', () => {
     const screen = mount()
 
-    screen.press('switch-zone')
+    screen.zone('down')
 
     expect(screen.rings()).toHaveLength(0)
     expect(screen.frames()).toEqual([])
@@ -269,7 +271,7 @@ describe('the session chrome, driven by a pad', () => {
   it('moves along the shortcut keys and presses the one under the cursor as a tap would', () => {
     const screen = mount()
     screen.connect()
-    screen.press('switch-zone')
+    screen.zone('down')
 
     screen.move('right')
     screen.move('right')
@@ -285,7 +287,7 @@ describe('the session chrome, driven by a pad', () => {
   it('sends a key that repeats when held exactly once for A, because a held A would never release', () => {
     const screen = mount()
     screen.connect()
-    screen.press('switch-zone')
+    screen.zone('down')
     screen.move('right')
     screen.move('right')
     screen.move('right')
@@ -302,7 +304,7 @@ describe('the session chrome, driven by a pad', () => {
   it('wraps from the last shortcut back to the first', () => {
     const screen = mount()
     screen.connect()
-    screen.press('switch-zone')
+    screen.zone('down')
 
     screen.move('left')
 
@@ -314,8 +316,7 @@ describe('the session chrome, driven by a pad', () => {
   it('starts the header on the active tab and switches tabs with A on another', () => {
     const screen = mount()
     screen.connect()
-    screen.press('switch-zone')
-    screen.press('switch-zone')
+    screen.zone('up')
     expect(screen.ringed()).toBe('tests')
 
     screen.move('right')
@@ -328,8 +329,7 @@ describe('the session chrome, driven by a pad', () => {
   it('moves between the buttons above the tabs and the tabs themselves', () => {
     const screen = mount()
     screen.connect()
-    screen.press('switch-zone')
-    screen.press('switch-zone')
+    screen.zone('up')
 
     screen.moveVertically('up')
     expect(screen.ringed()).toBe('Open file explorer')
@@ -343,8 +343,7 @@ describe('the session chrome, driven by a pad', () => {
   it('skips the reconnect control while there is nothing to reconnect', () => {
     const screen = mount()
     screen.connect()
-    screen.press('switch-zone')
-    screen.press('switch-zone')
+    screen.zone('up')
     screen.moveVertically('up')
 
     screen.move('left')
@@ -357,8 +356,7 @@ describe('the session chrome, driven by a pad', () => {
   it('goes back to the agent zone with B, and leaves A to the agent from there', () => {
     const screen = mount()
     screen.connect()
-    screen.press('switch-zone')
-    screen.press('switch-zone')
+    screen.zone('up')
 
     screen.press('back')
     expect(screen.frames()).toEqual(['zone-frame:agent'])
@@ -371,7 +369,7 @@ describe('the session chrome, driven by a pad', () => {
     const screen = mount()
     screen.connect()
 
-    screen.press('switch-zone')
+    screen.zone('down')
     expect(screen.requestNativeFocus).toHaveBeenLastCalledWith({ label: 'Switch to desktop mode' })
 
     screen.move('right')
@@ -384,8 +382,7 @@ describe('the session chrome, driven by a pad', () => {
     const screen = mount()
     screen.connect()
     screen.toggleFocusMode()
-    screen.press('switch-zone')
-    screen.press('switch-zone')
+    screen.zone('up')
     expect(screen.frames()).toEqual(['zone-frame:header'])
     expect(screen.ringed()).toBe('tests')
 
@@ -414,8 +411,7 @@ describe('the session chrome, driven by a pad', () => {
     const screen = mount()
     screen.connect()
     screen.toggleFocusMode()
-    screen.press('switch-zone')
-    screen.press('switch-zone')
+    screen.zone('up')
 
     screen.move('left')
     screen.move('left')
@@ -432,7 +428,7 @@ describe('the session chrome, driven by a pad', () => {
     expect(screen.frames()).toEqual([])
   })
 
-  it('hides the shortcut row and takes its zone with it: X goes from the agent to the header', () => {
+  it('hides the shortcut row and takes its zone with it: X+Up goes from the agent to the header', () => {
     const screen = mount()
     screen.connect()
     expect(screen.hasShortcutRow()).toBe(true)
@@ -440,9 +436,9 @@ describe('the session chrome, driven by a pad', () => {
     screen.toggleShortcuts()
     expect(screen.hasShortcutRow()).toBe(false)
 
-    screen.press('switch-zone')
+    screen.zone('up')
     expect(screen.frames()).toEqual(['zone-frame:header'])
-    screen.press('switch-zone')
+    screen.zone('down')
     expect(screen.frames()).toEqual(['zone-frame:agent'])
 
     screen.toggleShortcuts()

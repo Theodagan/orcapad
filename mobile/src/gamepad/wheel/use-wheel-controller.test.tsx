@@ -53,7 +53,7 @@ const EVERY_INTENT: Record<ControllerIntentKind, ControllerIntent> = {
   'cycle-tab': { kind: 'cycle-tab', direction: 'next' },
   'cycle-workspace': { kind: 'cycle-workspace', direction: 'next' },
   'wheel-motion': { kind: 'wheel-motion', wheel: 2, x: 0, y: 1 },
-  'switch-zone': { kind: 'switch-zone' },
+  'switch-zone': { kind: 'switch-zone', direction: 'up' },
   confirm: { kind: 'confirm' },
   back: { kind: 'back' },
   'toggle-dictation': { kind: 'toggle-dictation' },

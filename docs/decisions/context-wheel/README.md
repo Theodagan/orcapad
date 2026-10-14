@@ -1,7 +1,7 @@
 # Context Wheel product-default decisions (WHEEL-T9)
 
 One `*.json` file per promotion, matching `ProductDefaultDecision` in
-[`mobile/src/gamepad/wheel/wheel-product-default-gate.ts`](../../../mobile/src/gamepad/wheel/wheel-product-default-gate.ts).
+[`mobile/src/gamepad/evidence/wheel-product-default-gate.ts`](../../../mobile/src/gamepad/evidence/wheel-product-default-gate.ts).
 
 `002` does not perform any promotion, so this directory is empty by design. The
 gate in `wheel-product-default-gate.test.ts` is live regardless: the moment a

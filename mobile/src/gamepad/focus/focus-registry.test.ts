@@ -8,7 +8,7 @@ const confirm: ControllerIntent = { kind: 'confirm' }
 const back: ControllerIntent = { kind: 'back' }
 const scroll: ControllerIntent = { kind: 'scroll', direction: 'down', velocity: 1, elapsedMs: 16 }
 const tab: ControllerIntent = { kind: 'cycle-tab', direction: 'next' }
-const switchZone: ControllerIntent = { kind: 'switch-zone' }
+const switchZone: ControllerIntent = { kind: 'switch-zone', direction: 'up' }
 
 function target(
   id: string,
@@ -218,17 +218,6 @@ describe('zones (005 USE-R4)', () => {
     expect(registry.snapshot().zones).toEqual(['agent', 'shortcuts', 'header'])
   })
 
-  it('walks agent, shortcuts, header and back with X, skipping zones that are not there', () => {
-    const { registry } = session()
-
-    registry.dispatch(switchZone)
-    expect(registry.focusedZone()).toBe('shortcuts')
-    registry.dispatch(switchZone)
-    expect(registry.focusedZone()).toBe('header')
-    registry.dispatch(switchZone)
-    expect(registry.focusedZone()).toBe('agent')
-  })
-
   it('moves to visual neighbors with X+arrows and does not wrap', () => {
     const { registry, agent } = session()
     expect(registry.dispatch({ kind: 'switch-zone', direction: 'up' })).toBe(true)
@@ -262,7 +251,6 @@ describe('zones (005 USE-R4)', () => {
     registry.register(inZone('agent', 'agent', ['confirm']))
 
     expect(registry.dispatch(switchZone)).toBe(false)
-    expect(registry.snapshot().nextZone).toBeNull()
     expect(registry.snapshot().reachable.has('switch-zone')).toBe(false)
   })
 

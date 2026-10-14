@@ -25,9 +25,7 @@ import expo.modules.kotlin.modules.ModuleDefinition
  * tested without hardware.
  *
  * It taps `Window.Callback` rather than a view listener because that is the earliest point the
- * app can observe an event, and because the delegate's return value says whether the focused view
- * — a terminal WebView, for instance — consumed it. That answer is published on every sample, so
- * a surface that swallows controller input is visible as data rather than as a silent dead zone.
+ * app can observe an event, even one the focused view — a terminal WebView, say — consumes.
  */
 class OrcaGamepadModule : Module() {
   private var tap: WindowCallbackTap? = null
@@ -39,7 +37,6 @@ class OrcaGamepadModule : Module() {
   /** The axes as JavaScript last saw them, so resting jitter is not sent across the bridge. */
   private val emittedAxes = mutableMapOf<String, Float>()
   private var activeDeviceId: Int? = null
-  private var consumedByViewTree = false
   /** Attached game controllers and their resolved axes, refreshed when the device set changes. */
   private val axesByDevice = mutableMapOf<Int, DeviceAxes>()
 
@@ -66,7 +63,7 @@ class OrcaGamepadModule : Module() {
     Events(EVENT_SAMPLE, EVENT_DEVICES)
 
     Function("listControllers") { describeControllers() }
-    Function("currentSample") { sampleBundle(withFocus = true) }
+    Function("currentSample") { sampleBundle() }
 
     // Synchronous for JavaScript, but the work runs on the main thread, where every input event
     // is handled, so the held state is only ever touched from one thread.
@@ -225,7 +222,7 @@ class OrcaGamepadModule : Module() {
         TextInputWordDelete.visibleField(appContext.currentActivity?.currentFocus)
       },
       onKey = { event, consumed -> onKeyEvent(event, consumed) },
-      onMotion = { event, consumed -> onMotionEvent(event, consumed) }
+      onMotion = { event, _ -> onMotionEvent(event) }
     )
     restoreCallback = delegate
     tap = installed
@@ -295,7 +292,7 @@ class OrcaGamepadModule : Module() {
     val wasConnected = activeDeviceId != null
     val controllers = refreshControllers()
     Log.d(TAG, "controllers: " + controllers.joinToString { "${it.name}#${it.id}" }.ifEmpty { "none" })
-    // MVP keeps the first controller active; a second pad connecting does not steal the session.
+    // The first controller stays active; a second pad connecting does not steal the session.
     if (activeDeviceId == null || controllers.none { it.id == activeDeviceId }) {
       activeDeviceId = controllers.firstOrNull()?.id
     }
@@ -327,7 +324,6 @@ class OrcaGamepadModule : Module() {
     if (!acceptsDevice(event.deviceId)) {
       return
     }
-    consumedByViewTree = consumed
     if (button != null) {
       buttons[button] = pressed
       Log.d(TAG, "button $button=$pressed consumed=$consumed")
@@ -340,11 +336,10 @@ class OrcaGamepadModule : Module() {
     emit(force = true)
   }
 
-  private fun onMotionEvent(event: MotionEvent, consumed: Boolean) {
+  private fun onMotionEvent(event: MotionEvent) {
     if (!isControllerEvent(event) || !acceptsDevice(event.deviceId)) {
       return
     }
-    consumedByViewTree = consumed
     val resolved = axesOf(event.deviceId)
     for (index in ALL_AXES.indices) {
       val id = resolved.ids[index]
@@ -380,9 +375,6 @@ class OrcaGamepadModule : Module() {
     return true
   }
 
-  private fun focusedViewName(): String =
-    appContext.currentActivity?.window?.currentFocus?.javaClass?.simpleName ?: "none"
-
   private fun emit(force: Boolean) {
     val now = SystemClock.uptimeMillis()
     val wait = minimumIntervalMs - (now - lastEmitAt)
@@ -399,14 +391,10 @@ class OrcaGamepadModule : Module() {
     }
     lastEmitAt = now
     emittedAxes.putAll(axes)
-    sendEvent(EVENT_SAMPLE, sampleBundle(withFocus = false))
+    sendEvent(EVENT_SAMPLE, sampleBundle())
   }
 
-  /**
-   * `withFocus` reads the focused view, which only the interception check asks for: reading it on
-   * every motion sample was work nobody used.
-   */
-  private fun sampleBundle(withFocus: Boolean): Bundle {
+  private fun sampleBundle(): Bundle {
     val buttonBundle = Bundle().apply { buttons.forEach { (name, value) -> putFloat(name, value) } }
     val axisBundle = Bundle().apply { axes.forEach { (name, value) -> putFloat(name, value) } }
     return Bundle().apply {
@@ -414,8 +402,6 @@ class OrcaGamepadModule : Module() {
       putBundle("buttons", buttonBundle)
       putBundle("axes", axisBundle)
       putDouble("sampledAt", SystemClock.uptimeMillis().toDouble())
-      putBoolean("consumedByViewTree", consumedByViewTree)
-      putString("focusedView", if (withFocus) focusedViewName() else UNSAMPLED_FOCUS)
     }
   }
 
@@ -513,8 +499,6 @@ class OrcaGamepadModule : Module() {
     const val TAG = "OrcaGamepad"
     const val EVENT_SAMPLE = "onControllerSample"
     const val EVENT_DEVICES = "onControllerDevices"
-    /** Pushed samples skip the focus lookup; `currentSample` reads it on demand. */
-    const val UNSAMPLED_FOCUS = "unsampled"
     const val AXIS_JITTER = 0.01f
   }
 }

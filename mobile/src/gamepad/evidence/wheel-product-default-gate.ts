@@ -25,6 +25,15 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0
 }
 
+/** A string field of a parsed evidence record, or undefined; for naming a failing file. */
+export function readString(record: unknown, field: string): string | undefined {
+  if (record === null || typeof record !== 'object') {
+    return undefined
+  }
+  const value: unknown = Object.fromEntries(Object.entries(record))[field]
+  return typeof value === 'string' ? value : undefined
+}
+
 export function validateProductDefaultDecision(decision: unknown): readonly string[] {
   if (decision === null || typeof decision !== 'object') {
     return ['not a decision record']

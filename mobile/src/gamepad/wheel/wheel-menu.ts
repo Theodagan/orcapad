@@ -8,7 +8,7 @@ import { slotAngle, slotHalfWidth } from './wheel-layouts'
  * laid out, and what happens when it is too long to read.
  *
  * Eight is the most a thumb can tell apart. Past that the last segment becomes "More", which opens
- * the next page as one more level, so `B` steps back a page the way it steps back a menu.
+ * the next page as one more level, so `L2` steps back a page the way it steps back a menu.
  */
 
 const MAX_SEGMENTS = 8

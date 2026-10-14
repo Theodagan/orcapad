@@ -15,7 +15,7 @@ no per-device table is recorded here.
 
 | Question | How it is answered | Task |
 | --- | --- | --- |
-| Does the focused terminal WebView consume controller events before the app sees them? | `readControllerInterception()` reports `consumedByViewTree` and the focused view class on every sample. `001/tech.md` §6: if a decor-level tap cannot observe events, implementation pauses for an architecture decision rather than adding a workaround. | CTRL-T4 |
+| Does the focused terminal WebView consume controller events before the app sees them? | The `Window.Callback` tap logs `consumed=` per button in logcat (`adb logcat -s OrcaGamepad`); the sample fields that reported it were removed in 006 as unused. `001/tech.md` §6: if a decor-level tap cannot observe events, implementation pauses for an architecture decision rather than adding a workaround. | CTRL-T4 |
 | Dead-zone crossing to first visible wheel frame, p95 | device trace | CTRL-T8 |
 | Controller disconnect notice timing | device trace | CTRL-T8 |
 

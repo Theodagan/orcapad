@@ -52,7 +52,7 @@ const PROBE_BY_KIND: {
 } = {
   confirm: { kind: 'confirm' },
   back: { kind: 'back' },
-  'switch-zone': { kind: 'switch-zone' },
+  'switch-zone': { kind: 'switch-zone', direction: 'up' },
   'toggle-dictation': { kind: 'toggle-dictation' },
   scroll: { kind: 'scroll', direction: 'down', velocity: 1, elapsedMs: 16, begins: true },
   'cycle-tab': { kind: 'cycle-tab', direction: 'next' },
