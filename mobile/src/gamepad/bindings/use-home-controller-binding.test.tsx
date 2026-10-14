@@ -6,6 +6,7 @@ import type { ControllerIntent } from '../controller-input/controller-intent'
 import type { ControllerReader } from '../controller-input/controller-reader'
 import { neutralSample, type ControllerSample } from '../controller-input/controller-sample'
 import { createWheelRegistry } from '../wheel/wheel-registry'
+import { GO_ACTION_IDS } from './wheel-action-ids'
 import { useHomeControllerBinding } from './use-home-controller-binding'
 
 vi.mock('react-native', () => ({
@@ -177,15 +178,15 @@ describe('home controller binding', () => {
   })
 
   // BIND-R10 plus `003` §10: the action exists exactly as long as the surface does.
-  it('registers its wheel action while mounted and retracts it on unmount', () => {
+  it("registers Pair desktop in GO's New slot while mounted and retracts it on unmount", () => {
     const home = mount()
-    expect(home.registry.lookup('home.pair-desktop')).not.toBeNull()
+    expect(home.registry.lookup(GO_ACTION_IDS.new)?.label).toBe('Pair desktop')
 
-    home.registry.lookup('home.pair-desktop')?.run()
+    home.registry.lookup(GO_ACTION_IDS.new)?.run()
     expect(home.onPairDesktop).toHaveBeenCalledTimes(1)
 
     act(() => home.renderer.unmount())
-    expect(home.registry.lookup('home.pair-desktop')).toBeNull()
+    expect(home.registry.lookup(GO_ACTION_IDS.new)).toBeNull()
   })
 
   it('stops receiving intents once unmounted', () => {

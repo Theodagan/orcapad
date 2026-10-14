@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { resolveAgentIntervention, type InterventionSurface } from './agent-intervention'
-import { AGENT_WHEEL_ACTION_IDS } from './agent-wheel-action-ids'
+import { DO_ACTION_IDS } from './wheel-action-ids'
 import { LIST_SCROLL_RATE } from './controller-scroll-rate'
 import type { WheelActionBinding } from '../wheel/wheel-registry'
 import { FOCUS_PRIORITY } from '../focus/focus-zones'
@@ -82,11 +82,12 @@ export function useAgentControllerBinding(options: AgentControllerBindingOptions
     }
 
     // The chat decides whether a turn can be stopped, and a stop its button would refuse is
-    // unavailable here too. Close, launch and web belong to the session around the chat.
+    // unavailable here too. Close and launch belong to the session around the chat.
     const stopAction: WheelActionBinding = {
-      id: AGENT_WHEEL_ACTION_IDS.stop,
+      id: DO_ACTION_IDS.stop,
       label: 'Stop agent',
       availability: canStop && onStop !== undefined ? 'available' : 'unavailable',
+      reason: 'Nothing running to stop',
       run: () => latest.current.onStop?.()
     }
     const wheelActions: readonly WheelActionBinding[] = [stopAction]

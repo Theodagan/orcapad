@@ -295,8 +295,6 @@ export function MobileFileExplorerPanel(props: {
     [embedded, hostId, name, onRequestClose, router, worktreeId]
   )
 
-  const collapseAll = useCallback(() => setExpanded(() => new Set<string>()), [])
-
   const scrollExplorerTo = useCallback((offset: number) => {
     listRef.current?.scrollToOffset({ offset, animated: false })
   }, [])
@@ -314,7 +312,6 @@ export function MobileFileExplorerPanel(props: {
     onPreviewFile: (row) =>
       previewFile(row.relativePath, 'name' in row ? row.name : row.relativePath),
     onRetryDirectory: (row) => retryDirectory(row.relativePath),
-    onCollapseAll: collapseAll,
     onBack: () => (onRequestClose === undefined ? router.back() : onRequestClose()),
     scrollBy: listScroll.scrollBy
   })

@@ -1,10 +1,12 @@
 import type { ControllerIntentKind } from './controller-intent'
 import type { ControllerAxis, ControllerButton } from './controller-sample'
+import { DO_ACTION_IDS, VIEW_ACTION_IDS } from '../bindings/wheel-action-ids'
 
 /**
  * The accepted PRD mapping (CTRL-R1), as data rather than as branches, so a test can assert the
  * contract row by row and a reader can see the whole scheme at once. `005` moved three rows:
- * `Y` toggles dictation on tap, while `X` is held for directional zone movement.
+ * `Y` toggles dictation on tap, while `X` is held for directional zone movement. `012` gave Start
+ * and Select one wheel action each, run through the wheel registry so both paths stay one.
  *
  * The D-pad set lives in its own module and must never be merged into this one: the boundary
  * test fails a module that declares both, because the two have different provenance and a
@@ -19,9 +21,11 @@ export type ControllerBinding =
       readonly chord: ControllerButton | null
       readonly intent: Extract<
         ControllerIntentKind,
-        'confirm' | 'back' | 'toggle-dictation' | 'cycle-tab' | 'cycle-workspace'
+        'confirm' | 'back' | 'toggle-dictation' | 'cycle-tab' | 'cycle-workspace' | 'run-action'
       >
       readonly direction: 'previous' | 'next' | null
+      /** The wheel registry id a `run-action` row runs. */
+      readonly actionId?: string
       /**
        * `press` fires on the way down. `tap` fires on release, and only when the button went down
        * and up alone: a button that doubles as a modifier cannot know what it is until then.
@@ -129,6 +133,26 @@ export const PRD_CONTROLLER_BINDINGS: readonly ControllerBinding[] = [
     direction: null,
     timing: 'tap',
     label: 'Y'
+  },
+  {
+    kind: 'button',
+    button: 'start',
+    chord: null,
+    intent: 'run-action',
+    direction: null,
+    actionId: DO_ACTION_IDS.stop,
+    timing: 'press',
+    label: 'Start'
+  },
+  {
+    kind: 'button',
+    button: 'select',
+    chord: null,
+    intent: 'run-action',
+    direction: null,
+    actionId: VIEW_ACTION_IDS.focusMode,
+    timing: 'press',
+    label: 'Select'
   },
   { kind: 'unassigned', button: 'r3', label: 'R3' },
   { kind: 'unassigned', button: 'l3', label: 'L3' }

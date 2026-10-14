@@ -1,5 +1,6 @@
 import type { WheelMenuEntry } from './wheel-registry'
 import type { WheelSegment } from './wheel-segment'
+import { slotAngle, slotHalfWidth } from './wheel-layouts'
 
 /**
  * Turning a list into a second wheel. The list is data the surface supplies when the wheel opens
@@ -10,9 +11,7 @@ import type { WheelSegment } from './wheel-segment'
  * the next page as one more level, so `B` steps back a page the way it steps back a menu.
  */
 
-const FULL_TURN = Math.PI * 2
 const MAX_SEGMENTS = 8
-const BOUNDARY_OVERLAP = 0.001
 const MORE_ID = '__more'
 
 export type MenuStatus = 'loading' | 'ready' | 'error'
@@ -68,11 +67,8 @@ export function menuSegments(key: string, view: MenuView): readonly WheelSegment
   if (count === 0) {
     return []
   }
-  const halfWidth = Math.min(Math.PI, FULL_TURN / (2 * count) + BOUNDARY_OVERLAP)
-  const place = (index: number) => ({
-    centerAngle: (index / count) * FULL_TURN,
-    halfWidth
-  })
+  const halfWidth = slotHalfWidth(count)
+  const place = (index: number) => ({ centerAngle: slotAngle(index, count), halfWidth })
   const segments: WheelSegment[] = entries.map((entry, index) => ({
     id: entry.id,
     label: entry.label,

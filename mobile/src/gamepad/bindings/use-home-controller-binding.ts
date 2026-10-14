@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useZoneFocused } from '../zones/use-zone-focused'
 import { LIST_SCROLL_RATE } from './controller-scroll-rate'
-import { homeWheelActions } from './home-wheel-actions'
+import { pairDesktopWheelAction } from './go-wheel-actions'
 import { nextSelectedId, selectedItem } from './list-selection'
 import { focusTargetFor, type IntentHandlerEntry } from './surface-binding'
 import { useControllerListSelection } from './use-controller-list-selection'
@@ -62,8 +62,8 @@ export function useHomeControllerBinding<T extends { readonly id: string }>(
     return { ...focusTargetFor('home', entries), zone: 'list' as const }
   }, [hosts, onOpen, scrollEntry, current, select])
 
-  // BIND-R10: an id a preset may name, declared next door so preset data never imports React.
-  const wheelActions = useMemo(() => homeWheelActions(onPairDesktop), [onPairDesktop])
+  // GO's New slot on home (`012`).
+  const wheelActions = useMemo(() => [pairDesktopWheelAction(onPairDesktop)], [onPairDesktop])
   const binding = useMemo(() => ({ focusTarget, wheelActions }), [focusTarget, wheelActions])
 
   useSurfaceBinding(binding)

@@ -7,7 +7,6 @@ import type { ControllerIntent } from '../controller-input/controller-intent'
 import type { ControllerReader } from '../controller-input/controller-reader'
 import { neutralSample, type ControllerSample } from '../controller-input/controller-sample'
 import { createWheelRegistry } from '../wheel/wheel-registry'
-import { EXPLORER_WHEEL_ACTION_IDS } from './file-explorer-row-action'
 import { useFileExplorerControllerBinding } from './use-file-explorer-controller-binding'
 
 vi.mock('react-native', () => ({
@@ -57,7 +56,6 @@ function mount(
   const onToggleDirectory = vi.fn()
   const onPreviewFile = vi.fn()
   const onRetryDirectory = vi.fn()
-  const onCollapseAll = vi.fn()
   const onBack = vi.fn()
   const scrollBy = vi.fn()
   let dispatch: (intent: ControllerIntent) => boolean = () => false
@@ -84,7 +82,6 @@ function mount(
       onToggleDirectory,
       onPreviewFile,
       onRetryDirectory,
-      onCollapseAll,
       onBack,
       scrollBy
     })
@@ -124,7 +121,6 @@ function mount(
     onToggleDirectory,
     onPreviewFile,
     onRetryDirectory,
-    onCollapseAll,
     onBack
   }
 }
@@ -206,30 +202,12 @@ describe('file explorer controller binding', () => {
     expect(explorer.onRetryDirectory).not.toHaveBeenCalled()
   })
 
-  // BIND-R10: the ids WHEEL-T7 references, alive exactly while the panel is.
-  it('registers its wheel actions while mounted and retracts them on unmount', () => {
+  // `012`: the explorer offers nothing to the wheels; its actions stay on its own controls.
+  it('registers no wheel actions', () => {
     const explorer = mount()
     explorer.connect(true)
 
-    expect(explorer.registry.lookup(EXPLORER_WHEEL_ACTION_IDS.collapseAll)).not.toBeNull()
-    explorer.registry.lookup(EXPLORER_WHEEL_ACTION_IDS.collapseAll)?.run()
-    expect(explorer.onCollapseAll).toHaveBeenCalledTimes(1)
-
-    act(() => explorer.renderer.unmount())
-    expect(explorer.registry.lookup(EXPLORER_WHEEL_ACTION_IDS.collapseAll)).toBeNull()
-  })
-
-  // A wheel commit must not preview a folder just because something was selected.
-  it('previews from the wheel only when the selection is a file', () => {
-    const explorer = mount()
-    explorer.connect(true)
-
-    explorer.registry.lookup(EXPLORER_WHEEL_ACTION_IDS.preview)?.run()
-    expect(explorer.onPreviewFile).not.toHaveBeenCalled()
-
-    explorer.dispatch({ kind: 'move-selection', direction: 'down' })
-    explorer.registry.lookup(EXPLORER_WHEEL_ACTION_IDS.preview)?.run()
-    expect(explorer.onPreviewFile).toHaveBeenCalledWith(rows[1])
+    expect(explorer.registry.ids()).toEqual([])
   })
 
   it('goes back through the panel’s own close', () => {

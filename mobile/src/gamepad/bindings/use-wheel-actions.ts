@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useControllerBinding } from '../controller-provider'
+import { useControllerScreenActive } from '../focus/screen-focus-gate'
 import type { WheelBinding } from '../wheel/wheel-registry'
 
 /**
@@ -8,13 +9,18 @@ import type { WheelBinding } from '../wheel/wheel-registry'
  */
 export function useWheelActions(bindings: readonly WheelBinding[]): void {
   const { registerWheelAction } = useControllerBinding()
+  // A screen retained under another offers nothing: its actions would collide with the top one's.
+  const screenActive = useControllerScreenActive()
 
   useEffect(() => {
+    if (!screenActive) {
+      return
+    }
     const retractions = bindings.map((binding) => registerWheelAction(binding))
     return () => {
       for (const retract of retractions) {
         retract()
       }
     }
-  }, [bindings, registerWheelAction])
+  }, [bindings, registerWheelAction, screenActive])
 }

@@ -289,6 +289,6 @@ describe('the agentic loop', () => {
   it('reaches the interrupt step through the wheel, since X now switches zone', () => {
     const interrupt = AGENTIC_LOOP.find((step) => step.id === 'interrupt')
 
-    expect(interrupt?.reachedBy).toEqual([{ kind: 'wheel', bindingId: 'agent.stop' }])
+    expect(interrupt?.reachedBy).toEqual([{ kind: 'wheel', bindingId: 'do.stop' }])
   })
 })

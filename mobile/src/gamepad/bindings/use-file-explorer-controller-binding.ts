@@ -2,12 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useControllerBinding } from '../controller-provider'
 import { LIST_SCROLL_RATE } from './controller-scroll-rate'
 import { nextSelectedId, selectedItem } from './list-selection'
-import {
-  explorerWheelActions,
-  rowAction,
-  type ExplorerRow,
-  type RowAction
-} from './file-explorer-row-action'
+import { rowAction, type ExplorerRow, type RowAction } from './file-explorer-row-action'
 import { FOCUS_PRIORITY } from '../focus/focus-zones'
 import { useZoneFocused } from '../zones/use-zone-focused'
 import { focusTargetFor, type IntentHandlerEntry, type SurfaceBinding } from './surface-binding'
@@ -38,7 +33,6 @@ export type FileExplorerControllerBindingOptions<T extends ExplorerRow> = {
   readonly onToggleDirectory: (row: T) => void
   readonly onPreviewFile: (row: T) => void
   readonly onRetryDirectory: (row: T) => void
-  readonly onCollapseAll: () => void
   readonly onBack: () => void
   /** Moves the list from where it really is; the panel wires it to the list's own offset. */
   readonly scrollBy: (delta: number) => void
@@ -55,14 +49,12 @@ export function useFileExplorerControllerBinding<T extends ExplorerRow>(
     onToggleDirectory,
     onPreviewFile,
     onRetryDirectory,
-    onCollapseAll,
     onBack
   } = options
   const scrollEntry = useScrollIntentEntry(LIST_SCROLL_RATE, options.scrollBy)
   const { connected, activateFocusTarget } = useControllerBinding()
   const zoneFocused = useZoneFocused('panels')
   const { selectedId, current: currentId, select } = useControllerListSelection(rows, idOf)
-  const hasSelection = selectedId !== null
 
   const focusTarget = useMemo(() => {
     const current = (): T | null => selectedItem(rows, idOf, currentId())
@@ -151,31 +143,8 @@ export function useFileExplorerControllerBinding<T extends ExplorerRow>(
     scrollEntry
   ])
 
-  // Apart from the cursor, so a D-pad move does not re-register every wheel action.
-  const wheelActions = useMemo(() => {
-    const current = (): T | null => selectedItem(rows, idOf, currentId())
-    return explorerWheelActions({
-      hasSelection,
-      previewSelected: () => {
-        const row = current()
-        if (row !== null && rowAction(row) === 'preview-file') {
-          onPreviewFile(row)
-        }
-      },
-      collapseAll: onCollapseAll,
-      reloadSelected: () => {
-        const row = current()
-        if (row !== null) {
-          onRetryDirectory(row)
-        }
-      }
-    })
-  }, [rows, idOf, currentId, hasSelection, onPreviewFile, onCollapseAll, onRetryDirectory])
-
-  const binding = useMemo<SurfaceBinding>(
-    () => ({ focusTarget, wheelActions }),
-    [focusTarget, wheelActions]
-  )
+  // No wheel actions: preview, reload and fold stay on `A` and the D-pad (`012`).
+  const binding = useMemo<SurfaceBinding>(() => ({ focusTarget, wheelActions: [] }), [focusTarget])
 
   useSurfaceBinding(binding)
 

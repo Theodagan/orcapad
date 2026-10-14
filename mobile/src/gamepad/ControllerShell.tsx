@@ -14,8 +14,11 @@ import { WheelOverlay } from './wheel/WheelOverlay'
 import { useWheelController } from './wheel/use-wheel-controller'
 import { createWheelRegistry, type WheelRegistry } from './wheel/wheel-registry'
 import { createActiveDictationRegistry } from './bindings/active-dictation'
-import { ACTIVE_WHEEL_TRIAL } from './wheel/experiments/active-wheel-trial'
-import { navigationWheelActions } from './bindings/navigation-wheel-actions'
+import { wheelLayoutsFor, wheelScreenFor, type WheelScreen } from './wheel/wheel-layouts'
+import { goWheelActions } from './bindings/go-wheel-actions'
+import { ActionRefusalNotice } from './action-refusal/ActionRefusalNotice'
+import { createActionRefusalStore, refusalMessageFor } from './action-refusal/action-refusal-store'
+import { triggerError } from '../platform/haptics'
 import { useRootBackBinding } from './bindings/use-root-back-binding'
 import { useFocusModeSystemBars } from './session-chrome/use-focus-mode-system-bars'
 
@@ -33,6 +36,13 @@ const wheelRegistry = createWheelRegistry()
 // being dispatched to: a live microphone stays stoppable from wherever focus has gone (unless a
 // wheel is open, which takes every input first).
 const activeDictation = createActiveDictationRegistry()
+const actionRefusals = createActionRefusalStore()
+
+/** Start or Select with nothing to run: felt and said, never silent. */
+function refuseAction(actionId: string): void {
+  triggerError()
+  actionRefusals.show(refusalMessageFor(actionId))
+}
 
 /** `B` leaves any screen that has no use for it, which is most of them. Must sit inside the provider. */
 function RootBackBinding(): null {
@@ -55,17 +65,18 @@ function FocusModeSystemBars(): null {
   return null
 }
 
-/** The left wheel: back to this host's workspace list, and a new worktree on it. */
-function useNavigationWheelActions(registry: WheelRegistry): void {
+/** GO's Up, New and Settings, which need only the router. */
+function useGoWheelActions(registry: WheelRegistry, screen: WheelScreen, pathname: string): void {
   const router = useRouter()
-  const pathname = usePathname()
   const { hostId } = useGlobalSearchParams<{ hostId?: string }>()
   useEffect(() => {
     const host = typeof hostId === 'string' ? hostId : null
-    const unregister = navigationWheelActions({
+    const unregister = goWheelActions({
+      screen,
       hostId: host,
-      atWorkspaceList: host !== null && pathname === hostStackHostRoute(host),
-      onBackToMenu: () => {
+      atSettings: pathname === '/settings',
+      onAllHosts: () => router.dismissTo('/'),
+      onWorkspaces: () => {
         if (host !== null) {
           router.dismissTo(hostStackHostRoute(host))
         }
@@ -74,14 +85,15 @@ function useNavigationWheelActions(registry: WheelRegistry): void {
         if (host !== null) {
           router.dismissTo(hostNewWorktreeRoute(host))
         }
-      }
+      },
+      onSettings: () => router.push('/settings')
     }).map((action) => registry.register(action))
     return () => {
       for (const retract of unregister) {
         retract()
       }
     }
-  }, [hostId, pathname, registry, router])
+  }, [hostId, pathname, screen, registry, router])
 }
 
 export function ControllerShell({
@@ -91,10 +103,11 @@ export function ControllerShell({
   readonly children: ReactNode
   readonly onLayout?: (event: LayoutChangeEvent) => void
 }): ReactNode {
-  // Whichever layouts are being tried, from experiment data. Not a default: WHEEL-T9 is where a
-  // preset could become one, and only behind a trial record and a recorded human decision.
+  const pathname = usePathname()
+  const screen = wheelScreenFor(pathname)
+  // GO on the left stick and, in a session, DO on the right (`012`).
   const wheel = useWheelController({
-    presets: ACTIVE_WHEEL_TRIAL,
+    presets: wheelLayoutsFor(screen),
     registry: wheelRegistry,
     deadZone: 0.15,
     // An open wheel owns the pad: Android must not also move its own focus underneath it.
@@ -102,7 +115,7 @@ export function ControllerShell({
   })
   // A pad that drops mid-gesture must not leave an open wheel swallowing the screen.
   useCancelWheelOnDisconnect(controllerRuntime.reader, wheel.cancel)
-  useNavigationWheelActions(wheelRegistry)
+  useGoWheelActions(wheelRegistry, screen, pathname)
   const overlay = useMemo(() => <WheelOverlay controller={wheel} />, [wheel])
 
   return (
@@ -112,6 +125,8 @@ export function ControllerShell({
       intercept={wheel.intercept}
       captured={wheel.isOpen}
       registerWheelAction={wheelRegistry.register}
+      lookupWheelAction={wheelRegistry.lookup}
+      onActionRefused={refuseAction}
       activeDictation={activeDictation}
       requestNativeFocus={controllerRuntime.requestNativeFocus}
       wheelOverlay={overlay}
@@ -121,8 +136,9 @@ export function ControllerShell({
       </View>
       <RootBackBinding />
       <FocusModeSystemBars />
-      <ActionHintBar wheel={wheel.view} />
+      <ActionHintBar wheel={wheel.view} actions={wheelRegistry} />
       <ControllerConnectionNotice />
+      <ActionRefusalNotice store={actionRefusals} />
       <MobileDictationStatusPill />
     </ControllerProvider>
   )

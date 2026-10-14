@@ -80,9 +80,8 @@ export function WheelOverlay({
             </View>
           )
         })}
-        {view.segments.length === 0 && view.message !== null ? (
-          <Text style={styles.message}>{view.message}</Text>
-        ) : null}
+        {/* Loading, empty or failed with no segments; with segments, why the lit one is refused. */}
+        {view.message !== null ? <Text style={styles.message}>{view.message}</Text> : null}
       </View>
       <TriggerCue
         control={WHEEL_TRIGGER_NAMES.back}
@@ -169,7 +168,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     maxWidth: LABEL_MAX_WIDTH
   },
-  message: { color: colors.textMuted, fontSize: typography.bodySize, textAlign: 'center' },
+  message: {
+    color: colors.textMuted,
+    fontSize: typography.bodySize,
+    maxWidth: LABEL_MAX_WIDTH,
+    textAlign: 'center'
+  },
   title: {
     color: colors.textSecondary,
     fontSize: typography.bodySize,

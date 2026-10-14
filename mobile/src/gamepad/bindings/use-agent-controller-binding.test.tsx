@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { ControllerProvider, useController } from '../controller-provider'
 import type { ControllerIntent } from '../controller-input/controller-intent'
 import { createWheelRegistry } from '../wheel/wheel-registry'
-import { AGENT_WHEEL_ACTION_IDS } from './agent-wheel-action-ids'
+import { DO_ACTION_IDS } from './wheel-action-ids'
 import {
   useAgentControllerBinding,
   type AgentControllerBindingOptions
@@ -84,7 +84,7 @@ describe('agent controller binding', () => {
     it('stops the focused turn through the view’s own callback, from the wheel', () => {
       const agent = mount()
 
-      agent.registry.lookup(AGENT_WHEEL_ACTION_IDS.stop)?.run()
+      agent.registry.lookup(DO_ACTION_IDS.stop)?.run()
 
       expect(agent.onStop).toHaveBeenCalledTimes(1)
     })
@@ -93,7 +93,7 @@ describe('agent controller binding', () => {
     it('offers the stop unavailable when the view says the turn cannot be stopped', () => {
       const agent = mount({ canStop: false })
 
-      expect(agent.registry.lookup(AGENT_WHEEL_ACTION_IDS.stop)?.availability).toBe('unavailable')
+      expect(agent.registry.lookup(DO_ACTION_IDS.stop)?.availability).toBe('unavailable')
     })
 
     it('no longer answers a stop intent at all, because no control sends one', () => {
@@ -173,7 +173,7 @@ describe('agent controller binding', () => {
     it('still offers the stop on the wheel while a prompt is on screen', () => {
       const agent = mount({ ask: { questions: [] }, onCancelAsk: vi.fn() })
 
-      expect(agent.registry.lookup(AGENT_WHEEL_ACTION_IDS.stop)?.availability).toBe('available')
+      expect(agent.registry.lookup(DO_ACTION_IDS.stop)?.availability).toBe('available')
     })
   })
 
@@ -189,6 +189,6 @@ describe('agent controller binding', () => {
     act(() => agent.renderer.unmount())
 
     expect(agent.dispatch(scroll('down', 1, 16, true))).toBe(false)
-    expect(agent.registry.lookup(AGENT_WHEEL_ACTION_IDS.stop)).toBeNull()
+    expect(agent.registry.lookup(DO_ACTION_IDS.stop)).toBeNull()
   })
 })

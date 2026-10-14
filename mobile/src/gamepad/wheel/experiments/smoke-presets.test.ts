@@ -4,9 +4,7 @@ import { selectSegment } from '../wheel-geometry'
 import { resolveSegments, validatePreset, type WheelPresetDefinition } from '../wheel-preset'
 import { createWheelRegistry, type WheelRegistry } from '../wheel-registry'
 import { CLOSED_WHEEL, reduceWheel, type WheelPreset } from '../wheel-state'
-import { ACTIVE_WHEEL_TRIAL } from './active-wheel-trial'
 import { createSmokeDiagnostics } from './smoke-diagnostic-bindings'
-import { REAL_ACTION_PRESETS } from './real-action-presets'
 import { SMOKE_PRESETS } from './smoke-presets'
 
 const DEAD_ZONE = 0.15
@@ -160,20 +158,5 @@ describe('smoke bindings under the wheel', () => {
     expect(segments.find((segment) => segment.id === 'absent')?.availability).toBe('unavailable')
     expect(outcome).toMatchObject({ kind: 'cancel' })
     expect(diagnostics.runs()).toEqual([])
-  })
-})
-
-describe('active wheel trial', () => {
-  it('runs presets that agree about which stick they are on', () => {
-    for (const [side, preset] of Object.entries(ACTIVE_WHEEL_TRIAL)) {
-      expect(preset).toBeDefined()
-      expect(preset?.wheel).toBe(Number(side))
-      // Drawn from a catalog, never written inline: a trial runs a preset someone can re-read.
-      const catalogued =
-        preset === undefined
-          ? null
-          : (SMOKE_PRESETS[preset.presetId] ?? REAL_ACTION_PRESETS[preset.presetId])
-      expect(catalogued).toBe(preset)
-    }
   })
 })

@@ -28,6 +28,8 @@ val BUTTON_BY_KEY_CODE: Map<Int, String> = mapOf(
   KeyEvent.KEYCODE_BUTTON_R1 to "rb",
   KeyEvent.KEYCODE_BUTTON_THUMBL to "l3",
   KeyEvent.KEYCODE_BUTTON_THUMBR to "r3",
+  KeyEvent.KEYCODE_BUTTON_START to "start",
+  KeyEvent.KEYCODE_BUTTON_SELECT to "select",
   KeyEvent.KEYCODE_DPAD_UP to "dpad-up",
   KeyEvent.KEYCODE_DPAD_DOWN to "dpad-down",
   KeyEvent.KEYCODE_DPAD_LEFT to "dpad-left",
@@ -63,7 +65,7 @@ val TRIGGER_AXIS_BY_KEY_CODE: Map<Int, String> = mapOf(
 )
 
 val ALL_BUTTONS: List<String> = listOf(
-  "a", "b", "x", "y", "lb", "rb", "l3", "r3",
+  "a", "b", "x", "y", "lb", "rb", "l3", "r3", "start", "select",
   "dpad-up", "dpad-down", "dpad-left", "dpad-right"
 )
 

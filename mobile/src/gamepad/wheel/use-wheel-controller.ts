@@ -51,7 +51,7 @@ export type WheelController = {
 }
 
 export type WheelControllerOptions = {
-  /** A wheel with no preset still opens; it simply has nothing to lock (`002` §6). */
+  /** Follows the screen. A stick whose wheel has no preset here opens nothing. */
   readonly presets: Readonly<Partial<Record<WheelId, WheelPresetDefinition>>>
   readonly registry: WheelRegistry
   readonly deadZone: number
@@ -77,7 +77,10 @@ function onceEach(segmentsFor: SegmentsFor): SegmentsFor {
 }
 
 export function useWheelController(options: WheelControllerOptions): WheelController {
-  const { presets, registry, deadZone } = options
+  const { registry, deadZone } = options
+  // Read per event, so a screen change swaps layouts without rebuilding `intercept`.
+  const presetsRef = useRef(options.presets)
+  presetsRef.current = options.presets
   const stateRef = useRef<WheelState>(CLOSED_WHEEL)
   const vectorRef = useRef<{ x: number; y: number } | null>(null)
   const menusRef = useRef(new Map<string, MenuView>())
@@ -91,12 +94,12 @@ export function useWheelController(options: WheelControllerOptions): WheelContro
     (wheel, path) => {
       const key = path.at(-1)
       if (key === undefined) {
-        const preset = presets[wheel]
+        const preset = presetsRef.current[wheel]
         return preset === undefined ? [] : resolveSegments(preset, registry)
       }
       return menuSegments(key, menusRef.current.get(parseMenuKey(key).base) ?? LOADING_MENU)
     },
-    [presets, registry]
+    [registry]
   )
 
   const isLoading = useCallback((_wheel: WheelId, path: readonly string[]): boolean => {
@@ -126,17 +129,22 @@ export function useWheelController(options: WheelControllerOptions): WheelContro
   )
 
   const describe = useCallback(
-    (next: Extract<WheelState, { kind: 'open' }>): Pick<WheelView, 'title' | 'message'> => {
+    (
+      next: Extract<WheelState, { kind: 'open' }>,
+      segments: readonly WheelSegment[]
+    ): Pick<WheelView, 'title' | 'message'> => {
+      const locked = segments.find((segment) => segment.id === next.locked)
+      const reason = locked?.availability === 'unavailable' ? (locked.reason ?? null) : null
       const key = next.path.at(-1)
       if (key === undefined) {
-        return { title: null, message: null }
+        return { title: null, message: reason }
       }
       const { base } = parseMenuKey(key)
       const menu = menusRef.current.get(base) ?? LOADING_MENU
       const title = registry.lookup(base)?.label ?? null
       return {
         title,
-        message: menu.status === 'ready' && menu.entries.length > 0 ? null : menu.message
+        message: menu.status === 'ready' && menu.entries.length > 0 ? reason : menu.message
       }
     },
     [registry]
@@ -145,11 +153,12 @@ export function useWheelController(options: WheelControllerOptions): WheelContro
   const publish = useCallback(
     (resolve: SegmentsFor) => {
       const current = stateRef.current
-      viewStore.publish(
-        current.kind === 'closed'
-          ? CLOSED_VIEW
-          : { state: current, segments: resolve(current.wheel, current.path), ...describe(current) }
-      )
+      if (current.kind === 'closed') {
+        viewStore.publish(CLOSED_VIEW)
+        return
+      }
+      const segments = resolve(current.wheel, current.path)
+      viewStore.publish({ state: current, segments, ...describe(current, segments) })
     },
     [viewStore, describe]
   )
@@ -259,6 +268,16 @@ export function useWheelController(options: WheelControllerOptions): WheelContro
   const intercept = useCallback(
     (intent: ControllerIntent): boolean => {
       if (intent.kind === 'wheel-motion') {
+        const closed = stateRef.current
+        if (
+          closed.kind === 'closed' &&
+          presetsRef.current[intent.wheel] === undefined &&
+          !closed.spent.has(intent.wheel) &&
+          Math.hypot(intent.x, intent.y) > deadZone
+        ) {
+          // No wheel on this screen for that stick: swallowed, and nothing opens.
+          return true
+        }
         vectorRef.current = intent.x === 0 && intent.y === 0 ? null : { x: intent.x, y: intent.y }
         // Always the wheel's to handle: no surface has a meaning for raw stick motion.
         apply({ kind: 'motion', wheel: intent.wheel, x: intent.x, y: intent.y })
@@ -277,7 +296,7 @@ export function useWheelController(options: WheelControllerOptions): WheelContro
       }
       return true
     },
-    [apply]
+    [apply, deadZone]
   )
 
   const isOpen = useCallback((): boolean => stateRef.current.kind === 'open', [])

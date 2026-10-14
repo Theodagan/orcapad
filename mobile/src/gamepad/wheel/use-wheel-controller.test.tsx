@@ -58,7 +58,8 @@ const EVERY_INTENT: Record<ControllerIntentKind, ControllerIntent> = {
   back: { kind: 'back' },
   'toggle-dictation': { kind: 'toggle-dictation' },
   'move-selection': { kind: 'move-selection', direction: 'down' },
-  'move-horizontal': { kind: 'move-horizontal', direction: 'right' }
+  'move-horizontal': { kind: 'move-horizontal', direction: 'right' },
+  'run-action': { kind: 'run-action', actionId: 'test.act' }
 }
 
 const entry = (id: string, run = vi.fn()): WheelMenuEntry => ({
@@ -162,6 +163,32 @@ describe('wheel controller', () => {
         },
         (intent) => pad.wheel.intercept(intent)
       )
+    })
+
+    // `012`: DO exists only in a session, so elsewhere the right stick opens nothing.
+    it('opens nothing for a stick whose wheel this screen does not have', () => {
+      const pad = mount(createWheelRegistry())
+
+      expect(pad.wheel.intercept({ kind: 'wheel-motion', wheel: 2, x: 0, y: 1 })).toBe(true)
+      expect(pad.wheel.view.read().state.kind).toBe('closed')
+      expect(pad.wheel.isOpen()).toBe(false)
+    })
+
+    it('says why the lit segment is refused', () => {
+      const registry = createWheelRegistry()
+      registry.register({
+        id: 'test.act',
+        label: 'Act',
+        availability: 'unavailable',
+        reason: 'No agent here',
+        run: vi.fn()
+      })
+      const pad = mount(registry)
+      pad.send(RIGHT)
+
+      expect(pad.wheel.view.read().message).toBe('No agent here')
+      pad.send(UP)
+      expect(pad.wheel.view.read().message).toBeNull()
     })
 
     it('does not let the other stick through, nor let it open a second wheel', () => {

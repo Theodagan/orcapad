@@ -28,7 +28,7 @@ import {
   type SessionChromeStore
 } from './session-chrome/session-chrome-store'
 import type { FocusTarget } from './focus/focus-target'
-import type { WheelBinding } from './wheel/wheel-registry'
+import { isRunnableAction, type WheelBinding } from './wheel/wheel-registry'
 import {
   shouldToggleDictation,
   type ActiveDictation,
@@ -203,6 +203,10 @@ export type ControllerProviderProps = {
   readonly captured?: () => boolean
   /** WHEEL-T4's registry, passed in rather than reached for, so the provider owns no wheel state. */
   readonly registerWheelAction?: (binding: WheelBinding) => () => void
+  /** The same registry's read side: a `run-action` button runs what the wheel would. */
+  readonly lookupWheelAction?: (id: string) => WheelBinding | null
+  /** A `run-action` whose action is absent or unavailable: the shell says so. */
+  readonly onActionRefused?: (actionId: string) => void
   /**
    * Step 2 of `001` §7, between the wheel and the focused surface: `Y` reaches the session's
    * dictation wherever focus is. Absent means no dictation layer, and `Y` is an ordinary intent.
@@ -220,6 +224,8 @@ export function ControllerProvider({
   intercept,
   captured,
   registerWheelAction,
+  lookupWheelAction,
+  onActionRefused,
   activeDictation,
   requestNativeFocus
 }: ControllerProviderProps): ReactNode {
@@ -243,6 +249,18 @@ export function ControllerProvider({
     return true
   }, [activeDictation])
 
+  const runAction = useCallback(
+    (actionId: string): void => {
+      const binding = lookupWheelAction?.(actionId) ?? null
+      if (isRunnableAction(binding)) {
+        void binding.run()
+        return
+      }
+      onActionRefused?.(actionId)
+    },
+    [lookupWheelAction, onActionRefused]
+  )
+
   useEffect(() => {
     setConnected(activeReader.current().connected)
     return activeReader.subscribe((sample) => {
@@ -259,10 +277,15 @@ export function ControllerProvider({
         if (intent.kind === 'toggle-dictation' && takeDictationToggle()) {
           continue
         }
+        // Wherever focus is: the action belongs to the screen, not to a focused surface.
+        if (intent.kind === 'run-action') {
+          runAction(intent.actionId)
+          continue
+        }
         registry.dispatch(intent)
       }
     })
-  }, [activeReader, registry, resolve, intercept, captured, takeDictationToggle])
+  }, [activeReader, registry, resolve, intercept, captured, takeDictationToggle, runAction])
 
   const focus = useMemo<FocusReader>(
     () => ({

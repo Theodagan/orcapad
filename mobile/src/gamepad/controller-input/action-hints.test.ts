@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { actionHintsFor } from './action-hints'
+import { actionHintsFor, RUN_ACTION_IDS } from './action-hints'
+import { DO_ACTION_IDS, VIEW_ACTION_IDS } from '../bindings/wheel-action-ids'
 import type { ControllerIntentKind } from './controller-intent'
 
 const accepting = (...kinds: ControllerIntentKind[]): ReadonlySet<ControllerIntentKind> =>
@@ -114,5 +115,27 @@ describe('action hints', () => {
     const hints = actionHintsFor(accepting('cycle-workspace'))
 
     expect(hints).toEqual([{ control: 'Y+L1/R1', label: 'Worktrees' }])
+  })
+
+  // `012`: Start and Select are named only while the action they run can run.
+  it('shows Start Stop and Select Focus only while those actions are available', () => {
+    expect(actionHintsFor(accepting('confirm'))).toEqual([{ control: 'A', label: 'Select' }])
+
+    const hints = actionHintsFor(
+      accepting('confirm'),
+      {},
+      new Set([DO_ACTION_IDS.stop, VIEW_ACTION_IDS.focusMode])
+    )
+    expect(hints.slice(1)).toEqual([
+      { control: 'Start', label: 'Stop' },
+      { control: 'Select', label: 'Focus' }
+    ])
+    expect(actionHintsFor(accepting(), {}, new Set([VIEW_ACTION_IDS.focusMode]))).toEqual([
+      { control: 'Select', label: 'Focus' }
+    ])
+  })
+
+  it('watches exactly the actions Start and Select run', () => {
+    expect(RUN_ACTION_IDS).toEqual([DO_ACTION_IDS.stop, VIEW_ACTION_IDS.focusMode])
   })
 })

@@ -61,8 +61,8 @@ export const AGENTIC_LOOP: readonly LoopStep[] = [
     id: 'interrupt',
     surface: 'agent',
     what: 'stop a turn that is going wrong',
-    // Off `X` since `005`: the zone switch took it, and stopping lives on the right wheel.
-    reachedBy: [{ kind: 'wheel', bindingId: 'agent.stop' }]
+    // Off `X` since `005`; on DO and on Start since `012`.
+    reachedBy: [{ kind: 'wheel', bindingId: 'do.stop' }]
   },
   {
     id: 'answer',

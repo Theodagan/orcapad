@@ -2,7 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { REAL_ACTION_PRESETS } from './experiments/real-action-presets'
+import { wheelLayoutsFor, type WheelScreen } from './wheel-layouts'
 import { SMOKE_PRESETS } from './experiments/smoke-presets'
 import { readString } from './wheel-product-default-gate'
 import { validateWheelTrialRecord } from './wheel-trial-records'
@@ -108,7 +108,10 @@ describe('recorded wheel trials', () => {
   it.skipIf(trials.length === 0)('covers a smoke preset and a real-action preset', () => {
     const tested = new Set(trials.map(({ record }) => readString(record, 'presetId') ?? ''))
     const smoke = Object.keys(SMOKE_PRESETS).some((id) => tested.has(id))
-    const real = Object.keys(REAL_ACTION_PRESETS).some((id) => tested.has(id))
+    const screens: readonly WheelScreen[] = ['home', 'host', 'session', 'other']
+    const real = screens
+      .flatMap((screen) => Object.values(wheelLayoutsFor(screen)))
+      .some((preset) => tested.has(preset.presetId))
 
     expect(smoke, 'no smoke preset trialled').toBe(true)
     expect(real, 'no real-action preset trialled').toBe(true)

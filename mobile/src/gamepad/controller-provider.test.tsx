@@ -7,6 +7,7 @@ import { neutralSample, type ControllerSample } from './controller-input/control
 import { createActiveDictationRegistry } from './bindings/active-dictation'
 import { ControllerProvider, useController } from './controller-provider'
 import type { FocusTarget } from './focus/focus-target'
+import { createWheelRegistry, type WheelRegistry } from './wheel/wheel-registry'
 
 vi.mock('react-native', () => ({
   StyleSheet: { create: <T,>(styles: T) => styles, absoluteFill: {} },
@@ -286,5 +287,55 @@ describe('ControllerProvider', () => {
     })
     expect(toggle).toHaveBeenCalledTimes(1)
     expect(onUnavailable).toHaveBeenCalledTimes(1)
+  })
+
+  describe('run-action (012)', () => {
+    function mountWith(registry: WheelRegistry, onActionRefused = vi.fn()) {
+      const { reader, publish } = fakeReader()
+      const handle = vi.fn()
+      const target: FocusTarget = { id: 'session', accepts: new Set(['confirm']), handle }
+      act(() => {
+        renderer = create(
+          createElement(
+            ControllerProvider,
+            {
+              reader,
+              resolve: () => [{ kind: 'run-action', actionId: 'do.stop' }],
+              lookupWheelAction: registry.lookup,
+              onActionRefused
+            },
+            createElement(Surface, { target })
+          )
+        )
+      })
+      act(() => publish(neutralSample(1, true)))
+      return { onActionRefused, handle }
+    }
+
+    it('runs the registered action wherever focus is', () => {
+      const registry = createWheelRegistry()
+      const run = vi.fn()
+      registry.register({ id: 'do.stop', label: 'Stop agent', availability: 'available', run })
+
+      const { onActionRefused, handle } = mountWith(registry)
+
+      expect(run).toHaveBeenCalledTimes(1)
+      expect(onActionRefused).not.toHaveBeenCalled()
+      expect(handle).not.toHaveBeenCalled()
+    })
+
+    it('refuses an action that is unavailable or not registered, and runs nothing', () => {
+      const registry = createWheelRegistry()
+      const run = vi.fn()
+      registry.register({ id: 'do.stop', label: 'Stop agent', availability: 'unavailable', run })
+
+      const { onActionRefused } = mountWith(registry)
+      expect(run).not.toHaveBeenCalled()
+      expect(onActionRefused).toHaveBeenCalledWith('do.stop')
+      act(() => renderer?.unmount())
+
+      const empty = mountWith(createWheelRegistry())
+      expect(empty.onActionRefused).toHaveBeenCalledWith('do.stop')
+    })
   })
 })
