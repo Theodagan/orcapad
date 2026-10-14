@@ -240,6 +240,23 @@ describe('zones (005 USE-R4)', () => {
     expect(agent.handle).not.toHaveBeenCalled()
   })
 
+  it('reaches a zone off to one side, nearest first, with X+arrows', () => {
+    const { registry } = session()
+    registry.register(inZone('panels', 'panels', ['confirm']))
+
+    expect(registry.dispatch({ kind: 'switch-zone', direction: 'right' })).toBe(true)
+    expect(registry.focusedZone()).toBe('panels')
+    expect(registry.dispatch({ kind: 'switch-zone', direction: 'up' })).toBe(true)
+    expect(registry.focusedZone()).toBe('header')
+    expect(registry.dispatch({ kind: 'switch-zone', direction: 'right' })).toBe(true)
+    expect(registry.focusedZone()).toBe('panels')
+    expect(registry.dispatch({ kind: 'switch-zone', direction: 'down' })).toBe(true)
+    expect(registry.focusedZone()).toBe('shortcuts')
+    expect(registry.dispatch({ kind: 'switch-zone', direction: 'up' })).toBe(true)
+    expect(registry.focusedZone()).toBe('agent')
+    expect(registry.dispatch({ kind: 'switch-zone', direction: 'left' })).toBe(false)
+  })
+
   it('does nothing with one zone, and says so', () => {
     const registry = createFocusRegistry()
     registry.register(inZone('agent', 'agent', ['confirm']))

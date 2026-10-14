@@ -170,8 +170,18 @@ describe('a zone item', () => {
     expect(screen.zones()).toEqual(['agent'])
   })
 
+  it('declares no zone until a pad is attached', () => {
+    const screen = mount()
+    expect(screen.zones()).toEqual(['agent'])
+
+    screen.connect()
+
+    expect(screen.zones()).toEqual(['agent', 'header'])
+  })
+
   it('leaves the zone when its last item unmounts', () => {
     const screen = mount()
+    screen.connect()
     expect(screen.zones()).toEqual(['agent', 'header'])
 
     screen.removeItems()

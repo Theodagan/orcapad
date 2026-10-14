@@ -1,10 +1,6 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useControllerBinding } from '../controller-provider'
-import {
-  createScrollIntegrator,
-  LIST_SCROLL_MINIMUM_FIRST_STEP_POINTS,
-  LIST_SCROLL_POINTS_PER_SECOND_AT_FULL_PRESSURE
-} from './controller-scroll-rate'
+import { LIST_SCROLL_RATE } from './controller-scroll-rate'
 import { nextSelectedId, selectedItem } from './list-selection'
 import {
   explorerWheelActions,
@@ -15,6 +11,8 @@ import {
 import { FOCUS_PRIORITY } from '../focus/focus-zones'
 import { useZoneFocused } from '../zones/use-zone-focused'
 import { focusTargetFor, type IntentHandlerEntry, type SurfaceBinding } from './surface-binding'
+import { useControllerListSelection } from './use-controller-list-selection'
+import { useScrollIntentEntry } from './use-scroll-intent-entry'
 import { useSurfaceBinding } from './use-surface-binding'
 
 /**
@@ -60,29 +58,14 @@ export function useFileExplorerControllerBinding<T extends ExplorerRow>(
     onCollapseAll,
     onBack
   } = options
-  const scrollByRef = useRef(options.scrollBy)
-  useLayoutEffect(() => {
-    scrollByRef.current = options.scrollBy
-  })
-  const integrator = useMemo(
-    () =>
-      createScrollIntegrator({
-        unitsPerSecond: LIST_SCROLL_POINTS_PER_SECOND_AT_FULL_PRESSURE,
-        minimumFirstStep: LIST_SCROLL_MINIMUM_FIRST_STEP_POINTS
-      }),
-    []
-  )
+  const scrollEntry = useScrollIntentEntry(LIST_SCROLL_RATE, options.scrollBy)
   const { connected, activateFocusTarget } = useControllerBinding()
   const zoneFocused = useZoneFocused('panels')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const { selectedId, current: currentId, select } = useControllerListSelection(rows, idOf)
+  const hasSelection = selectedId !== null
 
-  const firstId = rows[0] === undefined ? null : idOf(rows[0])
-  useEffect(() => {
-    setSelectedId((current) => (connected ? (current ?? firstId) : null))
-  }, [connected, firstId])
-
-  const binding = useMemo<SurfaceBinding>(() => {
-    const current = (): T | null => selectedItem(rows, idOf, selectedId)
+  const focusTarget = useMemo(() => {
+    const current = (): T | null => selectedItem(rows, idOf, currentId())
 
     const activate = (row: T | null): void => {
       if (row === null) {
@@ -101,23 +84,12 @@ export function useFileExplorerControllerBinding<T extends ExplorerRow>(
     const entries: IntentHandlerEntry[] = [
       ['confirm', () => activate(current())],
       ['back', onBack],
-      [
-        'scroll',
-        (intent) => {
-          if (intent.kind !== 'scroll') {
-            return
-          }
-          const delta = integrator.step(intent)
-          if (delta !== 0) {
-            scrollByRef.current(delta)
-          }
-        }
-      ],
+      scrollEntry,
       [
         'move-selection',
         (intent) => {
           if (intent.kind === 'move-selection') {
-            setSelectedId((held) => nextSelectedId(rows, idOf, held, intent.direction))
+            select(nextSelectedId(rows, idOf, currentId(), intent.direction))
           }
         }
       ],
@@ -147,55 +119,63 @@ export function useFileExplorerControllerBinding<T extends ExplorerRow>(
           // Already closed, or not a folder at all: left means "out one level".
           const parent = parentIdOf(row)
           if (parent !== null) {
-            setSelectedId(parent)
+            select(parent)
           }
         }
       ]
     ]
 
+    // A docked panel is a zone of the session screen; as a full-screen route it is the only one.
     return {
-      // A docked panel is a zone of the session screen; as a full-screen route it is the only one.
-      focusTarget: {
-        ...focusTargetFor(FILE_EXPLORER_TARGET_ID, entries),
-        zone: 'panels',
-        priority: FOCUS_PRIORITY.surface,
-        labels: {
-          confirm: 'Open',
-          back: 'Close',
-          'move-selection': 'Move',
-          'move-horizontal': 'Fold / Unfold'
-        }
-      },
-      wheelActions: explorerWheelActions({
-        hasSelection: current() !== null,
-        previewSelected: () => {
-          const row = current()
-          if (row !== null && rowAction(row) === 'preview-file') {
-            onPreviewFile(row)
-          }
-        },
-        collapseAll: onCollapseAll,
-        reloadSelected: () => {
-          const row = current()
-          if (row !== null) {
-            onRetryDirectory(row)
-          }
-        }
-      })
+      ...focusTargetFor(FILE_EXPLORER_TARGET_ID, entries),
+      zone: 'panels' as const,
+      priority: FOCUS_PRIORITY.surface,
+      labels: {
+        confirm: 'Open',
+        back: 'Close',
+        'move-selection': 'Move',
+        'move-horizontal': 'Fold / Unfold'
+      }
     }
   }, [
     rows,
     idOf,
     isExpanded,
     parentIdOf,
-    selectedId,
+    currentId,
+    select,
     onToggleDirectory,
     onPreviewFile,
     onRetryDirectory,
-    onCollapseAll,
     onBack,
-    integrator
+    scrollEntry
   ])
+
+  // Apart from the cursor, so a D-pad move does not re-register every wheel action.
+  const wheelActions = useMemo(() => {
+    const current = (): T | null => selectedItem(rows, idOf, currentId())
+    return explorerWheelActions({
+      hasSelection,
+      previewSelected: () => {
+        const row = current()
+        if (row !== null && rowAction(row) === 'preview-file') {
+          onPreviewFile(row)
+        }
+      },
+      collapseAll: onCollapseAll,
+      reloadSelected: () => {
+        const row = current()
+        if (row !== null) {
+          onRetryDirectory(row)
+        }
+      }
+    })
+  }, [rows, idOf, currentId, hasSelection, onPreviewFile, onCollapseAll, onRetryDirectory])
+
+  const binding = useMemo<SurfaceBinding>(
+    () => ({ focusTarget, wheelActions }),
+    [focusTarget, wheelActions]
+  )
 
   useSurfaceBinding(binding)
 

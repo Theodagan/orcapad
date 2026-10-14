@@ -38,7 +38,7 @@ export function useSessionWheelActions(controller: MobileSessionController): voi
   } = controller
   const connected = connState === 'connected' && client !== null
   const input = useInputVisibility()
-  const { endTyping } = input
+  const { endTyping, reset: resetInput } = input
   const keyboardUp = keyboardLift > 0
   // A request for the keyboard ends when it has come up and gone again, or when it never came.
   const keyboardWasUp = useRef(false)
@@ -63,6 +63,8 @@ export function useSessionWheelActions(controller: MobileSessionController): voi
   const resetChrome = chrome.reset
   // Focus mode and the hidden shortcuts belong to the session: they end when it does.
   useEffect(() => resetChrome, [resetChrome])
+  // So is the wheel's say over the text strip, and any keyboard request still pending.
+  useEffect(() => resetInput, [resetInput])
 
   const bindings = useMemo<readonly WheelBinding[]>(() => {
     const isAgent =

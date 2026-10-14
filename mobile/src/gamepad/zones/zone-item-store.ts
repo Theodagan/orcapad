@@ -62,6 +62,13 @@ export function createZoneItemStore(registry: FocusRegistry): ZoneItemStore {
   const navigators = new Map<FocusZone, () => void>()
   const listeners = new Set<() => void>()
   let lastFocused: FocusZone | null = null
+  // Every item asks on every notify, so each zone's cursor is resolved once per change, not per item.
+  let version = 0
+  let view: {
+    readonly version: number
+    readonly focusedZone: FocusZone | null
+    readonly selected: Map<FocusZone, string | null>
+  } | null = null
 
   const enabled = (zone: FocusZone): ZoneItemRegistration[] =>
     [...(items.get(zone)?.values() ?? [])].filter((item) => !item.disabled)
@@ -80,7 +87,23 @@ export function createZoneItemStore(registry: FocusRegistry): ZoneItemStore {
     return moveInGrid(candidates, null, 'right', false)
   }
 
+  function cachedView(): NonNullable<typeof view> {
+    if (view === null || view.version !== version) {
+      view = { version, focusedZone: registry.focusedZone(), selected: new Map() }
+    }
+    return view
+  }
+
+  function cachedSelectedId(zone: FocusZone): string | null {
+    const { selected } = cachedView()
+    if (!selected.has(zone)) {
+      selected.set(zone, selectedId(zone))
+    }
+    return selected.get(zone) ?? null
+  }
+
   function notify(): void {
+    version += 1
     for (const listener of listeners) {
       listener()
     }
@@ -179,8 +202,8 @@ export function createZoneItemStore(registry: FocusRegistry): ZoneItemStore {
         notify()
       }
     },
-    isFocused: (zone, id) => registry.focusedZone() === zone && selectedId(zone) === id,
-    selectedId,
+    isFocused: (zone, id) => cachedView().focusedZone === zone && cachedSelectedId(zone) === id,
+    selectedId: cachedSelectedId,
     subscribe: (listener) => {
       listeners.add(listener)
       return () => {

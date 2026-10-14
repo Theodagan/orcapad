@@ -3,8 +3,8 @@ import { TERMINAL_ACCESSORY_KEY_DEFINITIONS } from '../../terminal/terminal-key-
 import { FOCUS_PRIORITY } from '../focus/focus-zones'
 import { AGENT_WHEEL_ACTION_IDS } from './agent-wheel-action-ids'
 import type { WheelActionBinding } from '../wheel/wheel-registry'
-import { createScrollIntegrator } from './controller-scroll-rate'
 import { focusTargetFor, type IntentHandlerEntry, type SurfaceBinding } from './surface-binding'
+import { useScrollIntentEntry } from './use-scroll-intent-entry'
 import { useSurfaceBinding } from './use-surface-binding'
 
 /**
@@ -34,6 +34,11 @@ export type TerminalWheelAction = {
 
 /** Full trigger pressure scrolls this many rows a second. A device trial tunes it, not taste. */
 export const TERMINAL_LINES_PER_SECOND_AT_FULL_PRESSURE = 40
+
+const TERMINAL_SCROLL_RATE = {
+  unitsPerSecond: TERMINAL_LINES_PER_SECOND_AT_FULL_PRESSURE,
+  minimumFirstStep: 1
+} as const
 
 export type TerminalControllerBindingOptions = {
   readonly handle: string
@@ -76,14 +81,7 @@ export function useTerminalControllerBinding(options: TerminalControllerBindingO
   useLayoutEffect(() => {
     latest.current = options
   })
-  const integrator = useMemo(
-    () =>
-      createScrollIntegrator({
-        unitsPerSecond: TERMINAL_LINES_PER_SECOND_AT_FULL_PRESSURE,
-        minimumFirstStep: 1
-      }),
-    []
-  )
+  const scrollEntry = useScrollIntentEntry(TERMINAL_SCROLL_RATE, options.scrollLines)
 
   const binding = useMemo<SurfaceBinding>(() => {
     const send = (bytes: string | null): void => {
@@ -92,18 +90,7 @@ export function useTerminalControllerBinding(options: TerminalControllerBindingO
       }
     }
     const entries: IntentHandlerEntry[] = [
-      [
-        'scroll',
-        (intent) => {
-          if (intent.kind !== 'scroll') {
-            return
-          }
-          const lines = integrator.step(intent)
-          if (lines !== 0) {
-            latest.current.scrollLines(lines)
-          }
-        }
-      ],
+      scrollEntry,
       [
         'move-selection',
         (intent) => {
@@ -157,7 +144,7 @@ export function useTerminalControllerBinding(options: TerminalControllerBindingO
       },
       wheelActions
     }
-  }, [handle, actions, integrator, editingText])
+  }, [handle, actions, scrollEntry, editingText])
 
   useSurfaceBinding(enabled ? binding : null)
 }

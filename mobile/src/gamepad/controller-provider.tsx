@@ -114,7 +114,8 @@ const INERT_INPUT_VISIBILITY: InputVisibilityStore = {
   reportContent: () => {},
   typing: () => false,
   beginTyping: () => {},
-  endTyping: () => {}
+  endTyping: () => {},
+  reset: () => {}
 }
 
 const INERT_SESSION_CHROME: SessionChromeStore = {

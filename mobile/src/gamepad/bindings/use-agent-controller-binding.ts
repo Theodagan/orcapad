@@ -1,14 +1,11 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { resolveAgentIntervention, type InterventionSurface } from './agent-intervention'
 import { AGENT_WHEEL_ACTION_IDS } from './agent-wheel-action-ids'
-import {
-  createScrollIntegrator,
-  LIST_SCROLL_MINIMUM_FIRST_STEP_POINTS,
-  LIST_SCROLL_POINTS_PER_SECOND_AT_FULL_PRESSURE
-} from './controller-scroll-rate'
+import { LIST_SCROLL_RATE } from './controller-scroll-rate'
 import type { WheelActionBinding } from '../wheel/wheel-registry'
 import { FOCUS_PRIORITY } from '../focus/focus-zones'
 import { focusTargetFor, type IntentHandlerEntry, type SurfaceBinding } from './surface-binding'
+import { useScrollIntentEntry } from './use-scroll-intent-entry'
 import { useSurfaceBinding } from './use-surface-binding'
 
 /**
@@ -46,14 +43,7 @@ export function useAgentControllerBinding(options: AgentControllerBindingOptions
   useLayoutEffect(() => {
     latest.current = options
   })
-  const integrator = useMemo(
-    () =>
-      createScrollIntegrator({
-        unitsPerSecond: LIST_SCROLL_POINTS_PER_SECOND_AT_FULL_PRESSURE,
-        minimumFirstStep: LIST_SCROLL_MINIMUM_FIRST_STEP_POINTS
-      }),
-    []
-  )
+  const scrollEntry = useScrollIntentEntry(LIST_SCROLL_RATE, options.scrollBy)
 
   const { ask, permission, question, onRespondPermission, onCancelAsk, onCancelPrompt } = options
   const intervention = useMemo(
@@ -71,18 +61,7 @@ export function useAgentControllerBinding(options: AgentControllerBindingOptions
 
   const binding = useMemo<SurfaceBinding>(() => {
     const entries: IntentHandlerEntry[] = [
-      [
-        'scroll',
-        (intent) => {
-          if (intent.kind !== 'scroll') {
-            return
-          }
-          const delta = integrator.step(intent)
-          if (delta !== 0) {
-            latest.current.scrollBy(delta)
-          }
-        }
-      ],
+      scrollEntry,
       [
         'move-selection',
         (intent) => {
@@ -121,7 +100,7 @@ export function useAgentControllerBinding(options: AgentControllerBindingOptions
       },
       wheelActions
     }
-  }, [sessionId, canStop, onStop, intervention, integrator])
+  }, [sessionId, canStop, onStop, intervention, scrollEntry])
 
   useSurfaceBinding(binding)
 }

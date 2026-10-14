@@ -1,7 +1,41 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createInputVisibilityStore } from './input-visibility-store'
 
+const strip = {}
+
 describe('the text-entry strip', () => {
+  it('keeps a draft open while another strip empties or goes away', () => {
+    const store = createInputVisibilityStore()
+    const composer = {}
+    store.reportContent(strip, true)
+    store.reportContent(composer, true)
+
+    store.reportContent(composer, false)
+
+    expect(store.visible()).toBe(true)
+    store.reportContent(strip, false)
+    expect(store.visible()).toBe(false)
+  })
+
+  it('forgets the wheel and the keyboard request on reset, and keeps a live draft', () => {
+    const store = createInputVisibilityStore()
+    store.toggle()
+    store.beginTyping()
+    const listener = vi.fn()
+    store.subscribe(listener)
+
+    store.reset()
+
+    expect(store.typing()).toBe(false)
+    expect(store.visible()).toBe(false)
+    expect(listener).toHaveBeenCalledTimes(1)
+
+    store.reportContent(strip, true)
+    store.toggle()
+    store.reset()
+    expect(store.visible()).toBe(true)
+  })
+
   it('is hidden until something asks for it', () => {
     expect(createInputVisibilityStore().visible()).toBe(false)
   })
@@ -9,10 +43,10 @@ describe('the text-entry strip', () => {
   it('opens by itself when a draft appears, and closes once it is gone', () => {
     const store = createInputVisibilityStore()
 
-    store.reportContent(true)
+    store.reportContent(strip, true)
     expect(store.visible()).toBe(true)
 
-    store.reportContent(false)
+    store.reportContent(strip, false)
     expect(store.visible()).toBe(false)
   })
 
@@ -22,14 +56,14 @@ describe('the text-entry strip', () => {
     store.toggle()
     expect(store.visible()).toBe(true)
 
-    store.reportContent(true)
-    store.reportContent(false)
+    store.reportContent(strip, true)
+    store.reportContent(strip, false)
     expect(store.visible()).toBe(true)
   })
 
   it('puts a strip away on request even while it holds a draft', () => {
     const store = createInputVisibilityStore()
-    store.reportContent(true)
+    store.reportContent(strip, true)
 
     store.toggle()
 
@@ -38,21 +72,21 @@ describe('the text-entry strip', () => {
 
   it('opens again for the next draft after it was put away', () => {
     const store = createInputVisibilityStore()
-    store.reportContent(true)
+    store.reportContent(strip, true)
     store.toggle()
-    store.reportContent(false)
+    store.reportContent(strip, false)
 
-    store.reportContent(true)
+    store.reportContent(strip, true)
 
     expect(store.visible()).toBe(true)
   })
 
   it('does not reopen for the same draft after it was put away', () => {
     const store = createInputVisibilityStore()
-    store.reportContent(true)
+    store.reportContent(strip, true)
     store.toggle()
 
-    store.reportContent(true)
+    store.reportContent(strip, true)
 
     expect(store.visible()).toBe(false)
   })
@@ -62,11 +96,11 @@ describe('the text-entry strip', () => {
     const listener = vi.fn()
     store.subscribe(listener)
 
-    store.reportContent(false)
+    store.reportContent(strip, false)
     expect(listener).not.toHaveBeenCalled()
 
-    store.reportContent(true)
-    store.reportContent(true)
+    store.reportContent(strip, true)
+    store.reportContent(strip, true)
     expect(listener).toHaveBeenCalledTimes(1)
 
     store.toggle()
@@ -88,7 +122,7 @@ describe('the text-entry strip', () => {
 
     it('beats a strip that was put away, and leaves a pinned strip pinned', () => {
       const store = createInputVisibilityStore()
-      store.reportContent(true)
+      store.reportContent(strip, true)
       store.toggle()
       expect(store.visible()).toBe(false)
 

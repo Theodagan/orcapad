@@ -1,13 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useControllerBinding, useFocusSnapshot } from '../controller-provider'
-import {
-  createScrollIntegrator,
-  LIST_SCROLL_MINIMUM_FIRST_STEP_POINTS,
-  LIST_SCROLL_POINTS_PER_SECOND_AT_FULL_PRESSURE
-} from './controller-scroll-rate'
+import { useMemo } from 'react'
+import { useZoneFocused } from '../zones/use-zone-focused'
+import { LIST_SCROLL_RATE } from './controller-scroll-rate'
 import { homeWheelActions } from './home-wheel-actions'
 import { nextSelectedId, selectedItem } from './list-selection'
 import { focusTargetFor, type IntentHandlerEntry } from './surface-binding'
+import { useControllerListSelection } from './use-controller-list-selection'
+import { useScrollIntentEntry } from './use-scroll-intent-entry'
 import { useSurfaceBinding } from './use-surface-binding'
 
 /**
@@ -34,76 +32,40 @@ export function useHomeControllerBinding<T extends { readonly id: string }>(
   options: HomeControllerBindingOptions<T>
 ): string | null {
   const { hosts, onOpen, onPairDesktop } = options
-  const scrollByRef = useRef(options.scrollBy)
-  useLayoutEffect(() => {
-    scrollByRef.current = options.scrollBy
-  })
-  const integrator = useMemo(
-    () =>
-      createScrollIntegrator({
-        unitsPerSecond: LIST_SCROLL_POINTS_PER_SECOND_AT_FULL_PRESSURE,
-        minimumFirstStep: LIST_SCROLL_MINIMUM_FIRST_STEP_POINTS
-      }),
-    []
-  )
-  const { connected } = useControllerBinding()
-  const { focusedZone } = useFocusSnapshot()
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const scrollEntry = useScrollIntentEntry(LIST_SCROLL_RATE, options.scrollBy)
+  const listFocused = useZoneFocused('list')
+  const { selectedId, current, select } = useControllerListSelection(hosts, hostId)
 
-  const firstHostId = hosts[0]?.id ?? null
-  useEffect(() => {
-    // Give the controller something to press `A` on, and take the highlight away again when the
-    // pad leaves so a touch user is never left looking at a selection they cannot move.
-    setSelectedId((current) => {
-      if (!connected) {
-        return null
-      }
-      return current !== null && hosts.some((host) => host.id === current) ? current : firstHostId
-    })
-  }, [connected, firstHostId, hosts])
-
-  const binding = useMemo(() => {
+  const focusTarget = useMemo(() => {
     const entries: IntentHandlerEntry[] = [
       [
         'confirm',
         () => {
-          const host = selectedItem(hosts, hostId, selectedId)
+          const host = selectedItem(hosts, hostId, current())
           if (host !== null) {
             onOpen(host)
           }
         }
       ],
-      [
-        'scroll',
-        (intent) => {
-          if (intent.kind !== 'scroll') {
-            return
-          }
-          const delta = integrator.step(intent)
-          if (delta !== 0) {
-            scrollByRef.current(delta)
-          }
-        }
-      ],
+      scrollEntry,
       [
         // Provisional: the PRD contract has no list movement, so this arrives only when the
         // experimental D-pad set is enabled (CTRL-R2).
         'move-selection',
         (intent) => {
-          if (intent.kind !== 'move-selection') {
-            return
+          if (intent.kind === 'move-selection') {
+            select(nextSelectedId(hosts, hostId, current(), intent.direction))
           }
-          setSelectedId((current) => nextSelectedId(hosts, hostId, current, intent.direction))
         }
       ]
     ]
-    return {
-      focusTarget: { ...focusTargetFor('home', entries), zone: 'list' as const },
-      // BIND-R10: an id a preset may name, declared next door so preset data never imports React.
-      wheelActions: homeWheelActions(onPairDesktop)
-    }
-  }, [hosts, selectedId, onOpen, onPairDesktop, integrator])
+    return { ...focusTargetFor('home', entries), zone: 'list' as const }
+  }, [hosts, onOpen, scrollEntry, current, select])
+
+  // BIND-R10: an id a preset may name, declared next door so preset data never imports React.
+  const wheelActions = useMemo(() => homeWheelActions(onPairDesktop), [onPairDesktop])
+  const binding = useMemo(() => ({ focusTarget, wheelActions }), [focusTarget, wheelActions])
 
   useSurfaceBinding(binding)
-  return focusedZone === 'list' ? selectedId : null
+  return listFocused ? selectedId : null
 }

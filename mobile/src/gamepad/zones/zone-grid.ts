@@ -16,11 +16,16 @@ export type GridDirection = 'left' | 'right' | 'up' | 'down'
 export function gridRows(items: readonly GridItem[]): readonly (readonly string[])[] {
   const rows = new Map<number, GridItem[]>()
   for (const item of items) {
-    rows.set(item.row, [...(rows.get(item.row) ?? []), item])
+    const row = rows.get(item.row)
+    if (row === undefined) {
+      rows.set(item.row, [item])
+    } else {
+      row.push(item)
+    }
   }
   return [...rows.entries()]
     .sort(([a], [b]) => a - b)
-    .map(([, row]) => [...row].sort((a, b) => a.order - b.order).map((item) => item.id))
+    .map(([, row]) => row.sort((a, b) => a.order - b.order).map((item) => item.id))
 }
 
 /**

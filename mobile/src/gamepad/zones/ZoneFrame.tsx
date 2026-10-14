@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react'
+import { useSyncExternalStore, type ReactNode } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { useControllerBinding, useFocusSnapshot } from '../controller-provider'
+import { useControllerBinding } from '../controller-provider'
 import type { FocusZone } from '../focus/focus-zones'
 import { colors, radii } from '../../theme/mobile-theme'
 
@@ -12,10 +12,18 @@ import { colors, radii } from '../../theme/mobile-theme'
  * zone to tell apart.
  */
 export function ZoneFrame({ zone }: { readonly zone: FocusZone }): ReactNode {
-  const { connected } = useControllerBinding()
-  const { focusedZone, zones } = useFocusSnapshot()
+  const { connected, focus } = useControllerBinding()
+  // A boolean, so a frame re-renders only when it appears or goes, not on every registration.
+  const framed = useSyncExternalStore(
+    focus.subscribe,
+    () => {
+      const { focusedZone, zones } = focus.snapshot()
+      return zones.length >= 2 && focusedZone === zone
+    },
+    () => false
+  )
 
-  if (!connected || zones.length < 2 || focusedZone !== zone) {
+  if (!connected || !framed) {
     return null
   }
   return (
