@@ -3,10 +3,10 @@ import { StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useActiveDictation, useControllerBinding, useFocusSnapshot } from './controller-provider'
 import { isDictationActive } from './bindings/active-dictation'
-import { actionHintsFor, type ActionHint } from './controller-input/action-hints'
-import { WHEEL_TRIGGER_NAMES } from './controller-input/wheel-trigger-steering'
+import { actionHintsFor } from './controller-input/action-hints'
 import { useSessionChrome } from './session-chrome/use-session-chrome'
 import type { FocusZone } from './focus/focus-zones'
+import { useWheelOpen, type WheelViewSource } from './wheel/wheel-view-store'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 
 /**
@@ -27,13 +27,8 @@ const ZONE_NAME: Record<FocusZone, string> = {
   panels: 'Panel'
 }
 
-/** What the two triggers do to an open wheel, which is all that does anything while one is up. */
-const WHEEL_HINTS: readonly ActionHint[] = [
-  { control: WHEEL_TRIGGER_NAMES.select, label: 'Select' },
-  { control: WHEEL_TRIGGER_NAMES.back, label: 'Cancel' }
-]
-
-export function ActionHintBar({ wheelOpen = false }: { readonly wheelOpen?: boolean }): ReactNode {
+export function ActionHintBar({ wheel }: { readonly wheel?: WheelViewSource }): ReactNode {
+  const wheelOpen = useWheelOpen(wheel)
   const { connected } = useControllerBinding()
   const { focusMode } = useSessionChrome()
   const { reachable, labels, focusedZone, zones } = useFocusSnapshot()
@@ -55,8 +50,9 @@ export function ActionHintBar({ wheelOpen = false }: { readonly wheelOpen?: bool
         }
       : {})
   }
-  const hints = wheelOpen ? WHEEL_HINTS : actionHintsFor(offered, wording)
-  if (!connected || focusMode || hints.length === 0) {
+  // An open wheel names its own triggers in its corners; saying it twice here would drift.
+  const hints = wheelOpen ? [] : actionHintsFor(offered, wording)
+  if (!connected || focusMode || (hints.length === 0 && !wheelOpen)) {
     return null
   }
   const chip = wheelOpen

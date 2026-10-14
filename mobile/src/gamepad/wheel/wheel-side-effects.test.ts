@@ -84,11 +84,11 @@ describe('only a commit can produce an invocation', () => {
     expect(drive([up, right, up, right, up]).invoked).toEqual([])
   })
 
-  it('an invalid direction runs nothing and closes', () => {
+  it('an invalid direction runs nothing and holds the wheel open with nothing lit', () => {
     const { invoked, state } = drive([up, deadArc])
 
     expect(invoked).toEqual([])
-    expect(state.kind).toBe('closed')
+    expect(state).toMatchObject({ kind: 'open', locked: null })
   })
 
   it('returning to centre runs nothing and closes', () => {
@@ -206,7 +206,7 @@ describe('only a commit can produce an invocation', () => {
 describe('an action that throws', () => {
   it('leaves the wheel closed, because it was closed before the action ran', () => {
     const outcome = reduceWheel(
-      { kind: 'open', wheel: 1, path: [], locked: 'north' },
+      { kind: 'open', wheel: 1, path: [], locked: 'north', spent: new Set() },
       confirm,
       preset()
     )

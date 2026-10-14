@@ -42,6 +42,8 @@ const preset: WheelPresetDefinition = loadPreset({
 const UP: ControllerIntent = { kind: 'wheel-motion', wheel: 1, x: 0, y: -1 }
 const RIGHT: ControllerIntent = { kind: 'wheel-motion', wheel: 1, x: 1, y: 0 }
 const CENTRE: ControllerIntent = { kind: 'wheel-motion', wheel: 1, x: 0, y: 0 }
+/** Inside a menu, the stick that chose it eases off before pointing again. */
+const PARTWAY: ControllerIntent = { kind: 'wheel-motion', wheel: 1, x: 0, y: -0.3 }
 const CONFIRM: ControllerIntent = { kind: 'confirm' }
 const BACK: ControllerIntent = { kind: 'back' }
 
@@ -167,7 +169,7 @@ describe('wheel controller', () => {
       pad.send(UP)
 
       expect(pad.wheel.intercept({ kind: 'wheel-motion', wheel: 2, x: 0, y: 1 })).toBe(true)
-      expect(pad.wheel.view.state).toMatchObject({ kind: 'open', wheel: 1 })
+      expect(pad.wheel.view.read().state).toMatchObject({ kind: 'open', wheel: 1 })
     })
 
     it('reports open and closed to the resolver, and to the native layer when it changes', () => {
@@ -237,6 +239,53 @@ describe('wheel controller', () => {
     })
   })
 
+  describe('the view', () => {
+    function countPublishes(pad: ReturnType<typeof mount>): () => number {
+      let count = 0
+      pad.wheel.view.subscribe(() => {
+        count += 1
+      })
+      return () => count
+    }
+
+    it('does not publish while the stick moves within one segment', () => {
+      const pad = mount(createWheelRegistry())
+      pad.send(UP)
+      const publishes = countPublishes(pad)
+
+      pad.send({ kind: 'wheel-motion', wheel: 1, x: 0.1, y: -0.95 })
+      pad.send({ kind: 'wheel-motion', wheel: 1, x: -0.1, y: -0.9 })
+      pad.send({ kind: 'wheel-motion', wheel: 1, x: 0.05, y: -0.7 })
+
+      expect(publishes()).toBe(0)
+    })
+
+    it('publishes once when the lock moves, and once when the wheel closes', () => {
+      const pad = mount(createWheelRegistry())
+      pad.send(UP)
+      const publishes = countPublishes(pad)
+
+      pad.send(RIGHT)
+      expect(publishes()).toBe(1)
+      pad.send(CENTRE)
+      expect(publishes()).toBe(2)
+    })
+
+    it('redraws an open wheel when a binding it shows registers', () => {
+      const registry = createWheelRegistry()
+      const pad = mount(registry)
+      pad.send(UP)
+      const availability = () =>
+        pad.wheel.view.read().segments.find((segment) => segment.id === 'act')?.availability
+
+      expect(availability()).toBe('unavailable')
+      act(() => {
+        registry.register({ id: 'test.act', label: 'Act', availability: 'available', run: vi.fn() })
+      })
+      expect(availability()).toBe('available')
+    })
+  })
+
   describe('menus', () => {
     function withMenu(menu: () => Promise<readonly WheelMenuEntry[]> | readonly WheelMenuEntry[]) {
       const registry = createWheelRegistry()
@@ -248,7 +297,9 @@ describe('wheel controller', () => {
       const { pad } = withMenu(() => [])
       pad.send(UP)
 
-      expect(pad.wheel.view.segments.find((segment) => segment.id === 'menu')?.opens).toBe(true)
+      expect(pad.wheel.view.read().segments.find((segment) => segment.id === 'menu')?.opens).toBe(
+        true
+      )
     })
 
     it('opens a second wheel of the entries on A, and runs nothing', () => {
@@ -257,17 +308,23 @@ describe('wheel controller', () => {
       pad.send(UP)
       pad.send(CONFIRM)
 
-      expect(pad.wheel.view.segments.map((segment) => segment.id)).toEqual(['claude', 'codex'])
-      expect(pad.wheel.view.title).toBe('Launch')
+      expect(pad.wheel.view.read().segments.map((segment) => segment.id)).toEqual([
+        'claude',
+        'codex'
+      ])
+      expect(pad.wheel.view.read().title).toBe('Launch')
       expect(first.run).not.toHaveBeenCalled()
     })
 
-    it('locks from where the stick already is, so the highlight does not wait for a nudge', () => {
+    it('does not lock the entry under the stick that chose the menu until it lets go', () => {
       const { pad } = withMenu(() => [entry('claude'), entry('codex')])
       pad.send(UP)
       pad.send(CONFIRM)
+      expect(pad.wheel.view.read().state).toMatchObject({ locked: null })
 
-      expect(pad.wheel.view.state).toMatchObject({ locked: 'claude' })
+      pad.send(PARTWAY)
+      pad.send(UP)
+      expect(pad.wheel.view.read().state).toMatchObject({ locked: 'claude' })
     })
 
     it('commits an entry on A: runs it once and closes', () => {
@@ -275,6 +332,8 @@ describe('wheel controller', () => {
       const { pad } = withMenu(() => [claude, entry('codex')])
       pad.send(UP)
       pad.send(CONFIRM)
+      pad.send(PARTWAY)
+      pad.send(UP)
       pad.send(CONFIRM)
 
       expect(claude.run).toHaveBeenCalledTimes(1)
@@ -289,14 +348,34 @@ describe('wheel controller', () => {
       pad.send(UP)
       pad.send(CONFIRM)
 
-      expect(pad.wheel.view.message).toBe('Loading…')
-      expect(pad.wheel.view.segments).toEqual([])
+      expect(pad.wheel.view.read().message).toBe('Loading…')
+      expect(pad.wheel.view.read().segments).toEqual([])
 
       await act(async () => resolve([entry('claude')]))
 
-      expect(pad.wheel.view.message).toBeNull()
-      expect(pad.wheel.view.segments.map((segment) => segment.id)).toEqual(['claude'])
-      expect(pad.wheel.view.state).toMatchObject({ locked: 'claude' })
+      expect(pad.wheel.view.read().message).toBeNull()
+      expect(pad.wheel.view.read().segments.map((segment) => segment.id)).toEqual(['claude'])
+      // Swinging well away from where the menu was chosen locks without recentring.
+      pad.send({ kind: 'wheel-motion', wheel: 1, x: -1, y: -0.2 })
+      expect(pad.wheel.view.read().state).toMatchObject({ locked: 'claude' })
+    })
+
+    it('ignores a load that a newer load of the same menu has replaced', async () => {
+      const pending: ((entries: readonly WheelMenuEntry[]) => void)[] = []
+      const { pad } = withMenu(
+        () => new Promise<readonly WheelMenuEntry[]>((done) => pending.push(done))
+      )
+      pad.send(UP)
+      pad.send(CONFIRM)
+      pad.send(BACK)
+      pad.send(PARTWAY)
+      pad.send(UP)
+      pad.send(CONFIRM)
+
+      await act(async () => pending[1]?.([entry('codex')]))
+      await act(async () => pending[0]?.([entry('claude')]))
+
+      expect(pad.wheel.view.read().segments.map((segment) => segment.id)).toEqual(['codex'])
     })
 
     it('does not cancel while it loads, however much the stick moves', () => {
@@ -310,13 +389,14 @@ describe('wheel controller', () => {
       expect(pad.wheel.isOpen()).toBe(true)
     })
 
-    it('commits nothing while loading: A cancels', () => {
+    it('commits nothing while loading, and keeps the menu open: A waits for the choices', () => {
       const { pad } = withMenu(() => new Promise<readonly WheelMenuEntry[]>(() => {}))
       pad.send(UP)
       pad.send(CONFIRM)
       pad.send(CONFIRM)
 
-      expect(pad.wheel.isOpen()).toBe(false)
+      expect(pad.wheel.isOpen()).toBe(true)
+      expect(pad.wheel.view.read().message).toBe('Loading…')
     })
 
     it('says so when the list fails, or is empty, and offers nothing to commit', async () => {
@@ -324,14 +404,14 @@ describe('wheel controller', () => {
       failing.pad.send(UP)
       failing.pad.send(CONFIRM)
       await act(async () => {})
-      expect(failing.pad.wheel.view.message).toBe('Could not load')
+      expect(failing.pad.wheel.view.read().message).toBe('Could not load')
       act(() => renderer?.unmount())
 
       const empty = withMenu(() => [])
       empty.pad.send(UP)
       empty.pad.send(CONFIRM)
-      expect(empty.pad.wheel.view.message).toBe('Nothing here')
-      expect(empty.pad.wheel.view.segments).toEqual([])
+      expect(empty.pad.wheel.view.read().message).toBe('Nothing here')
+      expect(empty.pad.wheel.view.read().segments).toEqual([])
     })
 
     it('steps back to the wheel on B, and closes on the next B', () => {
@@ -340,8 +420,8 @@ describe('wheel controller', () => {
       pad.send(CONFIRM)
 
       pad.send(BACK)
-      expect(pad.wheel.view.state).toMatchObject({ kind: 'open', path: [] })
-      expect(pad.wheel.view.segments.map((segment) => segment.id)).toEqual(['menu', 'act'])
+      expect(pad.wheel.view.read().state).toMatchObject({ kind: 'open', path: [] })
+      expect(pad.wheel.view.read().segments.map((segment) => segment.id)).toEqual(['menu', 'act'])
 
       pad.send(BACK)
       expect(pad.wheel.isOpen()).toBe(false)
@@ -352,7 +432,7 @@ describe('wheel controller', () => {
       const { pad } = withMenu(() => agents)
       pad.send(UP)
       pad.send(CONFIRM)
-      expect(pad.wheel.view.segments).toHaveLength(1)
+      expect(pad.wheel.view.read().segments).toHaveLength(1)
       pad.send(BACK)
       pad.send(BACK)
       pad.send(CENTRE)
@@ -361,7 +441,7 @@ describe('wheel controller', () => {
       pad.send(UP)
       pad.send(CONFIRM)
 
-      expect(pad.wheel.view.segments).toHaveLength(2)
+      expect(pad.wheel.view.read().segments).toHaveLength(2)
     })
 
     it('pages a long list: More opens the next page, and B comes back a page', () => {
@@ -369,7 +449,7 @@ describe('wheel controller', () => {
       const { pad } = withMenu(() => many)
       pad.send(UP)
       pad.send(CONFIRM)
-      expect(pad.wheel.view.segments).toHaveLength(8)
+      expect(pad.wheel.view.read().segments).toHaveLength(8)
 
       // The stick points at More, the eighth of eight, which sits seven eighths round the dial.
       const angle = (7 / 8) * Math.PI * 2
@@ -379,9 +459,9 @@ describe('wheel controller', () => {
         x: Math.sin(angle),
         y: -Math.cos(angle)
       })
-      expect(pad.wheel.view.state).toMatchObject({ locked: '__more' })
+      expect(pad.wheel.view.read().state).toMatchObject({ locked: '__more' })
       pad.send(CONFIRM)
-      expect(pad.wheel.view.segments.map((segment) => segment.id)).toEqual([
+      expect(pad.wheel.view.read().segments.map((segment) => segment.id)).toEqual([
         'e7',
         'e8',
         'e9',
@@ -390,7 +470,7 @@ describe('wheel controller', () => {
       ])
 
       pad.send(BACK)
-      expect(pad.wheel.view.segments).toHaveLength(8)
+      expect(pad.wheel.view.read().segments).toHaveLength(8)
     })
 
     it('runs a committed entry only through the menu it came from', () => {
@@ -401,6 +481,8 @@ describe('wheel controller', () => {
       registry.register({ id: 'act', label: 'Decoy', availability: 'available', run: decoy })
       pad.send(UP)
       pad.send(CONFIRM)
+      pad.send(PARTWAY)
+      pad.send(UP)
       pad.send(CONFIRM)
 
       expect(run).toHaveBeenCalledTimes(1)

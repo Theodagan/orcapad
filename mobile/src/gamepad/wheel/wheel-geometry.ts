@@ -45,7 +45,7 @@ export type SegmentSelection = {
  *
  * Overlapping segments resolve to the nearer centre rather than to declaration order, so a
  * preset cannot become order-dependent by accident. An unavailable segment can still be selected
- * — it renders disabled and `A` cancels on it (`002` §6) — because hiding it would move every
+ * — it renders disabled and `R2` cancels on it (`002` §6) — because hiding it would move every
  * other segment under the user's thumb.
  */
 export function selectSegment(
@@ -60,6 +60,10 @@ export function selectSegment(
     return { segmentId: null, angle, magnitude }
   }
 
+  return { segmentId: segmentAt(angle, segments)?.id ?? null, angle, magnitude }
+}
+
+function segmentAt(angle: number, segments: readonly WheelSegment[]): WheelSegment | null {
   let nearest: WheelSegment | null = null
   let nearestDistance = Number.POSITIVE_INFINITY
   for (const segment of segments) {
@@ -73,5 +77,34 @@ export function selectSegment(
       nearestDistance = distance
     }
   }
-  return { segmentId: nearest === null ? null : nearest.id, angle, magnitude }
+  return nearest
+}
+
+/** Past this a stick picks; inside it a lock only holds, so easing off never slides to a neighbour. */
+export const SELECT_RADIUS = 0.5
+/** A lock holds this far past its own edge, so a stick resting on a boundary does not flicker. */
+export const LOCK_HYSTERESIS = 0.12
+
+/**
+ * The lock after one sample of an open wheel, given the lock it had. The dead zone is the
+ * caller's: this only ever answers for a stick already outside it.
+ */
+export function steerLock(
+  x: number,
+  y: number,
+  segments: readonly WheelSegment[],
+  current: WheelSegmentId | null
+): WheelSegmentId | null {
+  const held = current === null ? undefined : segments.find((segment) => segment.id === current)
+  const angle = vectorAngle(x, y)
+  if (angle === null || Math.hypot(x, y) < SELECT_RADIUS) {
+    return held?.id ?? null
+  }
+  if (
+    held !== undefined &&
+    angularDistance(angle, normalizeAngle(held.centerAngle)) <= held.halfWidth + LOCK_HYSTERESIS
+  ) {
+    return held.id
+  }
+  return segmentAt(angle, segments)?.id ?? null
 }

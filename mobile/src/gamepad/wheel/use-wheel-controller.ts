@@ -11,32 +11,37 @@ import {
 import { resolveSegments, type WheelPresetDefinition } from './wheel-preset'
 import { isMenuBinding, type WheelMenuEntry, type WheelRegistry } from './wheel-registry'
 import type { WheelId, WheelSegment } from './wheel-segment'
-import { CLOSED_WHEEL, reduceWheel, stateAfter, type WheelState } from './wheel-state'
+import {
+  CLOSED_WHEEL,
+  reduceWheel,
+  stateAfter,
+  type WheelEvent,
+  type WheelPreset,
+  type WheelState
+} from './wheel-state'
+import {
+  CLOSED_VIEW,
+  createWheelViewStore,
+  type WheelView,
+  type WheelViewSource
+} from './wheel-view-store'
+
+export type { WheelView, WheelViewSource } from './wheel-view-store'
 
 /**
  * Wires controller intents into the pure machine and out to the dispatcher.
  *
- * The authoritative state is a ref, and React state only mirrors it for rendering. That is the
- * point rather than an optimisation: WHEEL-T5 requires that rendering never block a commit, so
- * the path from `A` to an invoked action is synchronous and does not wait for a frame. A slow or
- * suspended render delays the highlight, never the action.
+ * The authoritative state is a ref, and an external view store only mirrors it for rendering.
+ * That is the point rather than an optimisation: WHEEL-T5 requires that rendering never block a
+ * commit, so the path from `R2` to an invoked action is synchronous and does not wait for a frame.
+ * The hook itself never re-renders on stick motion; only the store's readers do, on a change.
  *
  * While a wheel is open it takes every intent (`005` USE-R11). Nothing underneath is meant to
  * react to a pad that is, for the moment, steering a menu.
  */
 
-export type WheelView = {
-  readonly state: WheelState
-  readonly segments: readonly WheelSegment[]
-  /** The live stick vector, for the needle. Null whenever no wheel is open. */
-  readonly vector: { readonly x: number; readonly y: number } | null
-  /** What the open wheel is, and what to say when it has nothing to choose from yet. */
-  readonly title: string | null
-  readonly message: string | null
-}
-
 export type WheelController = {
-  readonly view: WheelView
+  readonly view: WheelViewSource
   /** True when the wheel took the intent, so the focused surface must not also see it. */
   readonly intercept: (intent: ControllerIntent) => boolean
   /** True while a wheel owns the pad. Read per sample, so it cannot lag the state behind it. */
@@ -54,12 +59,21 @@ export type WheelControllerOptions = {
   readonly onOpenChange?: (open: boolean) => void
 }
 
-const CLOSED_VIEW: WheelView = {
-  state: CLOSED_WHEEL,
-  segments: [],
-  vector: null,
-  title: null,
-  message: null
+type SegmentsFor = WheelPreset['segmentsFor']
+
+/** One resolve per wheel and path for the length of one `apply`. */
+function onceEach(segmentsFor: SegmentsFor): SegmentsFor {
+  const resolved = new Map<string, readonly WheelSegment[]>()
+  return (wheel, path) => {
+    const key = `${wheel}\n${path.join('\n')}`
+    const hit = resolved.get(key)
+    if (hit !== undefined) {
+      return hit
+    }
+    const segments = segmentsFor(wheel, path)
+    resolved.set(key, segments)
+    return segments
+  }
 }
 
 export function useWheelController(options: WheelControllerOptions): WheelController {
@@ -67,12 +81,14 @@ export function useWheelController(options: WheelControllerOptions): WheelContro
   const stateRef = useRef<WheelState>(CLOSED_WHEEL)
   const vectorRef = useRef<{ x: number; y: number } | null>(null)
   const menusRef = useRef(new Map<string, MenuView>())
+  // Only the latest load of a menu may settle it: an older one finishing late would overwrite it.
+  const loadTokensRef = useRef(new Map<string, number>())
   const onOpenChangeRef = useRef(options.onOpenChange)
   onOpenChangeRef.current = options.onOpenChange
-  const [view, setView] = useState<WheelView>(CLOSED_VIEW)
+  const [viewStore] = useState(createWheelViewStore)
 
-  const segmentsFor = useCallback(
-    (wheel: WheelId, path: readonly string[]): readonly WheelSegment[] => {
+  const segmentsFor = useCallback<SegmentsFor>(
+    (wheel, path) => {
       const key = path.at(-1)
       if (key === undefined) {
         const preset = presets[wheel]
@@ -83,7 +99,13 @@ export function useWheelController(options: WheelControllerOptions): WheelContro
     [presets, registry]
   )
 
-  const preset = useMemo(() => ({ segmentsFor, deadZone }), [segmentsFor, deadZone])
+  const isLoading = useCallback((_wheel: WheelId, path: readonly string[]): boolean => {
+    const key = path.at(-1)
+    return (
+      key !== undefined &&
+      (menusRef.current.get(parseMenuKey(key).base) ?? LOADING_MENU).status === 'loading'
+    )
+  }, [])
 
   const runBinding = useCallback(
     (bindingId: string, path: readonly string[]) => {
@@ -120,9 +142,21 @@ export function useWheelController(options: WheelControllerOptions): WheelContro
     [registry]
   )
 
+  const publish = useCallback(
+    (resolve: SegmentsFor) => {
+      const current = stateRef.current
+      viewStore.publish(
+        current.kind === 'closed'
+          ? CLOSED_VIEW
+          : { state: current, segments: resolve(current.wheel, current.path), ...describe(current) }
+      )
+    },
+    [viewStore, describe]
+  )
+
   // Declared before `apply` uses it, assigned after: opening a menu is async, and its result has
   // to re-enter the same machine so the lock follows a stick that has not moved.
-  const applyRef = useRef<(event: Parameters<typeof reduceWheel>[1]) => boolean>(() => false)
+  const applyRef = useRef<(event: WheelEvent) => boolean>(() => false)
 
   const loadMenu = useCallback(
     (key: string) => {
@@ -132,14 +166,25 @@ export function useWheelController(options: WheelControllerOptions): WheelContro
       if (page > 1 || binding === null || !isMenuBinding(binding)) {
         return
       }
+      const token = (loadTokensRef.current.get(base) ?? 0) + 1
+      loadTokensRef.current.set(base, token)
       const settle = (menu: MenuView): void => {
+        if (loadTokensRef.current.get(base) !== token) {
+          return
+        }
         menusRef.current.set(base, menu)
         const open = stateRef.current
         const vector = vectorRef.current
-        if (open.kind === 'open' && open.path.at(-1) === key && vector !== null) {
-          // Re-lock from where the stick already is, or the highlight would wait for a nudge.
-          applyRef.current({ kind: 'motion', wheel: open.wheel, x: vector.x, y: vector.y })
+        if (open.kind !== 'open' || open.path.at(-1) !== key) {
+          return
         }
+        if (vector === null) {
+          publish(segmentsFor)
+          return
+        }
+        // Re-lock from where the stick already is, or the highlight would wait for a nudge.
+        applyRef.current({ kind: 'motion', wheel: open.wheel, x: vector.x, y: vector.y })
+        publish(segmentsFor)
       }
       const ready = (entries: readonly WheelMenuEntry[]): MenuView => ({
         status: 'ready',
@@ -161,19 +206,26 @@ export function useWheelController(options: WheelControllerOptions): WheelContro
         settle({ status: 'error', entries: [], message: 'Could not load' })
       }
     },
-    [registry]
+    [registry, publish, segmentsFor]
   )
 
   const apply = useCallback(
-    (event: Parameters<typeof reduceWheel>[1]): boolean => {
+    (event: WheelEvent): boolean => {
+      const resolve = onceEach(segmentsFor)
       const before = stateRef.current
-      const outcome = reduceWheel(before, event, preset)
+      const outcome = reduceWheel(before, event, { segmentsFor: resolve, deadZone, isLoading })
       const next = stateAfter(outcome)
       // Committed before any render is scheduled: the action does not wait for a frame.
       stateRef.current = next
+      if (next === before) {
+        // The same state draws the same view: a steady stick costs no publish at all.
+        return before.kind === 'open'
+      }
       if (before.kind === 'open') {
-        dispatchWheelOutcome(outcome, segmentsFor(before.wheel, before.path), (bindingId) =>
-          runBinding(bindingId, before.path)
+        dispatchWheelOutcome(
+          outcome,
+          () => resolve(before.wheel, before.path),
+          (bindingId) => runBinding(bindingId, before.path)
         )
       }
       if (outcome.kind === 'descend') {
@@ -185,24 +237,24 @@ export function useWheelController(options: WheelControllerOptions): WheelContro
       if ((before.kind === 'open') !== (next.kind === 'open')) {
         onOpenChangeRef.current?.(next.kind === 'open')
       }
-
-      // Read back rather than trusting `next`: opening a menu may have locked a segment already.
-      const current = stateRef.current
-      setView(
-        current.kind === 'closed'
-          ? CLOSED_VIEW
-          : {
-              state: current,
-              segments: segmentsFor(current.wheel, current.path),
-              vector: vectorRef.current,
-              ...describe(current)
-            }
-      )
+      // Reads `stateRef` back rather than trusting `next`: opening a menu may have locked already.
+      publish(resolve)
       return before.kind === 'open' || next.kind === 'open'
     },
-    [preset, segmentsFor, runBinding, loadMenu, describe]
+    [segmentsFor, deadZone, isLoading, runBinding, loadMenu, publish]
   )
   applyRef.current = apply
+
+  // A binding that mounts, unmounts or changes availability under an open wheel redraws it.
+  useEffect(
+    () =>
+      registry.subscribe(() => {
+        if (stateRef.current.kind === 'open') {
+          publish(segmentsFor)
+        }
+      }),
+    [registry, publish, segmentsFor]
+  )
 
   const intercept = useCallback(
     (intent: ControllerIntent): boolean => {
@@ -216,8 +268,8 @@ export function useWheelController(options: WheelControllerOptions): WheelContro
         // Closed: everything belongs to the focused surface (`001` §7).
         return false
       }
-      // Open: `A` and `B` steer the wheel, and every other control is swallowed rather than let
-      // through to the screen underneath.
+      // Open: `R2` and `L2` steer the wheel (decision 007), arriving here as `confirm` and `back`;
+      // every other control is swallowed rather than let through to the screen underneath.
       if (intent.kind === 'confirm') {
         apply({ kind: 'confirm' })
       } else if (intent.kind === 'back') {
@@ -246,5 +298,8 @@ export function useWheelController(options: WheelControllerOptions): WheelContro
     []
   )
 
-  return { view, intercept, isOpen, cancel }
+  return useMemo(
+    () => ({ view: viewStore, intercept, isOpen, cancel }),
+    [viewStore, intercept, isOpen, cancel]
+  )
 }

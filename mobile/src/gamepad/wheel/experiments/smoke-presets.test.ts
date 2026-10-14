@@ -107,7 +107,7 @@ describe('smoke presets', () => {
     )
     expect(opened).toEqual({
       kind: 'state',
-      state: { kind: 'open', wheel: preset.wheel, path: [], locked: null }
+      state: { kind: 'open', wheel: preset.wheel, path: [], locked: null, spent: new Set() }
     })
     expect(
       reduceWheel(

@@ -37,10 +37,14 @@ function preset(overrides: Partial<WheelPreset> = {}): WheelPreset {
   }
 }
 
+/** The sticks a set of outcomes leaves spent. */
+const spent = (...wheels: WheelId[]): ReadonlySet<WheelId> => new Set(wheels)
+const NONE = spent()
+
 const UP: WheelEvent = { kind: 'motion', wheel: 1, x: 0, y: -1 }
 const RIGHT: WheelEvent = { kind: 'motion', wheel: 1, x: 1, y: 0 }
 const CENTRED: WheelEvent = { kind: 'motion', wheel: 1, x: 0, y: 0 }
-const openOnNorth: WheelState = { kind: 'open', wheel: 1, path: [], locked: 'north' }
+const openOnNorth: WheelState = { kind: 'open', wheel: 1, path: [], locked: 'north', spent: NONE }
 
 function reduce(state: WheelState, event: WheelEvent, p: WheelPreset = preset()) {
   return reduceWheel(state, event, p)
@@ -51,7 +55,7 @@ describe('PRD wheel rules', () => {
   it('rule 1 — a wheel opens immediately when its stick leaves the dead zone', () => {
     expect(reduce(CLOSED_WHEEL, UP)).toEqual({
       kind: 'state',
-      state: { kind: 'open', wheel: 1, path: [], locked: 'north' }
+      state: { kind: 'open', wheel: 1, path: [], locked: 'north', spent: NONE }
     })
   })
 
@@ -62,7 +66,8 @@ describe('PRD wheel rules', () => {
       kind: 'open',
       wheel: 1,
       path: [],
-      locked: 'east'
+      locked: 'east',
+      spent: NONE
     })
   })
 
@@ -87,19 +92,20 @@ describe('PRD wheel rules', () => {
     expect(reduce(openOnNorth, { kind: 'confirm' })).toEqual({
       kind: 'commit',
       wheel: 1,
-      segmentId: 'north'
+      segmentId: 'north',
+      spent: spent(1)
     })
   })
 
-  it('rule 5 — returning to centre or leaving a valid segment before A cancels', () => {
+  it('rule 5 — returning to centre cancels, and leaving a valid segment drops the lock', () => {
     // The stick is already back at centre, so there is nothing to wait for before reopening.
-    expect(reduce(openOnNorth, CENTRED)).toEqual({ kind: 'cancel', spent: null })
-    // A dead arc between north and east is "no longer on a valid segment".
-    expect(reduce(openOnNorth, { kind: 'motion', wheel: 1, x: 0.7, y: -0.7 })).toEqual({
-      kind: 'cancel',
-      spent: null
+    expect(reduce(openOnNorth, CENTRED)).toEqual({ kind: 'cancel', spent: NONE })
+    // A dead arc between north and east holds the wheel open with nothing to commit.
+    expect(stateAfter(reduce(openOnNorth, { kind: 'motion', wheel: 1, x: 0.7, y: -0.7 }))).toEqual({
+      ...openOnNorth,
+      locked: null
     })
-    expect(stateAfter({ kind: 'cancel', spent: null })).toEqual(CLOSED_WHEEL)
+    expect(stateAfter({ kind: 'cancel', spent: NONE })).toEqual(CLOSED_WHEEL)
   })
 
   it('rule 6 — no hold-to-summon delay exists', () => {
@@ -116,7 +122,8 @@ describe('the transition table', () => {
       kind: 'open',
       wheel: 2,
       path: [],
-      locked: 'far-south'
+      locked: 'far-south',
+      spent: NONE
     })
   })
 
@@ -127,17 +134,16 @@ describe('the transition table', () => {
     })
   })
 
-  it('ignores the inactive stick entirely, so one wheel cannot steal the other', () => {
-    expect(reduce(openOnNorth, { kind: 'motion', wheel: 2, x: 0, y: 1 })).toEqual({
-      kind: 'state',
-      state: openOnNorth
-    })
+  it('ignores the inactive stick, so one wheel cannot steal the other', () => {
+    expect(stateAfter(reduce(openOnNorth, { kind: 'motion', wheel: 2, x: 0, y: 1 }))).toMatchObject(
+      { kind: 'open', wheel: 1, locked: 'north' }
+    )
   })
 
   it('cancels on B and on controller disconnect', () => {
     // B leaves a held stick behind, so the wheel is spent until that stick comes back.
-    expect(reduce(openOnNorth, { kind: 'back' })).toEqual({ kind: 'cancel', spent: 1 })
-    expect(reduce(openOnNorth, { kind: 'disconnect' })).toEqual({ kind: 'cancel', spent: null })
+    expect(reduce(openOnNorth, { kind: 'back' })).toEqual({ kind: 'cancel', spent: spent(1) })
+    expect(reduce(openOnNorth, { kind: 'disconnect' })).toEqual({ kind: 'cancel', spent: NONE })
   })
 
   it('leaves A and B to the focused surface while the wheel is closed', () => {
@@ -152,14 +158,17 @@ describe('failure behaviour (002 §6)', () => {
     const empty = preset({ segmentsFor: () => [] })
     const opened = stateAfter(reduce(CLOSED_WHEEL, UP, empty))
 
-    expect(opened).toEqual({ kind: 'open', wheel: 1, path: [], locked: null })
-    expect(reduce(opened, { kind: 'confirm' }, empty)).toEqual({ kind: 'cancel', spent: 1 })
+    expect(opened).toEqual({ kind: 'open', wheel: 1, path: [], locked: null, spent: NONE })
+    expect(reduce(opened, { kind: 'confirm' }, empty)).toEqual({ kind: 'cancel', spent: spent(1) })
   })
 
   it('cancels A on an unavailable lock rather than delegating it', () => {
     const disabled = preset({ segmentsFor: () => [segment('north', 0, 'unavailable')] })
 
-    expect(reduce(openOnNorth, { kind: 'confirm' }, disabled)).toEqual({ kind: 'cancel', spent: 1 })
+    expect(reduce(openOnNorth, { kind: 'confirm' }, disabled)).toEqual({
+      kind: 'cancel',
+      spent: spent(1)
+    })
   })
 
   it('commits an unknown lock, because unproven is not refused', () => {
@@ -168,7 +177,8 @@ describe('failure behaviour (002 §6)', () => {
     expect(reduce(openOnNorth, { kind: 'confirm' }, unproven)).toEqual({
       kind: 'commit',
       wheel: 1,
-      segmentId: 'north'
+      segmentId: 'north',
+      spent: spent(1)
     })
   })
 
@@ -177,23 +187,28 @@ describe('failure behaviour (002 §6)', () => {
 
     expect(reduce(openOnNorth, { kind: 'confirm' }, unmounted)).toEqual({
       kind: 'cancel',
-      spent: 1
+      spent: spent(1)
     })
   })
 
   it('closes on every terminal outcome, spending the wheel when its stick may still be out', () => {
-    expect(stateAfter({ kind: 'commit', wheel: 1, segmentId: 'north' })).toEqual({
+    expect(stateAfter({ kind: 'commit', wheel: 1, segmentId: 'north', spent: spent(1) })).toEqual({
       kind: 'closed',
-      spent: 1
+      spent: spent(1)
     })
-    expect(stateAfter({ kind: 'cancel', spent: null })).toEqual(CLOSED_WHEEL)
-    expect(stateAfter({ kind: 'cancel', spent: 2 })).toEqual({ kind: 'closed', spent: 2 })
+    expect(stateAfter({ kind: 'cancel', spent: NONE })).toEqual(CLOSED_WHEEL)
+    expect(stateAfter({ kind: 'cancel', spent: spent(2) })).toEqual({
+      kind: 'closed',
+      spent: spent(2)
+    })
   })
 })
 
 /** A stick held out through a commit or a B must not reopen the wheel it just closed. */
 describe('a spent wheel (005)', () => {
-  const spent: WheelState = { kind: 'closed', spent: 1 }
+  const spentOne: WheelState = { kind: 'closed', spent: spent(1) }
+  const DOWN_TWO: WheelEvent = { kind: 'motion', wheel: 2, x: 0, y: 1 }
+  const CENTRED_TWO: WheelEvent = { kind: 'motion', wheel: 2, x: 0, y: 0 }
 
   it('stays closed while its stick is still out, however much it jitters', () => {
     for (const event of [
@@ -201,19 +216,76 @@ describe('a spent wheel (005)', () => {
       RIGHT,
       { kind: 'motion', wheel: 1, x: 0.05, y: -0.95 } satisfies WheelEvent
     ]) {
-      expect(reduce(spent, event)).toEqual({ kind: 'state', state: spent })
+      expect(reduce(spentOne, event)).toEqual({ kind: 'state', state: spentOne })
     }
   })
 
   it('is cleared when the stick comes back to centre, and opens again after that', () => {
-    const cleared = stateAfter(reduce(spent, CENTRED))
+    const cleared = stateAfter(reduce(spentOne, CENTRED))
 
     expect(cleared).toEqual(CLOSED_WHEEL)
     expect(stateAfter(reduce(cleared, UP)).kind).toBe('open')
   })
 
   it('does not stop the other wheel from opening', () => {
-    expect(stateAfter(reduce(spent, { kind: 'motion', wheel: 2, x: 0, y: 1 })).kind).toBe('open')
+    expect(stateAfter(reduce(spentOne, DOWN_TWO)).kind).toBe('open')
+  })
+
+  it('keeps each wheel spent on its own: opening the other does not clear the first', () => {
+    const openTwo = stateAfter(reduce(spentOne, DOWN_TWO))
+    const closed = stateAfter(reduce(openTwo, { kind: 'confirm' }))
+
+    expect(closed).toEqual({ kind: 'closed', spent: spent(1, 2) })
+    expect(stateAfter(reduce(closed, UP)).kind).toBe('closed')
+    expect(stateAfter(reduce(closed, DOWN_TWO)).kind).toBe('closed')
+  })
+
+  it('spends a stick held out while the other wheel owns the pad', () => {
+    const held = stateAfter(reduce(openOnNorth, DOWN_TWO))
+    const closed = stateAfter(reduce(held, CENTRED))
+
+    expect(closed).toEqual({ kind: 'closed', spent: spent(2) })
+    expect(stateAfter(reduce(closed, DOWN_TWO)).kind).toBe('closed')
+  })
+
+  it('does not spend the other stick once it has come back before the wheel closed', () => {
+    const held = stateAfter(reduce(openOnNorth, DOWN_TWO))
+    const released = stateAfter(reduce(held, CENTRED_TWO))
+
+    expect(stateAfter(reduce(released, CENTRED))).toEqual(CLOSED_WHEEL)
+  })
+})
+
+describe('segment lock hysteresis', () => {
+  /** A unit vector at `angle`, scaled to `radius`. */
+  const at = (angle: number, radius = 1): WheelEvent => ({
+    kind: 'motion',
+    wheel: 1,
+    x: Math.sin(angle) * radius,
+    y: -Math.cos(angle) * radius
+  })
+  const EDGE = Math.PI / 6
+
+  it('keeps the lock a little past its own edge, so a resting thumb does not flicker', () => {
+    expect(stateAfter(reduce(openOnNorth, at(EDGE + 0.1)))).toMatchObject({ locked: 'north' })
+  })
+
+  it('lets go once the stick is clearly past that margin', () => {
+    expect(stateAfter(reduce(openOnNorth, at(EDGE + 0.2)))).toMatchObject({ locked: null })
+  })
+
+  it('selects only past half deflection; short of it the lock only holds', () => {
+    expect(stateAfter(reduce(CLOSED_WHEEL, at(0, 0.4)))).toMatchObject({
+      kind: 'open',
+      locked: null
+    })
+    expect(stateAfter(reduce(openOnNorth, at(QUARTER, 0.4)))).toMatchObject({ locked: 'north' })
+    expect(stateAfter(reduce(openOnNorth, at(QUARTER, 0.6)))).toMatchObject({ locked: 'east' })
+  })
+
+  it('returns the same state for a sample that changes nothing', () => {
+    const outcome = reduce(openOnNorth, at(0.05))
+    expect(outcome.kind === 'state' && outcome.state === openOnNorth).toBe(true)
   })
 })
 
@@ -223,78 +295,122 @@ describe('a wheel that opens a wheel (005 USE-R10)', () => {
   const nested = preset({
     segmentsFor: (wheel, path) => (wheel === 1 ? (path.length === 0 ? [opener] : choices) : [])
   })
-  const onOpener: WheelState = { kind: 'open', wheel: 1, path: [], locked: 'launch' }
+  const onOpener: WheelState = { kind: 'open', wheel: 1, path: [], locked: 'launch', spent: NONE }
+  const inMenu = (locked: string | null, path = ['agent.launch']): WheelState => ({
+    kind: 'open',
+    wheel: 1,
+    path,
+    locked,
+    spent: NONE
+  })
+  /** Inside the menu, the stick that chose it already let go. */
+  const PARTWAY: WheelEvent = { kind: 'motion', wheel: 1, x: 0, y: -0.3 }
 
   it('descends instead of committing, and runs nothing', () => {
     const outcome = reduce(onOpener, { kind: 'confirm' }, nested)
 
-    expect(outcome).toEqual({ kind: 'descend', wheel: 1, path: ['agent.launch'] })
-    expect(stateAfter(outcome)).toEqual({
-      kind: 'open',
-      wheel: 1,
-      path: ['agent.launch'],
-      locked: null
-    })
+    expect(outcome).toEqual({ kind: 'descend', wheel: 1, path: ['agent.launch'], spent: NONE })
+    expect(stateAfter(outcome)).toEqual({ ...inMenu(null), held: { anchor: null } })
   })
 
-  it('locks among the new segments, and commits one of them', () => {
+  it('locks among the new segments once the stick lets go, and commits one of them', () => {
     const inside = stateAfter(reduce(onOpener, { kind: 'confirm' }, nested))
-    const locked = stateAfter(reduce(inside, UP, nested))
+    const released = stateAfter(reduce(inside, PARTWAY, nested))
+    const locked = stateAfter(reduce(released, UP, nested))
 
     expect(locked).toMatchObject({ path: ['agent.launch'], locked: 'claude' })
     expect(reduce(locked, { kind: 'confirm' }, nested)).toEqual({
       kind: 'commit',
       wheel: 1,
-      segmentId: 'claude'
+      segmentId: 'claude',
+      spent: spent(1)
     })
+  })
+
+  it('does not lock the entry under the stick that chose the menu', () => {
+    const inside = stateAfter(reduce(onOpener, { kind: 'confirm' }, nested))
+    const anchored = stateAfter(reduce(inside, UP, nested))
+    const nudged = stateAfter(reduce(anchored, { kind: 'motion', wheel: 1, x: 0.2, y: -1 }, nested))
+
+    expect(anchored).toMatchObject({ locked: null, held: { anchor: 0 } })
+    expect(nudged).toMatchObject({ locked: null })
+  })
+
+  it('locks once the held stick swings far enough, without recentring', () => {
+    const inside = stateAfter(reduce(onOpener, { kind: 'confirm' }, nested))
+    const anchored = stateAfter(reduce(inside, UP, nested))
+    const swung = stateAfter(reduce(anchored, { kind: 'motion', wheel: 1, x: 0.4, y: -1 }, nested))
+
+    expect(swung).toMatchObject({ locked: 'claude' })
+    expect(swung).not.toHaveProperty('held')
   })
 
   it('does not commit from a descent with nothing locked: A cancels it', () => {
     const inside = stateAfter(reduce(onOpener, { kind: 'confirm' }, nested))
 
-    expect(reduce(inside, { kind: 'confirm' }, nested)).toEqual({ kind: 'cancel', spent: 1 })
+    expect(reduce(inside, { kind: 'confirm' }, nested)).toEqual({
+      kind: 'cancel',
+      spent: spent(1)
+    })
+  })
+
+  it('does nothing on R2 while the menu is still loading', () => {
+    const loading = preset({ ...nested, isLoading: (_wheel, path) => path.length > 0 })
+    const inside = stateAfter(reduce(onOpener, { kind: 'confirm' }, loading))
+
+    expect(reduce(inside, { kind: 'confirm' }, loading)).toEqual({ kind: 'state', state: inside })
+  })
+
+  it('holds a menu open in a gap, rather than cancelling it', () => {
+    const inside = inMenu('claude')
+
+    expect(stateAfter(reduce(inside, RIGHT, nested))).toEqual(inMenu(null))
   })
 
   it('steps back one level on B, and closes on the next', () => {
-    const inside: WheelState = { kind: 'open', wheel: 1, path: ['agent.launch'], locked: 'claude' }
-
-    const back = reduce(inside, { kind: 'back' }, nested)
-    expect(back).toEqual({ kind: 'ascend', wheel: 1, path: [] })
-    expect(stateAfter(back)).toEqual({ kind: 'open', wheel: 1, path: [], locked: null })
-    expect(reduce(stateAfter(back), { kind: 'back' }, nested)).toEqual({ kind: 'cancel', spent: 1 })
+    const back = reduce(inMenu('claude'), { kind: 'back' }, nested)
+    expect(back).toEqual({ kind: 'ascend', wheel: 1, path: [], spent: NONE })
+    expect(stateAfter(back)).toEqual({
+      kind: 'open',
+      wheel: 1,
+      path: [],
+      locked: null,
+      spent: NONE
+    })
+    expect(reduce(stateAfter(back), { kind: 'back' }, nested)).toEqual({
+      kind: 'cancel',
+      spent: spent(1)
+    })
   })
 
   it('cancels the whole wheel when the stick returns to centre inside a menu', () => {
-    const inside: WheelState = { kind: 'open', wheel: 1, path: ['agent.launch'], locked: 'claude' }
-
-    expect(reduce(inside, CENTRED, nested)).toEqual({ kind: 'cancel', spent: null })
+    expect(reduce(inMenu('claude'), CENTRED, nested)).toEqual({ kind: 'cancel', spent: NONE })
   })
 
   it('refuses to descend into a menu that is not available, which cancels', () => {
     const greyed = preset({ segmentsFor: () => [{ ...opener, availability: 'unavailable' }] })
 
-    expect(reduce(onOpener, { kind: 'confirm' }, greyed)).toEqual({ kind: 'cancel', spent: 1 })
+    expect(reduce(onOpener, { kind: 'confirm' }, greyed)).toEqual({
+      kind: 'cancel',
+      spent: spent(1)
+    })
   })
 
   it('opens an empty menu with no lock, rather than refusing to show it', () => {
     const empty = preset({ segmentsFor: (_wheel, path) => (path.length === 0 ? [opener] : []) })
     const inside = stateAfter(reduce(onOpener, { kind: 'confirm' }, empty))
 
-    expect(stateAfter(reduce(inside, UP, empty))).toMatchObject({ locked: null })
+    expect(stateAfter(reduce(inside, UP, empty))).toMatchObject({ kind: 'open', locked: null })
   })
 
   it('pages like a menu: each page is one more level, and B steps back a page', () => {
-    const page2: WheelState = {
-      kind: 'open',
-      wheel: 1,
-      path: ['agent.launch', 'agent.launch#2'],
-      locked: 'codex'
-    }
+    const page2 = inMenu('codex', ['agent.launch', 'agent.launch#2'])
 
     expect(reduce(page2, { kind: 'back' }, nested)).toEqual({
       kind: 'ascend',
       wheel: 1,
-      path: ['agent.launch']
+      path: ['agent.launch'],
+      spent: NONE
     })
   })
 })

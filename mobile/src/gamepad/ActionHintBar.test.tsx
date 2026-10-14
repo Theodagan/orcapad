@@ -9,6 +9,7 @@ import { neutralSample, type ControllerSample } from './controller-input/control
 import { ControllerProvider, useControllerBinding } from './controller-provider'
 import type { FocusZone } from './focus/focus-zones'
 import { useControllerFocus } from './focus/use-controller-focus'
+import type { WheelView, WheelViewSource } from './wheel/wheel-view-store'
 
 vi.mock('react-native', () => ({
   StyleSheet: { create: <T,>(styles: T) => styles, absoluteFill: {}, hairlineWidth: 1 },
@@ -49,6 +50,15 @@ function Surface({
   return null
 }
 
+/** A wheel that is up, as the overlay's store reports it. */
+const openView: WheelView = {
+  state: { kind: 'open', wheel: 1, path: [], locked: null, spent: new Set() },
+  segments: [],
+  title: null,
+  message: null
+}
+const openWheel: WheelViewSource = { read: () => openView, subscribe: () => () => {} }
+
 describe('ActionHintBar', () => {
   let renderer: ReactTestRenderer | null = null
   afterEach(() => {
@@ -78,7 +88,9 @@ describe('ActionHintBar', () => {
           { reader, activeDictation: options.dictation },
           createElement(FocusHelper),
           ...children,
-          createElement(ActionHintBar, { wheelOpen: options.wheelOpen })
+          createElement(ActionHintBar, {
+            wheel: options.wheelOpen ? openWheel : undefined
+          })
         )
       )
     })
@@ -199,7 +211,7 @@ describe('ActionHintBar', () => {
     expect(texts()).not.toContain('Dictate')
   })
 
-  it('shows only what the triggers do to an open wheel, while one is open', () => {
+  it('leaves the triggers to the open wheel’s own cues, keeping only its chip', () => {
     mount(
       [createElement(Surface, { id: 'agent', zone: 'agent', accepts: ['confirm', 'scroll'] })],
       {
@@ -207,7 +219,7 @@ describe('ActionHintBar', () => {
       }
     )
 
-    expect(texts()).toEqual(['Wheel', 'R2', 'Select', 'L2', 'Cancel'])
+    expect(texts()).toEqual(['Wheel'])
   })
 
   it('renders nothing in focus mode', () => {
