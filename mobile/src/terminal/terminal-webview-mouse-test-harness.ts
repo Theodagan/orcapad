@@ -1,12 +1,7 @@
 import { runInThisContext } from 'node:vm'
 import { afterEach, beforeEach, vi, type Mock } from 'vitest'
+import { TERMINAL_DOCUMENT_SCRIPT } from './terminal-webview-document-script.generated'
 import { XTERM_HTML } from './terminal-webview-html'
-
-function iifeSource(): string {
-  const start = XTERM_HTML.indexOf('(function() {')
-  const end = XTERM_HTML.lastIndexOf('})();')
-  return XTERM_HTML.slice(start, end + '})();'.length)
-}
 
 function bodyMarkup(): string {
   const start = XTERM_HTML.indexOf('<body>') + '<body>'.length
@@ -155,18 +150,27 @@ export function useTerminalMouseWebViewHarness() {
   let select: Select
   let terminals: TerminalStub[]
 
-  function boot(): void {
+  function boot(initialData = ''): void {
     document.body.innerHTML = bodyMarkup()
-    runInThisContext(iifeSource())
+    runInThisContext(TERMINAL_DOCUMENT_SCRIPT)
     window.dispatchEvent(
       new MessageEvent('message', {
-        data: JSON.stringify({ type: 'init', cols: 40, rows: 24, initialData: '' })
+        data: JSON.stringify({ type: 'init', cols: 40, rows: 24, initialData })
       })
     )
     // Why: init commits the replacement surface on the next animation frame.
     while (animationFrames.length > 0) {
       animationFrames.shift()?.()
     }
+  }
+
+  // Why: the document sends no mouse report until replayed bytes prove the encoding.
+  function writeLegacyMouseEncoding(): void {
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: JSON.stringify({ type: 'write', data: `${ESC}[?1006l` })
+      })
+    )
   }
 
   function activeTerminal(): TerminalStub {
@@ -236,13 +240,23 @@ export function useTerminalMouseWebViewHarness() {
   return {
     activeTerminal,
     boot,
+    showAlternateBuffer: () => {
+      buffer.type = 'alternate'
+    },
     clearPostedMessages: () => postMessage.mockClear(),
+    /** Runs the frames queued so far; touch scroll for a TUI is sent once per frame. */
+    runFrames: () => {
+      for (const frame of animationFrames.splice(0)) {
+        frame()
+      }
+    },
     dispatchPointer,
     mouseClick,
     mouseDrag,
     postedMessages: () => postedMessages(postMessage),
     selectionSpy: () => select,
     terminalInputBytes: () => terminalInputBytes(postMessage),
-    terminalSurface
+    terminalSurface,
+    writeLegacyMouseEncoding
   }
 }

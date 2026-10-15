@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { Check } from 'lucide-react-native'
 import type { AskAnswerSelection, AskPrompt } from '../../../src/shared/native-chat-ask'
-import { cursorForQuestion, movePromptCursor } from '../gamepad/bindings/agent-prompt-selection'
-import { ControllerFocusRing } from '../gamepad/focus/ControllerFocusRing'
-import { useNativeFocus } from '../gamepad/focus/native-focus'
-import { usePromptOptionBinding } from '../gamepad/bindings/use-prompt-option-binding'
-import { useControllerBinding } from '../gamepad/controller-provider'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { useAskControllerCursor } from './use-ask-controller-cursor'
+import { OptionRow } from './MobileNativeChatAskOption'
+import { TEXT_INPUT_FONT_SIZE } from '../platform/text-input-font-size'
+import { MobileNativeChatCardHeaderAction } from './MobileNativeChatCardHeaderAction'
+import { useMobileNativeChatAskAutoAdvance } from './use-mobile-native-chat-ask-auto-advance'
 
 type Props = {
   prompt: AskPrompt
@@ -16,6 +16,8 @@ type Props = {
    *  option's stable number instead of pasted label text (STA-1860). */
   onAnswer: (selections: AskAnswerSelection[]) => Promise<boolean>
   onCancel?: () => Promise<boolean>
+  /** Fold the card to a strip and free Send, writing nothing. */
+  onCollapse?: () => void
 }
 
 // Sentinel index for the free-text "Other…" row (never a real option index).
@@ -23,26 +25,42 @@ const OTHER = -1
 
 /** Native renderer for an agent's AskUserQuestion prompt as a wizard: one
  *  question per step with tabs across the top, a Next button that advances (Send
- *  on the last step), and a Cancel that dismisses the prompt. Neutral styling
+ *  on the last step), and a Cancel that dismisses the prompt. A single-select pick
+ *  moves on by itself, as on desktop. Neutral styling
  *  with a subtle green accent on the active choice to match the rest of the app. */
-export function MobileNativeChatAsk({ prompt, onAnswer, onCancel }: Props): React.JSX.Element {
+export function MobileNativeChatAsk({
+  prompt,
+  onAnswer,
+  onCancel,
+  onCollapse
+}: Props): React.JSX.Element {
   const [index, setIndex] = useState(0)
   const [selections, setSelections] = useState<number[][]>(() => prompt.questions.map(() => []))
   const [otherText, setOtherText] = useState<string[]>(() => prompt.questions.map(() => ''))
   const [submitting, setSubmitting] = useState(false)
   const submittingRef = useRef(false)
+  const autoAdvance = useMobileNativeChatAskAutoAdvance()
 
+  // A single-select option answers the question, so the card moves on after a beat that shows
+  // it chosen; "Other…" still needs its text.
   const toggle = (qi: number, optIndex: number, multi: boolean): void => {
-    setSelections((prev) => {
-      const next = prev.map((s) => [...s])
-      const cur = next[qi] ?? []
-      if (multi) {
-        next[qi] = cur.includes(optIndex) ? cur.filter((i) => i !== optIndex) : [...cur, optIndex]
-      } else {
-        next[qi] = cur.includes(optIndex) ? [] : [optIndex]
-      }
-      return next
-    })
+    // The ref, not `submitting`: a tap can land before the render that disables the rows.
+    if (submittingRef.current) {
+      return
+    }
+    const cur = selections[qi] ?? []
+    const picked = !cur.includes(optIndex)
+    const chosen = !picked
+      ? cur.filter((i) => i !== optIndex)
+      : multi
+        ? [...cur, optIndex]
+        : [optIndex]
+    const next = selections.map((s, i) => (i === qi ? chosen : s))
+    setSelections(next)
+    autoAdvance.cancel()
+    if (picked && !multi && optIndex !== OTHER) {
+      autoAdvance.schedule(() => void advance(next))
+    }
   }
 
   const setOther = (qi: number, value: string): void => {
@@ -53,15 +71,16 @@ export function MobileNativeChatAsk({ prompt, onAnswer, onCancel }: Props): Reac
     })
   }
 
-  const selectionFor = (qi: number): AskAnswerSelection => {
-    const picked = (selections[qi] ?? []).filter((i) => i !== OTHER)
-    const other = (selections[qi] ?? []).includes(OTHER) ? (otherText[qi] ?? '').trim() : ''
+  // `sel` is an explicit snapshot so a just-made pick isn't lost to the async setState.
+  const selectionFor = (qi: number, sel = selections): AskAnswerSelection => {
+    const picked = (sel[qi] ?? []).filter((i) => i !== OTHER)
+    const other = (sel[qi] ?? []).includes(OTHER) ? (otherText[qi] ?? '').trim() : ''
     return other ? { indices: picked, other } : { indices: picked }
   }
 
-  const isAnswered = (qi: number): boolean => {
-    const sel = selectionFor(qi)
-    return sel.indices.length > 0 || (sel.other ?? '').length > 0
+  const isAnswered = (qi: number, sel = selections): boolean => {
+    const answer = selectionFor(qi, sel)
+    return answer.indices.length > 0 || (answer.other ?? '').length > 0
   }
 
   const total = prompt.questions.length
@@ -78,54 +97,39 @@ export function MobileNativeChatAsk({ prompt, onAnswer, onCancel }: Props): Reac
   )
   const canAdvance = !submitting && (isLast ? allAnswered : currentAnswered)
 
-  const submit = async (): Promise<void> => {
-    if (!allAnswered || submittingRef.current) {
+  const submit = async (sel: number[][]): Promise<void> => {
+    if (!prompt.questions.every((_, i) => isAnswered(i, sel)) || submittingRef.current) {
       return
     }
     submittingRef.current = true
     setSubmitting(true)
     try {
-      await onAnswer(prompt.questions.map((_, i) => selectionFor(i)))
+      await onAnswer(prompt.questions.map((_, i) => selectionFor(i, sel)))
     } finally {
       submittingRef.current = false
       setSubmitting(false)
     }
   }
 
-  const advance = async (): Promise<void> => {
+  const advance = async (sel = selections): Promise<void> => {
+    autoAdvance.cancel()
     if (isLast) {
-      await submit()
+      await submit(sel)
     } else {
       setIndex((i) => Math.min(i + 1, total - 1))
     }
   }
 
-  // Controller edge (`004` LOOP-T3). Every call below is one this card's own buttons make, so
-  // the pad answers the prompt the same way a thumb does.
-  const { connected: controllerConnected } = useControllerBinding()
-  const [cursor, setCursor] = useState(0)
-  const currentOptionCount = prompt.questions[index]?.options.length ?? 0
-  usePromptOptionBinding({
-    promptKey: `ask:${index}`,
-    optionCount: currentOptionCount,
-    onMove: (direction) =>
-      setCursor((held) => movePromptCursor(held, currentOptionCount, direction)),
-    onChoose: () => toggle(index, cursor, prompt.questions[index]?.multiSelect === true),
-    onAdvance: canAdvance ? () => void advance() : undefined,
-    onRetreat: index > 0 ? () => setIndex((i) => Math.max(i - 1, 0)) : undefined,
-    onCancel: () => {
-      if (!submittingRef.current && onCancel) {
-        void onCancel()
-      }
-    }
+  const cursor = useAskControllerCursor({
+    prompt,
+    index,
+    selections,
+    toggle,
+    advance: canAdvance ? () => void advance() : undefined,
+    setIndex,
+    submittingRef,
+    onCancel
   })
-
-  // Follow the answer already given rather than snapping to the top: the user is reviewing a
-  // choice they made, and hiding it would be the wrong help.
-  useEffect(() => {
-    setCursor(cursorForQuestion(selections[index] ?? []))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index])
 
   const q = prompt.questions[index]!
   const otherSelected = (selections[index] ?? []).includes(OTHER)
@@ -144,7 +148,11 @@ export function MobileNativeChatAsk({ prompt, onAnswer, onCancel }: Props): Reac
             <Pressable
               key={i}
               style={[styles.tab, i === index && styles.tabActive]}
-              onPress={() => setIndex(i)}
+              disabled={submitting}
+              onPress={() => {
+                autoAdvance.cancel()
+                setIndex(i)
+              }}
             >
               <Text style={[styles.tabText, i === index && styles.tabTextActive]} numberOfLines={1}>
                 {qq.header || `Step ${i + 1}`}
@@ -158,15 +166,28 @@ export function MobileNativeChatAsk({ prompt, onAnswer, onCancel }: Props): Reac
       ) : null}
 
       <ScrollView style={styles.scroll} keyboardShouldPersistTaps="always">
-        <Text style={styles.questionText}>{q.question}</Text>
+        <View style={styles.questionRow}>
+          <Text style={styles.questionText}>{q.question}</Text>
+          <MobileNativeChatCardHeaderAction
+            onCollapse={
+              onCollapse &&
+              (() => {
+                autoAdvance.cancel()
+                onCollapse()
+              })
+            }
+            disabled={submitting}
+          />
+        </View>
         {q.options.map((opt, optIndex) => (
           <OptionRow
             key={`${optIndex}:${opt.label}`}
             label={opt.label}
             description={opt.description}
             selected={(selections[index] ?? []).includes(optIndex)}
-            cursored={controllerConnected && optIndex === cursor}
+            cursored={optIndex === cursor}
             multi={q.multiSelect}
+            disabled={submitting}
             onPress={() => toggle(index, optIndex, q.multiSelect)}
           />
         ))}
@@ -174,6 +195,7 @@ export function MobileNativeChatAsk({ prompt, onAnswer, onCancel }: Props): Reac
           label="Other…"
           selected={otherSelected}
           multi={q.multiSelect}
+          disabled={submitting}
           onPress={() => toggle(index, OTHER, q.multiSelect)}
         />
         {otherSelected ? (
@@ -193,6 +215,7 @@ export function MobileNativeChatAsk({ prompt, onAnswer, onCancel }: Props): Reac
         <Pressable
           style={styles.cancel}
           onPress={async () => {
+            autoAdvance.cancel()
             if (!submittingRef.current && onCancel) {
               submittingRef.current = true
               setSubmitting(true)
@@ -216,7 +239,7 @@ export function MobileNativeChatAsk({ prompt, onAnswer, onCancel }: Props): Reac
         ) : null}
         <Pressable
           style={[styles.next, !canAdvance && styles.nextDisabled]}
-          onPress={advance}
+          onPress={() => void advance()}
           disabled={!canAdvance}
         >
           <Text style={[styles.nextText, !canAdvance && styles.nextTextDisabled]}>
@@ -225,52 +248,6 @@ export function MobileNativeChatAsk({ prompt, onAnswer, onCancel }: Props): Reac
         </Pressable>
       </View>
     </View>
-  )
-}
-
-function OptionRow({
-  label,
-  description,
-  selected,
-  cursored = false,
-  multi,
-  onPress
-}: {
-  label: string
-  description?: string
-  selected: boolean
-  /** Controller cursor: the option `A` would choose. Absent for touch. */
-  cursored?: boolean
-  multi?: boolean
-  onPress: () => void
-}): React.JSX.Element {
-  const focusRef = useNativeFocus(cursored)
-  return (
-    <Pressable
-      ref={focusRef}
-      style={[styles.option, selected && styles.optionSelected]}
-      onPress={onPress}
-    >
-      {/* Multi-select reads as a checkbox (square); single-select as a radio (circle). */}
-      <View
-        style={[
-          styles.check,
-          multi ? styles.checkSquare : styles.checkCircle,
-          selected && styles.checkOn
-        ]}
-      >
-        {selected ? <Check size={12} color={colors.bgBase} strokeWidth={3} /> : null}
-      </View>
-      <View style={styles.optionBody}>
-        <Text style={styles.optionLabel}>{label}</Text>
-        {description ? (
-          <Text style={styles.optionDescription} numberOfLines={3}>
-            {description}
-          </Text>
-        ) : null}
-      </View>
-      {cursored ? <ControllerFocusRing radius={radii.card} /> : null}
-    </Pressable>
   )
 }
 
@@ -316,56 +293,17 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: spacing.md
   },
+  questionRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm
+  },
   questionText: {
+    flex: 1,
     color: colors.textPrimary,
     fontSize: typography.bodySize + 1,
     fontWeight: '600',
     marginVertical: spacing.sm
-  },
-  option: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.sm,
-    borderRadius: radii.card,
-    backgroundColor: colors.bgRaised,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    marginBottom: spacing.xs
-  },
-  optionSelected: {
-    borderColor: colors.statusGreen
-  },
-  check: {
-    width: 18,
-    height: 18,
-    borderWidth: 1.5,
-    borderColor: colors.textMuted,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  checkCircle: {
-    borderRadius: 9
-  },
-  checkSquare: {
-    borderRadius: 4
-  },
-  checkOn: {
-    backgroundColor: colors.statusGreen,
-    borderColor: colors.statusGreen
-  },
-  optionBody: {
-    flex: 1,
-    gap: 2
-  },
-  optionLabel: {
-    color: colors.textPrimary,
-    fontSize: typography.bodySize,
-    fontWeight: '600'
-  },
-  optionDescription: {
-    color: colors.textSecondary,
-    fontSize: typography.metaSize
   },
   input: {
     backgroundColor: colors.bgRaised,
@@ -373,7 +311,7 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSubtle,
     borderRadius: radii.card,
     color: colors.textPrimary,
-    fontSize: typography.bodySize,
+    fontSize: TEXT_INPUT_FONT_SIZE,
     padding: spacing.sm,
     minHeight: 44,
     marginBottom: spacing.xs

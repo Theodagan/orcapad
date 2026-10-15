@@ -33,8 +33,6 @@ export function MobileSessionActiveContent({
     setShowCreateTabDrawer,
     dictationMode,
     toastMessage,
-    terminalFrameHeightRef,
-    setTerminalFrameWidth,
     handleTerminalTap,
     browserScreencastSupported,
     showToast,
@@ -50,13 +48,15 @@ export function MobileSessionActiveContent({
     deleteDiffCommentForFile,
     copyDiffCommentsToClipboard,
     sendDiffCommentsToAgent,
+    sendingDiffCommentIds,
     updateMarkdownLocalContent,
     copyMarkdownLocalContent,
     discardMarkdownLocalContent,
     saveMarkdownTab,
-    notifyTerminalFrameHeight,
     setTerminalWebViewRef,
     handleTerminalWebReady,
+    notifyTerminalFrame,
+    notifyTerminalCellBoxChange,
     handleFileTap,
     handleNativeChatFileTap,
     handleTerminalOpenUrl,
@@ -85,7 +85,7 @@ export function MobileSessionActiveContent({
   } = controller
   // Arrows, Enter and Escape from the pad take the shortcut keys' path, not the gesture gate.
   const sendControllerKey = (bytes: string): void => void handleAccessoryKey({ bytes })
-  return showLoadingState ? (
+  const content = showLoadingState ? (
     <View style={styles.emptyState}>
       <ActivityIndicator size="small" color={colors.textSecondary} />
     </View>
@@ -132,6 +132,7 @@ export function MobileSessionActiveContent({
   ) : activeFileTab ? (
     <View style={styles.markdownFrame}>
       <FileReader
+        client={client}
         doc={fileDocs.get(activeFileTab.id)}
         title={activeFileTab.title || 'File'}
         relativePath={activeFileTab.relativePath}
@@ -140,6 +141,7 @@ export function MobileSessionActiveContent({
           activeFileTab.diffSource === 'staged' || activeFileTab.diffSource === 'unstaged'
             ? {
                 comments: diffComments,
+                sendingCommentIds: sendingDiffCommentIds,
                 busy: diffCommentBusy,
                 onAdd: addDiffCommentForFile,
                 onDelete: deleteDiffCommentForFile,
@@ -196,17 +198,7 @@ export function MobileSessionActiveContent({
       )}
     </View>
   ) : (
-    <View
-      style={styles.terminalFrame}
-      onLayout={(e) => {
-        terminalFrameHeightRef.current = e.nativeEvent.layout.height
-        // Why: notify height imperatively so dock settling re-fits the PTY without rerendering SessionScreen.
-        const nextWidth = Math.round(e.nativeEvent.layout.width)
-        const nextHeight = Math.round(e.nativeEvent.layout.height)
-        setTerminalFrameWidth((prev) => (prev === nextWidth ? prev : nextWidth))
-        notifyTerminalFrameHeight(nextHeight)
-      }}
-    >
+    <View style={styles.terminalFrame}>
       {terminals.map((terminal) => (
         <TerminalPaneView
           key={terminal.handle}
@@ -226,6 +218,7 @@ export function MobileSessionActiveContent({
           }}
           onRef={setTerminalWebViewRef}
           onWebReady={handleTerminalWebReady}
+          onCellBoxChange={notifyTerminalCellBoxChange}
           onSelectionMode={handleSelectionMode}
           onSelectionCopy={handleSelectionCopy}
           onSelectionEvicted={handleSelectionEvicted}
@@ -261,6 +254,18 @@ export function MobileSessionActiveContent({
           <Text style={styles.toastText}>{toastMessage}</Text>
         </Animated.View>
       )}
+    </View>
+  )
+  return (
+    <View
+      // Why: one frame under every branch; react-native-web observes onLayout only on a View that mounts with it.
+      style={styles.contentFrame}
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout
+        notifyTerminalFrame({ width, height })
+      }}
+    >
+      {content}
     </View>
   )
 }

@@ -13,10 +13,12 @@ import { ControllerFocusRing } from '../gamepad/focus/ControllerFocusRing'
 import { useSessionChrome } from '../gamepad/session-chrome/use-session-chrome'
 import { ZoneFrame } from '../gamepad/zones/ZoneFrame'
 import { ZoneItem } from '../gamepad/zones/ZoneItem'
+import { keepHeldPressThroughLongPress } from './held-press-long-press'
 import { isTerminalPhoneDisplayMode } from './mobile-session-route-helpers'
 import { useHorizontalStripReveal } from './use-horizontal-strip-reveal'
 import { colors } from '../theme/mobile-theme'
 import { styles } from './mobile-session-styles'
+import { useKeyboardPersistingTaps } from '../platform/keyboard-persisting-taps'
 import type { MobileSessionController } from './use-mobile-session-controller'
 
 /** The three fixed buttons come first; the keys follow in the order the row draws them. */
@@ -63,6 +65,7 @@ export function MobileSessionAccessoryKeys({
   } = controller
 
   const strip = useHorizontalStripReveal()
+  const accessoryBarKeepsKeyboard = useKeyboardPersistingTaps('always')
   const { shortcutsHidden } = useSessionChrome()
   const toggleActiveDisplayMode = (): void => {
     if (activeHandle) {
@@ -77,7 +80,7 @@ export function MobileSessionAccessoryKeys({
   }
 
   return (
-    <View style={styles.accessoryBar}>
+    <View ref={accessoryBarKeepsKeyboard} style={styles.accessoryBar}>
       {/* Why: fixed keyboard escape hatch; outside ScrollView + shortcut path so it can't scroll away or be hidden (#5106). */}
       {keyboardLift > 0 && (
         <Pressable
@@ -259,6 +262,7 @@ export function MobileSessionAccessoryKeys({
                   }
                   void handleAccessoryKey(createTerminalLiveAccessoryInput(key))
                 }}
+                onLongPress={key.repeatable ? keepHeldPressThroughLongPress : undefined}
                 accessibilityLabel={key.accessibilityLabel ?? `Send ${key.label}`}
               >
                 <Text

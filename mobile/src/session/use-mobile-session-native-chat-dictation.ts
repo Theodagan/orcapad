@@ -30,7 +30,7 @@ export function useMobileSessionNativeChatDictation(
     worktreeId,
     client,
     connState,
-    agentSessionPromptCancelSupported,
+    agentSessionHostSupport,
     setInput,
     terminalDraftCaret,
     liveInputTerminalHandles,
@@ -78,12 +78,13 @@ export function useMobileSessionNativeChatDictation(
     nativeChatTranscriptIsLocalReadable,
     nativeChatInputLeaseReady,
     connState,
-    agentSessionPromptCancelSupported,
+    agentSessionHostSupport,
     onSendError: nativeChatSendError.show,
     onSendResolved: nativeChatSendError.clear
   })
   const { toggleTabChatView, showNativeChat, showNativeChatRef } = nativeChatController
   nativeChatSendError.bannerMountedRef.current = showNativeChat
+  nativeChatSendError.keepWhile(nativeChatController.nativeChatCommandRefusalCauses)
   const nativeChatOverlayInputLockReason =
     activeSessionTab?.type === 'agent-session'
       ? connState === 'connected'
@@ -110,6 +111,24 @@ export function useMobileSessionNativeChatDictation(
     const timer = setTimeout(() => setDictationNotice(null), 5000)
     return () => clearTimeout(timer)
   }, [dictationNotice])
+  /**
+   * One policy for every dictation failure, whichever entry point sees it: `onError` for a
+   * dictation already underway, `start`'s rejection for the tap that never got one.
+   */
+  const reportDictationFailure = useCallback(
+    (err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err)
+      const setupRequired = isDictationSetupRequiredError(message)
+      setDictationNotice(setupRequired ? 'Dictation needs setup' : message)
+      // The pill offers setup without hiding its five-second hint beneath a native sheet.
+      if (setupRequired) {
+        return
+      }
+      triggerError()
+      showToast(message)
+    },
+    [showToast]
+  )
 
   const dictation = useMobileDictation({
     client,
@@ -155,15 +174,7 @@ export function useMobileSessionNativeChatDictation(
     },
     onError: (err) => {
       dictationRouteContextRef.current = null
-      setDictationNotice(
-        isDictationSetupRequiredError(err.message) ? 'Dictation needs setup' : err.message
-      )
-      // The pill offers setup without hiding its five-second hint beneath a native sheet.
-      if (isDictationSetupRequiredError(err.message)) {
-        return
-      }
-      triggerError()
-      showToast(err.message)
+      reportDictationFailure(err)
     }
   })
 
@@ -189,16 +200,9 @@ export function useMobileSessionNativeChatDictation(
       if (dictationRouteContextRef.current === routeContext) {
         dictationRouteContextRef.current = null
       }
-      const message = err instanceof Error ? err.message : String(err)
-      setDictationNotice(isDictationSetupRequiredError(message) ? 'Dictation needs setup' : message)
-      // The same setup hint as onError; the pill opens the sheet on demand.
-      if (isDictationSetupRequiredError(message)) {
-        return
-      }
-      triggerError()
-      showToast(message)
+      reportDictationFailure(err)
     })
-  }, [activeHandle, beginDictation, liveInputTerminalHandles, triggerError, showToast])
+  }, [activeHandle, beginDictation, liveInputTerminalHandles, reportDictationFailure])
 
   const cancelDictation = useCallback(() => {
     dictationRouteContextRef.current = null

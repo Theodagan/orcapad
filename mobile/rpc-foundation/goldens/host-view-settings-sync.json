@@ -1,0 +1,354 @@
+{
+  "goldenFormatVersion": 6,
+  "operation": "host.view-settings",
+  "family": "host.view-settings",
+  "namedDeltas": [],
+  "values": {
+    "3337ab8c1ffc": {
+      "name": "ui.set#1",
+      "ordinal": 6,
+      "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"ui.set\",\"params\":{\"sortBy\":\"name\"}}"
+    },
+    "582477c8e0af": {
+      "name": "ui.get#1",
+      "ordinal": 2,
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"ui.get\"}"
+    },
+    "5b5eda740798": {
+      "name": "ui.set#1",
+      "ordinal": 5,
+      "args": [
+        {
+          "name": "method",
+          "value": "ui.set"
+        },
+        {
+          "name": "params",
+          "value": {
+            "sortBy": "name"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-2",
+          "ok": true,
+          "result": {
+            "ok": true
+          }
+        }
+      }
+    },
+    "651e8014c9ff": {
+      "name": "ui.get#1",
+      "ordinal": 1,
+      "args": [
+        {
+          "name": "method",
+          "value": "ui.get"
+        },
+        {
+          "name": "params",
+          "value": {
+            "$rpc": "absent"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true,
+          "result": {
+            "ui": {
+              "groupBy": "repo",
+              "hideSleepingWorkspaces": true,
+              "sortBy": "name"
+            }
+          }
+        }
+      }
+    },
+    "7bbe6d34ee5c": {
+      "view": {
+        "collapsedGroups": [],
+        "filters": {
+          "alwaysShowDefaultBranchWorkspace": true,
+          "filterRepoIds": [],
+          "hideAutomationGeneratedWorkspaces": false,
+          "hideCliCreatedWorkspaces": false,
+          "hideDefaultBranchWorkspace": false,
+          "hideDetachedHeadWorkspaces": false,
+          "hideSleepingWorkspaces": true,
+          "hideWorkspacesFromOtherDevices": false,
+          "visibleHostIds": {
+            "$rpc": "null"
+          }
+        },
+        "groupBy": "repo",
+        "sharesOtherClientFilter": false,
+        "sortBy": "name",
+        "workspaceStatuses": [
+          {
+            "color": "neutral",
+            "icon": "circle",
+            "id": "todo",
+            "label": "Todo"
+          },
+          {
+            "color": "conductor-progress",
+            "icon": "conductor-progress",
+            "id": "in-progress",
+            "label": "In progress"
+          },
+          {
+            "color": "conductor-review",
+            "icon": "conductor-review",
+            "id": "in-review",
+            "label": "In review"
+          },
+          {
+            "color": "conductor-done",
+            "icon": "conductor-done",
+            "id": "completed",
+            "label": "Done"
+          }
+        ]
+      }
+    },
+    "9270aeb7d9c6": {
+      "status": "pending",
+      "startedAt": 0
+    },
+    "985caf5772e9": {
+      "name": "ui.get#1",
+      "ordinal": 1,
+      "args": [
+        {
+          "name": "method",
+          "value": "ui.get"
+        },
+        {
+          "name": "params",
+          "value": {
+            "$rpc": "absent"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "pending",
+        "startedAt": 0
+      }
+    },
+    "c81e3e604f1c": {
+      "name": "view",
+      "ordinal": 4,
+      "value": {
+        "collapsedGroups": [],
+        "filters": {
+          "alwaysShowDefaultBranchWorkspace": true,
+          "filterRepoIds": [],
+          "hideAutomationGeneratedWorkspaces": false,
+          "hideCliCreatedWorkspaces": false,
+          "hideDefaultBranchWorkspace": false,
+          "hideDetachedHeadWorkspaces": false,
+          "hideSleepingWorkspaces": true,
+          "hideWorkspacesFromOtherDevices": false,
+          "visibleHostIds": {
+            "$rpc": "null"
+          }
+        },
+        "groupBy": "repo",
+        "sharesOtherClientFilter": false,
+        "sortBy": "name",
+        "workspaceStatuses": [
+          {
+            "color": "neutral",
+            "icon": "circle",
+            "id": "todo",
+            "label": "Todo"
+          },
+          {
+            "color": "conductor-progress",
+            "icon": "conductor-progress",
+            "id": "in-progress",
+            "label": "In progress"
+          },
+          {
+            "color": "conductor-review",
+            "icon": "conductor-review",
+            "id": "in-review",
+            "label": "In review"
+          },
+          {
+            "color": "conductor-done",
+            "icon": "conductor-done",
+            "id": "completed",
+            "label": "Done"
+          }
+        ]
+      }
+    },
+    "c886cd24aa84": {
+      "view": {
+        "collapsedGroups": [],
+        "filters": {
+          "alwaysShowDefaultBranchWorkspace": true,
+          "filterRepoIds": [],
+          "hideAutomationGeneratedWorkspaces": false,
+          "hideCliCreatedWorkspaces": false,
+          "hideDefaultBranchWorkspace": false,
+          "hideDetachedHeadWorkspaces": false,
+          "hideSleepingWorkspaces": false,
+          "hideWorkspacesFromOtherDevices": false,
+          "visibleHostIds": {
+            "$rpc": "null"
+          }
+        },
+        "groupBy": "repo",
+        "sharesOtherClientFilter": {
+          "$rpc": "null"
+        },
+        "sortBy": "recent",
+        "workspaceStatuses": [
+          {
+            "color": "neutral",
+            "icon": "circle",
+            "id": "todo",
+            "label": "Todo"
+          },
+          {
+            "color": "conductor-progress",
+            "icon": "conductor-progress",
+            "id": "in-progress",
+            "label": "In progress"
+          },
+          {
+            "color": "conductor-review",
+            "icon": "conductor-review",
+            "id": "in-review",
+            "label": "In review"
+          },
+          {
+            "color": "conductor-done",
+            "icon": "conductor-done",
+            "id": "completed",
+            "label": "Done"
+          }
+        ]
+      }
+    },
+    "e51c608f6ed4": {
+      "name": "view",
+      "ordinal": 3,
+      "value": {
+        "collapsedGroups": [],
+        "filters": {
+          "alwaysShowDefaultBranchWorkspace": true,
+          "filterRepoIds": [],
+          "hideAutomationGeneratedWorkspaces": false,
+          "hideCliCreatedWorkspaces": false,
+          "hideDefaultBranchWorkspace": false,
+          "hideDetachedHeadWorkspaces": false,
+          "hideSleepingWorkspaces": true,
+          "hideWorkspacesFromOtherDevices": false,
+          "visibleHostIds": {
+            "$rpc": "null"
+          }
+        },
+        "groupBy": "repo",
+        "sharesOtherClientFilter": false,
+        "sortBy": "name",
+        "workspaceStatuses": [
+          {
+            "color": "neutral",
+            "icon": "circle",
+            "id": "todo",
+            "label": "Todo"
+          },
+          {
+            "color": "conductor-progress",
+            "icon": "conductor-progress",
+            "id": "in-progress",
+            "label": "In progress"
+          },
+          {
+            "color": "conductor-review",
+            "icon": "conductor-review",
+            "id": "in-review",
+            "label": "In review"
+          },
+          {
+            "color": "conductor-done",
+            "icon": "conductor-done",
+            "id": "completed",
+            "label": "Done"
+          }
+        ]
+      }
+    },
+    "eb79a9b3682a": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "$rpc": "undefined"
+      }
+    }
+  },
+  "recording": {
+    "scenario": "host-view-settings-sync",
+    "checkpoints": [
+      {
+        "id": "ui-pending",
+        "observation": {
+          "sender": ["985caf5772e9"],
+          "payloads": ["582477c8e0af"],
+          "settlements": {
+            "mount": "eb79a9b3682a",
+            "sync": "9270aeb7d9c6"
+          },
+          "state": "c886cd24aa84",
+          "effects": []
+        }
+      },
+      {
+        "id": "settled",
+        "observation": {
+          "sender": ["651e8014c9ff", "5b5eda740798"],
+          "payloads": ["582477c8e0af", "3337ab8c1ffc"],
+          "settlements": {
+            "mount": "eb79a9b3682a",
+            "sync": "eb79a9b3682a",
+            "sort": "eb79a9b3682a"
+          },
+          "state": "7bbe6d34ee5c",
+          "effects": ["e51c608f6ed4", "c81e3e604f1c"]
+        }
+      }
+    ]
+  }
+}

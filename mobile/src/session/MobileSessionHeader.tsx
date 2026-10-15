@@ -8,6 +8,7 @@ import {
   GitBranch,
   Globe,
   MoreHorizontal,
+  PanelLeftOpen,
   Plus
 } from 'lucide-react-native'
 import { MobileSessionHeaderIconButton } from './MobileSessionHeaderIconButton'
@@ -25,6 +26,8 @@ import { ZoneItem } from '../gamepad/zones/ZoneItem'
 import { colors } from '../theme/mobile-theme'
 import { QuickCommandsTabButton } from './QuickCommandsTabButton'
 import { styles } from './mobile-session-styles'
+import { useKeyboardPersistingTaps } from '../platform/keyboard-persisting-taps'
+import { useHostSidebarReveal } from '../layout/host-sidebar-reveal'
 import type { MobileSessionController } from './use-mobile-session-controller'
 
 export function MobileSessionHeader({ controller }: { controller: MobileSessionController }) {
@@ -63,7 +66,7 @@ export function MobileSessionHeader({ controller }: { controller: MobileSessionC
     showHeaderMoreButton
   } = controller
   const reconnectHost = (): void => {
-    if (hostId) {
+    if (hostId && forceReconnectHost) {
       void forceReconnectHost(hostId)
     }
   }
@@ -226,9 +229,22 @@ export function MobileSessionHeader({ controller }: { controller: MobileSessionC
       </>
     ) : null
 
+  const tabBarKeepsKeyboard = useKeyboardPersistingTaps('handled')
+  const revealSidebar = useHostSidebarReveal()
   return (
     <SafeAreaView style={styles.sessionChrome} edges={['top']}>
       <View style={styles.sessionTopBar}>
+        {revealSidebar ? (
+          <Pressable
+            style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
+            onPress={revealSidebar}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Show sidebar"
+          >
+            <PanelLeftOpen size={18} color={colors.textSecondary} />
+          </Pressable>
+        ) : null}
         <ZoneItem zone="header" id="back" order={0} onActivate={requestLeaveSession}>
           {({ focused, focusRef }) => (
             <Pressable
@@ -236,6 +252,7 @@ export function MobileSessionHeader({ controller }: { controller: MobileSessionC
               style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
               onPress={requestLeaveSession}
               hitSlop={8}
+              accessibilityRole="button"
               accessibilityLabel="Back to worktrees"
             >
               <ChevronLeft size={22} color={colors.textSecondary} strokeWidth={2.2} />
@@ -337,7 +354,7 @@ export function MobileSessionHeader({ controller }: { controller: MobileSessionC
       </View>
 
       {!compact && visibleTabs.length > 0 && (
-        <View style={styles.tabBar}>
+        <View ref={tabBarKeepsKeyboard} style={styles.tabBar}>
           {tabStrip}
           {tabButtons}
         </View>

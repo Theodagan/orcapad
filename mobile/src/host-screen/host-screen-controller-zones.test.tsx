@@ -58,7 +58,7 @@ function fakeReader(): { reader: ControllerReader; publish: (s: ControllerSample
 function fakeHost() {
   const state = {
     hostName: 'laptop',
-    groupMode: 'none',
+    view: { groupBy: 'none' },
     showSearch: false,
     setShowFilterModal: vi.fn(),
     setShowSortPicker: vi.fn(),
@@ -73,16 +73,18 @@ function fakeHost() {
   }
   const controller = {
     actions,
+    activeFilterCount: 0,
     connState: 'connected',
     embedded: false,
     floatingWorkspaceEnabled: false,
     forceReconnectHost: vi.fn(),
     hostId: 'host-1',
+    hostDisplay: { title: 'laptop', descriptorLine: null },
     lastConnectedAt: 0,
     onHideSidebar: undefined,
     reconnectAttempts: 0,
     relayRecovery: {},
-    settings: { activeFilterCount: 0, selectedSortLabel: 'Recent' },
+    settings: { selectedSortLabel: 'Recent' },
     state
   }
   return { controller, state, actions }
