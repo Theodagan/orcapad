@@ -176,7 +176,8 @@ function sourceFiles(directory: string): string[] {
     if (entry.isDirectory()) {
       return entry.name === 'node_modules' ? [] : sourceFiles(path)
     }
-    return [path]
+    // Build output (bundled third-party engines), not source anyone writes.
+    return entry.name.includes('.generated.') ? [] : [path]
   })
 }
 

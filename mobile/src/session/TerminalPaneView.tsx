@@ -39,6 +39,7 @@ type TerminalPaneViewProps = {
   controllerFocused: boolean
   /** Sends bytes the way a shortcut key does, which is how the D-pad, A and B reach an agent. */
   onControllerKey: (bytes: string) => void
+  onCellBoxChange: (handle: string) => void
 }
 
 const NO_CONTROLLER_ACTIONS: readonly TerminalWheelAction[] = []
@@ -65,7 +66,8 @@ export function TerminalPaneView({
   onTextScaleChange,
   controllerActions,
   controllerFocused,
-  onControllerKey
+  onControllerKey,
+  onCellBoxChange
 }: TerminalPaneViewProps) {
   // The pane keeps its own copy of the handle purely so the controller can reach the scrollback;
   // `onRef` still hands the same ref upward exactly as before.
@@ -109,6 +111,7 @@ export function TerminalPaneView({
         style={styles.terminalWebView}
         terminalTheme={terminalTheme}
         textScale={textScale}
+        shownAtMount={active}
         onWebReady={() => onWebReady(handle)}
         onSelectionMode={(a) => onSelectionMode(handle, a)}
         onSelectionCopy={(t) => onSelectionCopy(handle, t)}
@@ -122,6 +125,7 @@ export function TerminalPaneView({
         onFileTap={(pathText, line, column) => onFileTap(handle, pathText, line, column)}
         onOpenUrl={(url) => onOpenUrl(handle, url)}
         onTextScaleChange={onTextScaleChange}
+        onCellBoxChange={() => onCellBoxChange(handle)}
       />
     </View>
   )

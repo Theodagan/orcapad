@@ -10,6 +10,7 @@ import { TERMINAL_ACCESSORY_KEY_DEFINITIONS } from '../terminal/terminal-key-def
 import { createTerminalLiveAccessoryInput } from '../terminal/terminal-live-accessory-input'
 import { MobileSessionAccessoryKeys } from './MobileSessionAccessoryKeys'
 import { MobileSessionHeader } from './MobileSessionHeader'
+import { HostSidebarRevealContext } from '../layout/host-sidebar-reveal'
 import type { MobileSessionController } from './use-mobile-session-controller'
 
 /**
@@ -40,6 +41,7 @@ vi.mock('lucide-react-native', () => {
     Keyboard: icon,
     MoreHorizontal: icon,
     Monitor: icon,
+    PanelLeftOpen: icon,
     Plus: icon,
     Smartphone: icon,
     SquareChevronRight: icon
@@ -154,7 +156,7 @@ describe('the session chrome, driven by a pad', () => {
     renderer = null
   })
 
-  function mount() {
+  function mount(options: { revealSidebar?: () => void } = {}) {
     const { reader, publish } = fakeReader()
     const header = fakeHeader()
     const dock = fakeDock()
@@ -184,7 +186,11 @@ describe('the session chrome, driven by a pad', () => {
           ControllerProvider,
           { reader, requestNativeFocus },
           createElement(Agent),
-          createElement(MobileSessionHeader, { controller: headerController }),
+          createElement(
+            HostSidebarRevealContext.Provider,
+            { value: options.revealSidebar ?? null },
+            createElement(MobileSessionHeader, { controller: headerController })
+          ),
           createElement(MobileSessionAccessoryKeys, { controller: dockController })
         ),
         { createNodeMock: (element) => ({ label: element.props.accessibilityLabel }) }
@@ -351,6 +357,23 @@ describe('the session chrome, driven by a pad', () => {
     expect(screen.ringed()).toBe('Back to worktrees')
     screen.move('right')
     expect(screen.ringed()).toBe('Open file explorer')
+  })
+
+  it('reaches Show sidebar left of Back when the wide layout hides the sidebar, and reveals it on A', () => {
+    const revealSidebar = vi.fn()
+    const screen = mount({ revealSidebar })
+    screen.connect()
+    screen.zone('up')
+    screen.moveVertically('up')
+
+    screen.move('left')
+    expect(screen.ringed()).toBe('Show sidebar')
+    screen.move('right')
+    expect(screen.ringed()).toBe('Back to worktrees')
+    screen.move('left')
+    screen.press('confirm')
+
+    expect(revealSidebar).toHaveBeenCalledTimes(1)
   })
 
   it('goes back to the agent zone with B, and leaves A to the agent from there', () => {
