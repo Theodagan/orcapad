@@ -16,12 +16,14 @@ export type ControllerIntent =
   | { readonly kind: 'cycle-tab'; readonly direction: 'previous' | 'next' }
   | { readonly kind: 'cycle-workspace'; readonly direction: 'previous' | 'next' }
   | { readonly kind: 'wheel-motion'; readonly wheel: 1 | 2; readonly x: number; readonly y: number }
-  | { readonly kind: 'switch-zone'; readonly direction?: 'up' | 'down' | 'left' | 'right' }
+  | { readonly kind: 'switch-zone'; readonly direction: 'up' | 'down' | 'left' | 'right' }
   | { readonly kind: 'confirm' }
   | { readonly kind: 'back' }
   | { readonly kind: 'toggle-dictation' }
   | { readonly kind: 'move-selection'; readonly direction: 'up' | 'down' }
   | { readonly kind: 'move-horizontal'; readonly direction: 'left' | 'right' }
+  /** A registered wheel action run straight from a button, so the button and the wheel share one path. */
+  | { readonly kind: 'run-action'; readonly actionId: string }
 
 export type ControllerIntentKind = ControllerIntent['kind']
 

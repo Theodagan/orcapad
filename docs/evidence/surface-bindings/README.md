@@ -1,7 +1,7 @@
 # Surface binding device validation (BIND-T10)
 
 One `*.json` file per device run, matching `ControllerBindingEvidence` in
-[`mobile/src/gamepad/bindings/controller-binding-evidence.ts`](../../../mobile/src/gamepad/bindings/controller-binding-evidence.ts).
+[`mobile/src/gamepad/evidence/controller-binding-evidence.ts`](../../../mobile/src/gamepad/evidence/controller-binding-evidence.ts).
 
 Every one of the eight bound surfaces must appear, each with what the controller
 did *and* what touch still does — BIND-AC10 is half the claim, and a record that

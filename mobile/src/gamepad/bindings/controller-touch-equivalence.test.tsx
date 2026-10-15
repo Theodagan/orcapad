@@ -179,7 +179,7 @@ describe('controller and touch reach the same action', () => {
     })
 
     onStop()
-    harness.registry.lookup('agent.stop')?.run()
+    harness.registry.lookup('do.stop')?.run()
 
     expect(onStop).toHaveBeenCalledTimes(2)
   })
@@ -316,7 +316,7 @@ describe('an unavailable target does nothing rather than something', () => {
     })
 
     // The wheel refuses to commit an unavailable segment, so the stop is never reached.
-    expect(harness.registry.lookup('agent.stop')?.availability).toBe('unavailable')
+    expect(harness.registry.lookup('do.stop')?.availability).toBe('unavailable')
     expect(onStop).not.toHaveBeenCalled()
   })
 })

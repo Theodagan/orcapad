@@ -18,7 +18,13 @@ export function ControllerScreenGate({
   readonly active: boolean
   readonly children?: ReactNode
 }): ReactNode {
-  return <ScreenActiveContext.Provider value={active}>{children}</ScreenActiveContext.Provider>
+  // A nested navigator's top screen is still hidden when its parent screen is.
+  const parentActive = useContext(ScreenActiveContext)
+  return (
+    <ScreenActiveContext.Provider value={active && parentActive}>
+      {children}
+    </ScreenActiveContext.Provider>
+  )
 }
 
 /** True wherever no gate is above, which is every test and every screen outside a navigator. */

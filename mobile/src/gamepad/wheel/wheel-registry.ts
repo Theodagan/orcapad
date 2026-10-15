@@ -16,6 +16,8 @@ export type WheelActionBinding = {
   readonly id: WheelActionBindingId
   readonly label: string
   readonly availability: SegmentAvailability
+  /** Said in the wheel's middle while this is locked and unavailable. */
+  readonly reason?: string
   readonly run: () => void | Promise<void>
 }
 
@@ -35,6 +37,7 @@ export type WheelMenuBinding = {
   readonly id: WheelActionBindingId
   readonly label: string
   readonly availability: SegmentAvailability
+  readonly reason?: string
   readonly menu: () => Promise<readonly WheelMenuEntry[]> | readonly WheelMenuEntry[]
 }
 
@@ -42,6 +45,11 @@ export type WheelBinding = WheelActionBinding | WheelMenuBinding
 
 export function isMenuBinding(binding: WheelBinding): binding is WheelMenuBinding {
   return 'menu' in binding
+}
+
+/** What a button may run straight away: a registered action, not a menu, and not refused. */
+export function isRunnableAction(binding: WheelBinding | null): binding is WheelActionBinding {
+  return binding !== null && !isMenuBinding(binding) && binding.availability !== 'unavailable'
 }
 
 export type WheelRegistry = {

@@ -22,6 +22,8 @@ const INTENT_OF: Record<Trigger, Extract<ControllerIntent, { kind: 'confirm' | '
 }
 const TRIGGER_OF_SCROLL = { up: 'l2', down: 'r2' } as const satisfies Record<string, Trigger>
 const FIRM_PULL = 0.5
+/** A fired trigger re-arms only well below the fire level, so a pull jittering at 0.5 fires once. */
+const REARM_BELOW = 0.3
 
 /** The two controls as printed on the pad, for whatever draws what an open wheel answers to. */
 export const WHEEL_TRIGGER_NAMES = { select: 'R2', back: 'L2' } as const
@@ -37,10 +39,13 @@ export type WheelTriggerSteering = (
 export function createWheelTriggerSteering(): WheelTriggerSteering {
   // Triggers pulled while a wheel was open, until they come back up.
   const spent = new Set<Trigger>()
+  // Triggers that have crossed the fire level and not yet come back below the re-arm level.
+  const pulled = new Set<Trigger>()
 
-  return (previous, next, intents, captured, triggerDeadZone) => {
+  return (_previous, next, intents, captured, triggerDeadZone) => {
     if (!next.connected) {
       spent.clear()
+      pulled.clear()
       return intents
     }
     for (const trigger of TRIGGERS) {
@@ -62,9 +67,14 @@ export function createWheelTriggerSteering(): WheelTriggerSteering {
       }
       steered.push(intent)
     }
-    if (captured) {
-      for (const trigger of TRIGGERS) {
-        if (axisOf(previous, trigger) < FIRM_PULL && axisOf(next, trigger) >= FIRM_PULL) {
+    for (const trigger of TRIGGERS) {
+      const value = axisOf(next, trigger)
+      if (value < REARM_BELOW) {
+        pulled.delete(trigger)
+      } else if (value >= FIRM_PULL && !pulled.has(trigger)) {
+        // Tracked uncaptured too, so a trigger already held when a wheel opens never fires.
+        pulled.add(trigger)
+        if (captured) {
           steered.push(INTENT_OF[trigger])
         }
       }

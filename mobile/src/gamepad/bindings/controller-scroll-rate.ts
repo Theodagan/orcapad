@@ -15,6 +15,12 @@ export const LIST_SCROLL_POINTS_PER_SECOND_AT_FULL_PRESSURE = 900
 /** A tap on a trigger always moves at least this much, so it is felt. */
 export const LIST_SCROLL_MINIMUM_FIRST_STEP_POINTS = 12
 
+/** How a list or a transcript scrolls by trigger. */
+export const LIST_SCROLL_RATE = {
+  unitsPerSecond: LIST_SCROLL_POINTS_PER_SECOND_AT_FULL_PRESSURE,
+  minimumFirstStep: LIST_SCROLL_MINIMUM_FIRST_STEP_POINTS
+} as const
+
 export type ScrollIntegrator = {
   /** Signed whole units to move for this sample (negative is up); the remainder carries over. */
   readonly step: (intent: ScrollIntent) => number

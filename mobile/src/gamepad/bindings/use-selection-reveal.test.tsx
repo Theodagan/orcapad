@@ -39,6 +39,10 @@ function mount(initialSelected: string | null) {
     scrollToId,
     scrollToOffset,
     select: setSelected,
+    unmount: () =>
+      act(() => {
+        renderer?.unmount()
+      }),
     report: (...tokens: ViewToken<Row>[]) =>
       act(() => {
         reveal?.onViewableItemsChanged({ changed: tokens })
@@ -159,6 +163,21 @@ describe('revealing the controller selection', () => {
     list.scrollToId.mockClear()
 
     list.select('a')
+    act(() => {
+      vi.advanceTimersByTime(120)
+    })
+
+    expect(list.scrollToId).not.toHaveBeenCalled()
+  })
+
+  it('drops a pending retry when the list goes away', () => {
+    const list = mount('a')
+    list.report({ item: { id: 'a' }, key: 'a', index: 0, isViewable: true })
+    list.listCannotPlace(40, 60)
+    list.select('far')
+    list.scrollToId.mockClear()
+
+    list.unmount()
     act(() => {
       vi.advanceTimersByTime(120)
     })

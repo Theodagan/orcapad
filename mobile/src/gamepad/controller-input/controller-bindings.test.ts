@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { CHORD_BUTTON, PRD_CONTROLLER_BINDINGS } from './controller-bindings'
+import { DO_ACTION_IDS, VIEW_ACTION_IDS } from '../bindings/wheel-action-ids'
 
 /**
  * CTRL-AC1: this suite covers the accepted mapping and must never reach the provisional D-pad
@@ -21,8 +22,28 @@ describe('the accepted PRD mapping', () => {
       'B',
       'X modifier',
       'Y',
+      'Start',
+      'Select',
       'R3',
       'L3'
+    ])
+  })
+
+  // `012`: Start stops the agent and Select toggles focus mode, through the wheel registry.
+  it('runs one wheel action each from Start and Select, on the way down and unchorded', () => {
+    const runs = PRD_CONTROLLER_BINDINGS.filter(
+      (binding) => binding.kind === 'button' && binding.intent === 'run-action'
+    )
+
+    expect(
+      runs.map((binding) =>
+        binding.kind === 'button'
+          ? [binding.button, binding.actionId, binding.timing, binding.chord]
+          : null
+      )
+    ).toEqual([
+      ['start', DO_ACTION_IDS.stop, 'press', null],
+      ['select', VIEW_ACTION_IDS.focusMode, 'press', null]
     ])
   })
 

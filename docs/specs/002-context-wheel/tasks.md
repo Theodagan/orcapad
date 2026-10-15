@@ -62,6 +62,9 @@
   device trial sees those states. `active-smoke-trial.ts` is what the shell
   runs; it is experiment data, not a default (WHEEL-AC7).
 
+  > Later: `active-smoke-trial.ts` and `active-wheel-trial.ts` were replaced by
+  > `wheel/wheel-layouts.ts` in 012, and the smoke presets were deleted in 006.
+
   **Verify:** `pnpm --dir mobile test src/gamepad/wheel/experiments`
 
 - [x] **WHEEL-T7 - Existing-action experiment presets**
@@ -85,6 +88,8 @@
   The active trial now runs one smoke preset and one real-action preset, one per
   stick, which is what WHEEL-T8 needs from a single session.
 
+  > Later: `real-action-presets.ts` was replaced by `wheel/wheel-layouts.ts` in 012.
+
   **Verify:** `pnpm --dir mobile test src/gamepad/wheel/experiments`
 
 - [~] **WHEEL-T8 - Device trials — SCHEMA DONE, RUN OUTSTANDING**
@@ -107,7 +112,7 @@
   `docs/evidence/context-wheel/`; the coverage check for a smoke and a
   real-action preset turns on with the first one.
 
-  **Verify:** `pnpm --dir mobile test src/gamepad/wheel/wheel-trial-records.test.ts`
+  **Verify:** `pnpm --dir mobile test src/gamepad/evidence/wheel-trial-records.test.ts`
 
 - [x] **WHEEL-T9 - Human assignment gate**
 
@@ -128,4 +133,4 @@
   This is the lock, not the promotion. `candidate` is the best a trial can say on
   its own; a machine reading good numbers is not a person deciding to ship them.
 
-  **Verify:** `pnpm --dir mobile test src/gamepad/wheel/wheel-product-default-gate.test.ts`
+  **Verify:** `pnpm --dir mobile test src/gamepad/evidence/wheel-product-default-gate.test.ts`

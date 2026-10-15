@@ -2,8 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { REAL_ACTION_PRESETS } from './experiments/real-action-presets'
-import { SMOKE_PRESETS } from './experiments/smoke-presets'
+import { wheelLayoutsFor, type WheelScreen } from '../wheel/wheel-layouts'
 import { readString } from './wheel-product-default-gate'
 import { validateWheelTrialRecord } from './wheel-trial-records'
 
@@ -12,11 +11,11 @@ const evidenceRoot = fileURLToPath(
 )
 
 const complete = {
-  trialId: 'smoke-hex-2026-01-01',
+  trialId: 'go-session-2026-01-01',
   testedAt: '2026-01-01',
   device: 'Retroid Pocket Flip 2',
   controller: 'built-in',
-  presetId: 'smoke-hex',
+  presetId: 'go-session',
   sampleCount: 40,
   openLatencyP95Ms: 42,
   accidentalOpenCount: 1,
@@ -80,7 +79,7 @@ describe('wheel trial record', () => {
 /**
  * The gate. WHEEL-T8 needs a controller-capable device and a person to run the presets, so the
  * measurements are outstanding rather than failing — the same position CTRL-T8 takes. Every
- * record that *does* land is validated, and both preset families must eventually be covered.
+ * record that *does* land is validated, and a shipped layout must eventually be covered.
  *
  * Delete the `skipIf` below to turn this back into a gate once the trials are run.
  */
@@ -105,12 +104,13 @@ describe('recorded wheel trials', () => {
     }
   })
 
-  it.skipIf(trials.length === 0)('covers a smoke preset and a real-action preset', () => {
+  it.skipIf(trials.length === 0)('covers a shipped wheel layout', () => {
     const tested = new Set(trials.map(({ record }) => readString(record, 'presetId') ?? ''))
-    const smoke = Object.keys(SMOKE_PRESETS).some((id) => tested.has(id))
-    const real = Object.keys(REAL_ACTION_PRESETS).some((id) => tested.has(id))
+    const screens: readonly WheelScreen[] = ['home', 'host', 'session', 'other']
+    const real = screens
+      .flatMap((screen) => Object.values(wheelLayoutsFor(screen)))
+      .some((preset) => tested.has(preset.presetId))
 
-    expect(smoke, 'no smoke preset trialled').toBe(true)
     expect(real, 'no real-action preset trialled').toBe(true)
   })
 })

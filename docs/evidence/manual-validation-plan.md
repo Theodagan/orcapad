@@ -5,8 +5,8 @@ a person holding a controller, and it produces two records:
 
 | Record | Schema | Lands in |
 | --- | --- | --- |
-| Wheel device trial (WHEEL-T8) | `mobile/src/gamepad/wheel/wheel-trial-records.ts` | `docs/evidence/context-wheel/*.json` |
-| Binding device validation (BIND-T10) | `mobile/src/gamepad/bindings/controller-binding-evidence.ts` | `docs/evidence/surface-bindings/*.json` |
+| Wheel device trial (WHEEL-T8) | `mobile/src/gamepad/evidence/wheel-trial-records.ts` | `docs/evidence/context-wheel/*.json` |
+| Binding device validation (BIND-T10) | `mobile/src/gamepad/evidence/controller-binding-evidence.ts` | `docs/evidence/surface-bindings/*.json` |
 
 Both gates currently **skip** rather than fail. They turn into gates the moment a
 record lands — and a malformed one fails immediately, so file them as you go.
@@ -70,35 +70,32 @@ proves only the controller proves half of it.
 | 2 | **home** | `A` opens the highlighted host | The blue outline appears only once a pad is connected, and disappears on disconnect. |
 | 3 | **workspaces** | `Y`+`LB`/`RB` moves the highlight, `A` opens | Selection must follow search and collapse. Type in the search box and cycle again. |
 | 4 | **session-tabs** | `LB`/`RB` cycles | It wraps. With one tab, nothing should happen at all. |
-| 5 | **agent** | `X` stops a turn; `A`/`B` on a permission prompt | `A` must answer **only** a permission. On an ask or a question it should do nothing — that refusal is deliberate. |
+| 5 | **agent** | `Start` stops a turn; `A`/`B` on a permission prompt | `A` must answer **only** a permission. On an ask or a question it should do nothing — that refusal is deliberate. |
 | 6 | **dictation** | `R3` starts and stops | Then: start dictation, navigate to another screen, press `R3`. It must still stop. That is the global-stop rule. |
 | 7 | **terminal** | `L2`/`R2` scrolls the scrollback | It must stop at both ends, and **must not double-scroll**. If it jumps two steps per press, the WebView is consuming input too — record `terminalWebViewConsumedInput: true`. |
 | 8 | **files** | `A` toggles a folder / previews a file; D-pad left and right walk the tree | A loading row must do nothing when pressed. |
 
 ## 4. The wheel
 
-Left stick runs a six-segment smoke preset; right stick runs the real-action
-explorer preset. Both are in `active-wheel-trial.ts` and are one edit to change.
+The left stick opens Go and, in a session, the right stick opens Do. Both layouts
+live in `wheel/wheel-layouts.ts`, which replaced `active-wheel-trial.ts` and
+`real-action-presets.ts` in 012; the smoke presets were deleted in 006.
 
 1. Flick the left stick. The wheel opens with no delay — no hold, no timer.
-2. Move around the six segments. Can you reach all of them reliably, or are the
-   ones away from the thumb's rest awkward? That is what six segments is asking.
-3. Press `A`. Reopen: the committed segment's label now carries a run count
-   (`Slot 3 x1`). That counter is the only way to tell a commit from a cancel.
-4. Return to centre and release. Reopen — the count must be unchanged.
-5. On the right stick, open the explorer preset **from the home screen**. Its
-   segments should render disabled, and `A` should cancel. This is the "mostly
-   disabled wheel" question: does it read as broken or as informative?
-6. Open a file explorer, then the same preset. Now the segments are live.
+2. Move around the segments. Can you reach all of them reliably, or are the
+   ones away from the thumb's rest awkward?
+3. Return to centre and release. Nothing may run.
+4. Off a session, segments with nothing behind them render disabled and `R2`
+   cancels on them. Does that read as broken or as informative?
 
 ## 5. Filing the records
 
 Write the JSON by hand; the validators are the spec.
 
 ```bash
-pnpm --dir mobile test src/gamepad/wheel/wheel-trial-records.test.ts
-pnpm --dir mobile test src/gamepad/bindings/controller-binding-evidence.test.ts
-pnpm --dir mobile test src/gamepad/controller-input/controller-evidence.test.ts
+pnpm --dir mobile test src/gamepad/evidence/wheel-trial-records.test.ts
+pnpm --dir mobile test src/gamepad/evidence/controller-binding-evidence.test.ts
+pnpm --dir mobile test src/gamepad/evidence/controller-evidence.test.ts
 ```
 
 A few refusals are deliberate and worth knowing before you hit them:
@@ -151,7 +148,7 @@ ends in something to read.
    the chosen option is filled.
 4. **Approve a tool call.** `A` allows, `B` dismisses.
 5. **Read the result.** `LB`/`RB` to the diff or file tab, `L2`/`R2` to scroll.
-6. **Stop something on purpose.** `X` mid-turn, so you have seen it work when you
+6. **Stop something on purpose.** `Start` mid-turn, so you have seen it work when you
    need it rather than when you are testing it.
 
 11. **opencode.** Hold `R2` and `L2` in an opencode terminal with a long transcript: it must
@@ -299,3 +296,20 @@ is evidence too: record what it needed and leave `worked: false` with the reason
 `docs/decisions/controller-contract/` 002 through 006 each changed a position on the product
 owner's instruction. If a step above feels wrong on the device, the decision behind it is the
 thing to reopen, and each record says what reversing it would cost.
+
+---
+
+# Appendix: the controller pass (`006`)
+
+Device checks the 006 fixes could only prove with a fake pad. Rebuild first: the native module
+changed, and it has not been compiled here (no Android SDK on the dev machine at authoring time).
+
+1. **Kotlin compiles.** `./gradlew :orca-gamepad:compileDebugKotlin` from `mobile/android`.
+2. **No lost press.** Open a sheet with `A`, close it, press `A` once: it must act once.
+3. **No scroll on return.** Background the app with a trigger held, come back: nothing scrolls.
+4. **Hat D-pad.** On an Xbox-style pad, tap and release the D-pad: no endless repeat.
+5. **Start** stops a running agent.
+6. **Select** toggles focus mode.
+7. **Go slots.** Each Go slot works on home, the host list and a session, at the same angle.
+8. **Keys ▸ Ctrl+C** interrupts the running program.
+9. **Held stick.** Commit a wheel and keep holding the left stick: the wheel must not reopen.

@@ -249,4 +249,4 @@
   is the CTRL-T4 checkpoint BIND-T6 made safe either way but which nobody has yet
   answered.
 
-  **Verify:** `pnpm --dir mobile test src/gamepad/bindings/controller-binding-evidence.test.ts`
+  **Verify:** `pnpm --dir mobile test src/gamepad/evidence/controller-binding-evidence.test.ts`

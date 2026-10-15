@@ -21,9 +21,6 @@ export type NativeControllerSample = {
   readonly buttons: Readonly<Record<string, number>>
   readonly axes: Readonly<Record<string, number>>
   readonly sampledAt: number
-  /** True when the focused view took the event before the controller layer saw it. */
-  readonly consumedByViewTree: boolean
-  readonly focusedView: string
 }
 
 export type NativeControllerDevices = {

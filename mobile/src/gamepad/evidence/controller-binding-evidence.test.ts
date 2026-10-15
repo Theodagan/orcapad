@@ -2,7 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { readString } from '../wheel/wheel-product-default-gate'
+import { readString } from './wheel-product-default-gate'
 import {
   BOUND_SURFACES,
   validateControllerBindingEvidence,

@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { createElement } from 'react'
 import { act, create } from 'react-test-renderer'
 
-vi.mock('react-native', () => ({}))
+vi.mock('react-native', () => ({
+  StyleSheet: { create: <T,>(styles: T) => styles, absoluteFill: {} },
+  View: 'View'
+}))
 
 const { useHorizontalStripReveal } = await import('./use-horizontal-strip-reveal')
 
@@ -61,12 +64,19 @@ describe('useHorizontalStripReveal', () => {
     const { strip, scrollTo } = mountStrip()
     strip().scrollProps.onLayout(viewportOf(300))
     strip().scrollProps.onContentSizeChange(900)
-    strip().scrollProps.onScroll({ nativeEvent: { contentOffset: { x: 400 } } })
+    strip().scrollProps.onScrollEndDrag({ nativeEvent: { contentOffset: { x: 400 } } })
     strip().frameProps('paste').onLayout(layout(20, 50))
 
     strip().reveal('paste')
 
     expect(scrollTo).toHaveBeenCalledExactlyOnceWith({ x: 8, animated: true })
+  })
+
+  it('streams per-frame scroll events only while a pad is attached', () => {
+    const { strip } = mountStrip()
+
+    expect(strip().scrollProps.onScroll).toBeUndefined()
+    expect(strip().scrollProps.scrollEventThrottle).toBeUndefined()
   })
 
   it('ignores a key it has not measured yet', () => {

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useControllerBinding } from '../controller-provider'
+import { useControllerScreenActive } from '../focus/screen-focus-gate'
 import { useControllerFocus } from '../focus/use-controller-focus'
 import type { SurfaceBinding } from './surface-binding'
 
@@ -13,8 +14,10 @@ export function useSurfaceBinding(binding: SurfaceBinding | null): void {
   useControllerFocus(binding?.focusTarget ?? null)
 
   const actions = binding?.wheelActions
+  // A screen retained under another offers nothing: its actions would collide with the top one's.
+  const screenActive = useControllerScreenActive()
   useEffect(() => {
-    if (actions === undefined || actions.length === 0) {
+    if (!screenActive || actions === undefined || actions.length === 0) {
       return
     }
     const retractions = actions.map((action) => registerWheelAction(action))
@@ -23,5 +26,5 @@ export function useSurfaceBinding(binding: SurfaceBinding | null): void {
         retract()
       }
     }
-  }, [actions, registerWheelAction])
+  }, [actions, registerWheelAction, screenActive])
 }

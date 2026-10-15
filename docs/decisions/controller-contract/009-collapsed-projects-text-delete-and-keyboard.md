@@ -3,6 +3,7 @@
 **Date:** 2026-10-05
 **Status:** applied in `005` USE-T23, pending human ratification
 **Amends:** decision 007 (the right wheel's contents; `B` in a draft), decision 001 (what the D-pad walks on the host list)
+**Amended by:** decision 012 (Start/Select, and the GO/DO wheels)
 
 ## What the third device session found
 

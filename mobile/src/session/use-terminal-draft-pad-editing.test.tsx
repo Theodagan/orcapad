@@ -39,7 +39,13 @@ function Terminal({ sent }: { readonly sent: string[] }): ReactNode {
   return null
 }
 
-type Seen = { draft: string; caret: number; caretMode: boolean }
+type Seen = {
+  draft: string
+  caret: number
+  caretMode: boolean
+  selection: { start: number; end: number } | undefined
+  beginTouchEditing: () => void
+}
 
 function Field(props: {
   readonly initial: string
@@ -60,7 +66,13 @@ function Field(props: {
     onSend: props.onSend,
     keyboardRequested: false
   })
-  Object.assign(props.seen, { draft, caret, caretMode: editing.caretMode })
+  Object.assign(props.seen, {
+    draft,
+    caret,
+    caretMode: editing.caretMode,
+    selection: editing.selection,
+    beginTouchEditing: editing.beginTouchEditing
+  })
   return null
 }
 
@@ -89,7 +101,13 @@ describe('editing a terminal command draft with the pad', () => {
   function mount(options: { initial: string; available?: boolean; padAttached?: boolean }) {
     const sent: string[] = []
     const onSend = vi.fn()
-    const seen: Seen = { draft: '', caret: 0, caretMode: false }
+    const seen: Seen = {
+      draft: '',
+      caret: 0,
+      caretMode: false,
+      selection: undefined,
+      beginTouchEditing: () => {}
+    }
     const { reader, publish } = fakeReader()
     const held: { controller: ReturnType<typeof useController> | null } = { controller: null }
     function Probe(): ReactNode {
@@ -118,7 +136,7 @@ describe('editing a terminal command draft with the pad', () => {
     const press = (intent: ControllerIntent): void => {
       act(() => void held.controller?.dispatchIntent(intent))
     }
-    return { sent, onSend, seen, press }
+    return { sent, onSend, seen, press, publish }
   }
 
   it('moves the caret and deletes a word in the draft, not in the terminal', () => {
@@ -166,6 +184,16 @@ describe('editing a terminal command draft with the pad', () => {
     hidden.press({ kind: 'back' })
     expect(hidden.sent).toEqual(['ctrl-w'])
     expect(hidden.seen.draft).toBe('echo hi')
+  })
+
+  it('releases the native caret when the pad leaves before the input reports a selection', () => {
+    const { seen, publish } = mount({ initial: 'git status' })
+
+    act(() => seen.beginTouchEditing())
+    expect(seen.selection).toEqual({ start: 10, end: 10 })
+
+    act(() => publish(neutralSample(2, false)))
+    expect(seen.selection).toBeUndefined()
   })
 
   it('has no caret without a pad', () => {

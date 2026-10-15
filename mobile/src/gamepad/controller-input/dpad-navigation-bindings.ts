@@ -1,4 +1,4 @@
-import type { ControllerIntentKind } from './controller-intent'
+import type { ControllerIntent, ControllerIntentKind } from './controller-intent'
 import type { ControllerButton } from './controller-sample'
 
 /**
@@ -29,3 +29,21 @@ export const DPAD_NAVIGATION_BINDINGS: readonly DpadNavigationBinding[] = [
   { button: 'dpad-left', intent: 'move-horizontal', direction: 'left', label: 'D-pad left' },
   { button: 'dpad-right', intent: 'move-horizontal', direction: 'right', label: 'D-pad right' }
 ]
+
+/** What a D-pad press means: a zone switch with `X` held, otherwise the binding's own movement. */
+export function dpadIntent(
+  binding: DpadNavigationBinding,
+  zoneModifierHeld: boolean
+): ControllerIntent | null {
+  if (zoneModifierHeld) {
+    return { kind: 'switch-zone', direction: binding.direction }
+  }
+  if (binding.intent === 'move-selection') {
+    return binding.direction === 'up' || binding.direction === 'down'
+      ? { kind: 'move-selection', direction: binding.direction }
+      : null
+  }
+  return binding.direction === 'left' || binding.direction === 'right'
+    ? { kind: 'move-horizontal', direction: binding.direction }
+    : null
+}

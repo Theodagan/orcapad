@@ -3,7 +3,7 @@ import { buttonIntent } from './binding-intent'
 import type { ControllerIntent } from './controller-intent'
 import { neutralSample, type ControllerSample } from './controller-sample'
 import { createDpadRepeater } from './dpad-repeat'
-import { DPAD_NAVIGATION_BINDINGS } from './dpad-navigation-bindings'
+import { DPAD_NAVIGATION_BINDINGS, dpadIntent } from './dpad-navigation-bindings'
 import { axisOf, isDown, outsideDeadZone, wentDown } from './sample-edges'
 import { createTapTracker } from './tap-tracker'
 import { createWheelTriggerSteering } from './wheel-trigger-steering'
@@ -134,23 +134,46 @@ export function resolveControllerIntents(
       if (!wentDown(previous, next, binding.button)) {
         continue
       }
-      if (zoneModifier) {
-        intents.push({ kind: 'switch-zone', direction: binding.direction })
-        continue
-      }
-      if (binding.intent === 'move-selection') {
-        if (binding.direction === 'up' || binding.direction === 'down') {
-          intents.push({ kind: 'move-selection', direction: binding.direction })
-        }
-        continue
-      }
-      if (binding.direction === 'left' || binding.direction === 'right') {
-        intents.push({ kind: 'move-horizontal', direction: binding.direction })
+      const intent = dpadIntent(binding, zoneModifier)
+      if (intent !== null) {
+        intents.push(intent)
       }
     }
   }
 
   return intents
+}
+
+/** A hold ends only below this share of the trigger dead zone, so a light pull flutters as one. */
+const SCROLL_HOLD_EXIT_FRACTION = 0.4
+
+/**
+ * Hysteresis for `begins`: a trigger resting on its dead zone crosses it back and forth, and each
+ * crossing would otherwise restart the gesture and drop its momentum.
+ */
+function createScrollHoldTracker(
+  policy: ControllerPolicy
+): (sample: ControllerSample, intents: readonly ControllerIntent[]) => readonly ControllerIntent[] {
+  const holding = new Set<'up' | 'down'>()
+  const exit = policy.triggerDeadZone * SCROLL_HOLD_EXIT_FRACTION
+  return (sample, intents) => {
+    for (const binding of PRD_CONTROLLER_BINDINGS) {
+      if (
+        binding.kind === 'trigger' &&
+        (!sample.connected || axisOf(sample, binding.axis) <= exit)
+      ) {
+        holding.delete(binding.direction)
+      }
+    }
+    return intents.map((intent) => {
+      if (intent.kind !== 'scroll') {
+        return intent
+      }
+      const ongoing = holding.has(intent.direction)
+      holding.add(intent.direction)
+      return ongoing && intent.begins ? { ...intent, begins: false } : intent
+    })
+  }
 }
 
 export type ControllerResolver = (
@@ -164,9 +187,12 @@ export type ControllerResolver = (
  * and the triggers that steer an open wheel. Everything else is the pure resolver above.
  */
 export function createControllerIntentResolver(
-  policy: ControllerPolicy = DEFAULT_CONTROLLER_POLICY
+  policy: ControllerPolicy = DEFAULT_CONTROLLER_POLICY,
+  /** The last sample a resolver being replaced saw, so a button already down is not pressed again. */
+  initialPrevious: ControllerSample = neutralSample(0)
 ): ControllerResolver {
-  let previous = neutralSample(0)
+  let previous = initialPrevious
+  const scrollHolds = createScrollHoldTracker(policy)
   const taps = createTapTracker()
   const repeat = createDpadRepeater({
     delayMs: policy.dpadRepeatDelayMs,
@@ -178,18 +204,10 @@ export function createControllerIntentResolver(
       previous,
       sample,
       [
-        ...resolveControllerIntents(previous, sample, policy),
+        ...scrollHolds(sample, resolveControllerIntents(previous, sample, policy)),
         ...taps(previous, sample, context.captured),
         ...(policy.dpadNavigation
-          ? repeat(previous, sample, context.captured).map((intent): ControllerIntent => {
-              if (isDown(sample, 'x') && intent.kind === 'move-selection') {
-                return { kind: 'switch-zone', direction: intent.direction }
-              }
-              if (isDown(sample, 'x') && intent.kind === 'move-horizontal') {
-                return { kind: 'switch-zone', direction: intent.direction }
-              }
-              return intent
-            })
+          ? repeat(previous, sample, context.captured, isDown(sample, 'x'))
           : [])
       ],
       context.captured,

@@ -1,9 +1,9 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { WHEEL_TRIGGER_NAMES } from '../controller-input/wheel-trigger-steering'
-import { useController } from '../controller-provider'
 import { colors, radii, spacing, typography } from '../../theme/mobile-theme'
 import type { WheelController } from './use-wheel-controller'
+import { useWheelView } from './wheel-view-store'
 
 /**
  * The wheel, drawn above whatever surface is focused. While it is up it owns every input
@@ -23,24 +23,17 @@ import type { WheelController } from './use-wheel-controller'
 const RADIUS_FEW = 96
 /** More than this many segments need a wider dial, or their labels touch. */
 const MANY_SEGMENTS = 6
-const RADIUS_MANY = 122
+const RADIUS_MANY = 140
+/** Past this a label ellipsizes, so neighbours on a full dial never overlap. */
+const LABEL_MAX_WIDTH = 96
 
-export function WheelOverlay({ controller }: { readonly controller: WheelController }): ReactNode {
-  const { connected } = useController()
-  const { view, cancel } = controller
-
-  const wasConnected = useRef(connected)
-  useEffect(() => {
-    // The falling edge only. A controller that goes away mid-gesture cancels, rather than
-    // leaving a wheel nothing can close (`002` §6) — but "no controller attached" is a resting
-    // state, not an event, and cancelling on every render while disconnected would fight
-    // anything that opened the wheel by other means.
-    const lost = wasConnected.current && !connected
-    wasConnected.current = connected
-    if (lost) {
-      cancel()
-    }
-  }, [connected, cancel])
+// A pad lost mid-gesture is cancelled by `useCancelWheelOnDisconnect`, not here.
+export function WheelOverlay({
+  controller
+}: {
+  readonly controller: Pick<WheelController, 'view'>
+}): ReactNode {
+  const view = useWheelView(controller.view)
 
   if (view.state.kind === 'closed') {
     return null
@@ -87,9 +80,8 @@ export function WheelOverlay({ controller }: { readonly controller: WheelControl
             </View>
           )
         })}
-        {view.segments.length === 0 && view.message !== null ? (
-          <Text style={styles.message}>{view.message}</Text>
-        ) : null}
+        {/* Loading, empty or failed with no segments; with segments, why the lit one is refused. */}
+        {view.message !== null ? <Text style={styles.message}>{view.message}</Text> : null}
       </View>
       <TriggerCue
         control={WHEEL_TRIGGER_NAMES.back}
@@ -169,9 +161,19 @@ const styles = StyleSheet.create({
   },
   // Disabled, never hidden: removing it would move every other segment under the thumb.
   segmentDisabled: { opacity: 0.4 },
-  label: { color: colors.textSecondary, fontSize: typography.bodySize },
-  labelLocked: { color: colors.textPrimary, fontSize: typography.bodySize, fontWeight: '700' },
-  message: { color: colors.textMuted, fontSize: typography.bodySize, textAlign: 'center' },
+  label: { color: colors.textSecondary, fontSize: typography.bodySize, maxWidth: LABEL_MAX_WIDTH },
+  labelLocked: {
+    color: colors.textPrimary,
+    fontSize: typography.bodySize,
+    fontWeight: '700',
+    maxWidth: LABEL_MAX_WIDTH
+  },
+  message: {
+    color: colors.textMuted,
+    fontSize: typography.bodySize,
+    maxWidth: LABEL_MAX_WIDTH,
+    textAlign: 'center'
+  },
   title: {
     color: colors.textSecondary,
     fontSize: typography.bodySize,

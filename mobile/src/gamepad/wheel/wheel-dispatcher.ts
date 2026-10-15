@@ -23,13 +23,15 @@ export type WheelActionRunner = (bindingId: string) => void
  */
 export function dispatchWheelOutcome(
   outcome: WheelOutcome,
-  segments: readonly WheelSegment[],
+  segments: readonly WheelSegment[] | (() => readonly WheelSegment[]),
   run: WheelActionRunner
 ): void {
   if (outcome.kind !== 'commit') {
     return
   }
-  const committed = segments.find((segment) => segment.id === outcome.segmentId)
+  // A thunk, so the samples that commit nothing never resolve segments here.
+  const resolved = typeof segments === 'function' ? segments() : segments
+  const committed = resolved.find((segment) => segment.id === outcome.segmentId)
   if (committed === undefined) {
     return
   }

@@ -23,7 +23,8 @@ import { describe, expect, it } from 'vitest'
  * file RPC — are FND-T4 and land here next.
  *
  * Accepted gaps: a specifier assembled at runtime, a rule reached through a re-exported alias,
- * and the single-letter face buttons, which no literal scan can tell from ordinary data.
+ * and the single-letter face buttons and `start`/`select`, which no literal scan can tell from
+ * ordinary data.
  */
 
 const mobileRoot = fileURLToPath(new URL('../..', import.meta.url))

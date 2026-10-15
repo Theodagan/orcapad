@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ControllerSample } from './controller-sample'
 
 const platform = { OS: 'android' }
 const findNodeHandle = vi.fn<(node: unknown) => number | null>()
@@ -17,7 +18,7 @@ vi.mock('../../../modules/orca-gamepad', () => ({
   }
 }))
 
-const { createControllerRuntime } = await import('./controller-runtime')
+const { createControllerRuntime, policyForControllers } = await import('./controller-runtime')
 
 // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: a stand-in host node; the mocked findNodeHandle only reads its identity.
 const view = { name: 'a pressable' } as never
@@ -86,5 +87,40 @@ describe('the controller runtime’s native focus request', () => {
 
     expect(() => createControllerRuntime().requestNativeFocus(view)).not.toThrow()
     await Promise.resolve()
+  })
+})
+
+function device(flat: Record<string, number>) {
+  return { id: 1, name: 'pad', vendorId: 0, productId: 0, hasAnalogTriggers: true, flat }
+}
+
+function pressed(button: 'a'): ControllerSample {
+  return { connected: true, buttons: new Map([[button, 1]]), axes: new Map(), sampledAt: 0 }
+}
+
+describe('the controller runtime’s policy', () => {
+  it('takes the stick dead zone from the vertical flats too', () => {
+    expect(policyForControllers([device({ 'left-x': 0.05, 'right-y': 0.2 })]).stickDeadZone).toBe(
+      0.2
+    )
+  })
+
+  it('does not replay a held button as a press when a device event arrives', () => {
+    let onDevices: ((payload: { controllers: unknown[] }) => void) | null = null
+    nativeModule.current = nativeWith({
+      addListener: (_event: string, listener: (payload: { controllers: unknown[] }) => void) => {
+        onDevices = listener
+        return { remove: () => {} }
+      }
+    })
+    const runtime = createControllerRuntime()
+    expect(runtime.resolve(pressed('a'))).toEqual([{ kind: 'confirm' }])
+
+    onDevices?.({ controllers: [] })
+    expect(runtime.resolve(pressed('a'))).toEqual([])
+
+    // A real policy change still rebuilds, seeded with the held button.
+    onDevices?.({ controllers: [device({ 'left-x': 0.3 })] })
+    expect(runtime.resolve(pressed('a'))).toEqual([])
   })
 })

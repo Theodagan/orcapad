@@ -12,6 +12,8 @@ import {
   DEFAULT_CONTROLLER_POLICY,
   type ControllerPolicy
 } from './controller-resolver'
+import { DPAD_NAVIGATION_BINDINGS, dpadIntent } from './dpad-navigation-bindings'
+import { DO_ACTION_IDS, VIEW_ACTION_IDS } from '../bindings/wheel-action-ids'
 
 // Built by walking the vocabulary rather than the literal's keys, so no assertion is needed to
 // narrow a string into a member.
@@ -92,6 +94,20 @@ describe('buttons', () => {
 
   it('publishes nothing at all while disconnected', () => {
     expect(resolve(idle, sample({ a: 1 }, {}, false))).toEqual([])
+  })
+
+  // `012`: Start and Select run a wheel action each, once per press.
+  it('runs Stop agent on Start and Focus mode on Select, on the way down', () => {
+    const start = sample({ start: 1 })
+    expect(resolve(idle, start)).toEqual([{ kind: 'run-action', actionId: DO_ACTION_IDS.stop }])
+    expect(resolve(start, start)).toEqual([])
+    expect(resolve(idle, sample({ select: 1 }))).toEqual([
+      { kind: 'run-action', actionId: VIEW_ACTION_IDS.focusMode }
+    ])
+  })
+
+  it('keeps Start and Select out of the Y chord', () => {
+    expect(resolve(sample({ y: 1 }), sample({ y: 1, start: 1 }))).toEqual([])
   })
 })
 
@@ -372,5 +388,29 @@ describe('a held D-pad direction repeats like an arrow key (005)', () => {
 
     resolver(held(0))
     expect(resolver(held(500))).toEqual([])
+  })
+})
+
+describe('a resolver that replaces another', () => {
+  it('reads a button already down in the last sample as held, not as a fresh press', () => {
+    const resolver = createControllerIntentResolver(DEFAULT_CONTROLLER_POLICY, sample({ a: 1 }))
+
+    expect(resolver(sample({ a: 1 }))).toEqual([])
+    expect(resolver(sample())).toEqual([])
+    expect(resolver(sample({ a: 1 }))).toEqual([{ kind: 'confirm' }])
+  })
+})
+
+describe('dpadIntent', () => {
+  it('maps each D-pad binding to its movement, and to a zone switch with X held', () => {
+    expect(DPAD_NAVIGATION_BINDINGS.map((binding) => dpadIntent(binding, false))).toEqual([
+      { kind: 'move-selection', direction: 'up' },
+      { kind: 'move-selection', direction: 'down' },
+      { kind: 'move-horizontal', direction: 'left' },
+      { kind: 'move-horizontal', direction: 'right' }
+    ])
+    expect(DPAD_NAVIGATION_BINDINGS.map((binding) => dpadIntent(binding, true))).toEqual(
+      DPAD_NAVIGATION_BINDINGS.map(({ direction }) => ({ kind: 'switch-zone', direction }))
+    )
   })
 })

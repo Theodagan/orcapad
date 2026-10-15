@@ -4,10 +4,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ControllerReader } from '../gamepad/controller-input/controller-reader'
 import { neutralSample, type ControllerSample } from '../gamepad/controller-input/controller-sample'
 import { ControllerProvider, useControllerBinding } from '../gamepad/controller-provider'
-import { AGENT_WHEEL_ACTION_IDS } from '../gamepad/bindings/agent-wheel-action-ids'
-import { NAVIGATION_WHEEL_ACTION_IDS } from '../gamepad/bindings/navigation-wheel-actions'
-import { createWheelRegistry, isMenuBinding } from '../gamepad/wheel/wheel-registry'
-import { useSessionWheelActions } from './use-session-wheel-actions'
+import { DO_ACTION_IDS, VIEW_ACTION_IDS } from '../gamepad/bindings/wheel-action-ids'
+import {
+  createWheelRegistry,
+  isMenuBinding,
+  type WheelMenuEntry,
+  type WheelRegistry
+} from '../gamepad/wheel/wheel-registry'
+import { useSessionDoWheelActions } from './use-session-do-wheel-actions'
 import type { MobileSessionController } from './use-mobile-session-controller'
 
 vi.mock('react-native', () => ({
@@ -48,6 +52,8 @@ function fakeController(overrides: Record<string, unknown> = {}) {
   const handleCreateTerminal = vi.fn()
   const toggleTabChatView = vi.fn()
   const dismissSoftwareKeyboard = vi.fn()
+  const handleAccessoryKey = vi.fn()
+  const handlePaste = vi.fn()
   const activeSessionTab: Tab = { id: 't1', type: 'agent-session' }
   const controller = {
     client: { sendRequest },
@@ -61,6 +67,9 @@ function fakeController(overrides: Record<string, unknown> = {}) {
     dismissSoftwareKeyboard,
     handleCloseSessionTab,
     handleCreateTerminal,
+    handleAccessoryKey,
+    handlePaste,
+    canPaste: false,
     ...overrides
   }
   return {
@@ -69,13 +78,21 @@ function fakeController(overrides: Record<string, unknown> = {}) {
     handleCloseSessionTab,
     handleCreateTerminal,
     toggleTabChatView,
-    dismissSoftwareKeyboard
+    dismissSoftwareKeyboard,
+    handleAccessoryKey,
+    handlePaste
   }
+}
+
+/** The entries a DO submenu opens with right now. */
+async function menuOf(registry: WheelRegistry, id: string): Promise<readonly WheelMenuEntry[]> {
+  const binding = registry.lookup(id)
+  return binding !== null && isMenuBinding(binding) ? await binding.menu() : []
 }
 
 type FakeController = ReturnType<typeof fakeController>['controller']
 
-describe('session wheel actions', () => {
+describe('session DO wheel actions', () => {
   let renderer: ReactTestRenderer | null = null
   afterEach(() => {
     act(() => renderer?.unmount())
@@ -88,7 +105,7 @@ describe('session wheel actions', () => {
     const { reader, publish } = fakeReader()
     function Harness(): ReactNode {
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook reads a handful of fields, all of which the fake supplies.
-      useSessionWheelActions(controller as unknown as MobileSessionController)
+      useSessionDoWheelActions(controller as unknown as MobileSessionController)
       return null
     }
     act(() => {
@@ -107,11 +124,12 @@ describe('session wheel actions', () => {
   }
 
   describe('close', () => {
-    it('is available on an agent tab, and closes exactly that tab through the session’s own close', () => {
+    it('closes exactly the tab in front of you through the session’s own close', () => {
       const { controller, handleCloseSessionTab } = fakeController()
       const registry = mount(controller)
 
-      const close = registry.lookup(AGENT_WHEEL_ACTION_IDS.close)
+      const close = registry.lookup(DO_ACTION_IDS.close)
+      expect(close?.label).toBe('Close tab')
       expect(close?.availability).toBe('available')
       if (close !== null && !isMenuBinding(close)) {
         close.run()
@@ -120,35 +138,69 @@ describe('session wheel actions', () => {
       expect(handleCloseSessionTab).toHaveBeenCalledWith(controller.activeSessionTab)
     })
 
-    it('is available on a terminal that runs an agent, and not on a plain one', () => {
-      const agent = mount(
-        fakeController({ activeSessionTab: { id: 't', type: 'terminal', agent: 'claude' } })
-          .controller
-      )
-      expect(agent.lookup(AGENT_WHEEL_ACTION_IDS.close)?.availability).toBe('available')
-      act(() => renderer?.unmount())
-
+    it('closes any kind of tab, not only an agent', () => {
       const plain = mount(
         fakeController({ activeSessionTab: { id: 't', type: 'terminal' } }).controller
       )
-      expect(plain.lookup(AGENT_WHEEL_ACTION_IDS.close)?.availability).toBe('unavailable')
-    })
+      expect(plain.lookup(DO_ACTION_IDS.close)?.availability).toBe('available')
+      act(() => renderer?.unmount())
 
-    it('is unavailable on a tab that is not an agent, and while disconnected', () => {
       const note = mount(
         fakeController({ activeSessionTab: { id: 'n', type: 'markdown' } }).controller
       )
-      expect(note.lookup(AGENT_WHEEL_ACTION_IDS.close)?.availability).toBe('unavailable')
-      act(() => renderer?.unmount())
-
-      const offline = mount(fakeController({ connState: 'reconnecting' }).controller)
-      expect(offline.lookup(AGENT_WHEEL_ACTION_IDS.close)?.availability).toBe('unavailable')
+      expect(note.lookup(DO_ACTION_IDS.close)?.availability).toBe('available')
     })
 
-    it('is unavailable with no tab at all', () => {
-      const registry = mount(fakeController({ activeSessionTab: null }).controller)
+    it('is unavailable while disconnected, and with no tab at all', () => {
+      const offline = mount(fakeController({ connState: 'reconnecting' }).controller)
+      expect(offline.lookup(DO_ACTION_IDS.close)?.availability).toBe('unavailable')
+      act(() => renderer?.unmount())
 
-      expect(registry.lookup(AGENT_WHEEL_ACTION_IDS.close)?.availability).toBe('unavailable')
+      const empty = mount(fakeController({ activeSessionTab: null }).controller)
+      expect(empty.lookup(DO_ACTION_IDS.close)?.availability).toBe('unavailable')
+    })
+  })
+
+  describe('keys', () => {
+    const terminalTab = { id: 't', type: 'terminal' }
+
+    it('sends the shortcut row’s keys through the accessory key path', async () => {
+      const { controller, handleAccessoryKey } = fakeController({ activeSessionTab: terminalTab })
+      const registry = mount(controller)
+
+      expect(registry.lookup(DO_ACTION_IDS.keys)?.availability).toBe('available')
+      const entries = await menuOf(registry, DO_ACTION_IDS.keys)
+      expect(entries.map((entry) => entry.label)).toEqual([
+        'Ctrl+C',
+        'Esc',
+        'Tab',
+        'Shift+Tab',
+        'Enter',
+        'Ctrl+D',
+        'Ctrl+L'
+      ])
+      entries[0]?.run()
+      expect(handleAccessoryKey).toHaveBeenCalledWith({ bytes: '\x03' })
+    })
+
+    it('offers Paste only when there is something to paste', async () => {
+      const { controller, handlePaste } = fakeController({
+        activeSessionTab: terminalTab,
+        canPaste: true
+      })
+      const registry = mount(controller)
+
+      const entries = await menuOf(registry, DO_ACTION_IDS.keys)
+      expect(entries.at(-1)?.label).toBe('Paste')
+      entries.at(-1)?.run()
+      expect(handlePaste).toHaveBeenCalledTimes(1)
+    })
+
+    it('is unavailable off a terminal, and says why', () => {
+      const registry = mount(fakeController().controller)
+
+      expect(registry.lookup(DO_ACTION_IDS.keys)?.availability).toBe('unavailable')
+      expect(registry.lookup(DO_ACTION_IDS.keys)?.reason).toBe('Keys need a terminal')
     })
   })
 
@@ -161,7 +213,7 @@ describe('session wheel actions', () => {
       const { controller, handleCreateTerminal } = fakeController()
       const registry = mount(controller)
 
-      const launch = registry.lookup(AGENT_WHEEL_ACTION_IDS.launch)
+      const launch = registry.lookup(DO_ACTION_IDS.launch)
       expect(launch !== null && isMenuBinding(launch)).toBe(true)
       expect(loadOptions).not.toHaveBeenCalled()
       const entries = launch !== null && isMenuBinding(launch) ? await launch.menu() : []
@@ -178,73 +230,73 @@ describe('session wheel actions', () => {
     it('is unavailable while disconnected', () => {
       const registry = mount(fakeController({ connState: 'disconnected' }).controller)
 
-      expect(registry.lookup(AGENT_WHEEL_ACTION_IDS.launch)?.availability).toBe('unavailable')
+      expect(registry.lookup(DO_ACTION_IDS.launch)?.availability).toBe('unavailable')
     })
   })
 
-  describe('toggle view', () => {
+  describe('view', () => {
     const chatTab = { id: 'c', type: 'terminal', agent: 'claude' }
+    const entryOf = async (registry: WheelRegistry, id: string) =>
+      (await menuOf(registry, DO_ACTION_IDS.view)).find((entry) => entry.id === id)
 
-    it('switches the tab between chat and terminal through the tab menu’s own toggle', () => {
+    it('opens chat/terminal, focus mode, shortcuts and input, in that order', async () => {
+      const registry = mount(fakeController({ activeSessionTab: chatTab }).controller)
+
+      const entries = await menuOf(registry, DO_ACTION_IDS.view)
+      expect(entries.map((entry) => entry.id)).toEqual([
+        VIEW_ACTION_IDS.chatTerminal,
+        VIEW_ACTION_IDS.focusMode,
+        VIEW_ACTION_IDS.shortcuts,
+        VIEW_ACTION_IDS.input
+      ])
+    })
+
+    it('switches the tab between chat and terminal through the tab menu’s own toggle', async () => {
       const { controller, toggleTabChatView } = fakeController({ activeSessionTab: chatTab })
       const registry = mount(controller)
 
-      const toggle = registry.lookup(AGENT_WHEEL_ACTION_IDS.toggleView)
+      const toggle = await entryOf(registry, VIEW_ACTION_IDS.chatTerminal)
       expect(toggle?.availability).toBe('available')
-      if (toggle !== null && !isMenuBinding(toggle)) {
-        toggle.run()
-      }
+      expect(toggle?.label).toBe('Chat view')
+      toggle?.run()
 
       expect(toggleTabChatView).toHaveBeenCalledWith('c')
     })
 
-    it('names where it goes, not where you are', () => {
-      const terminal = mount(fakeController({ activeSessionTab: chatTab }).controller)
-      expect(terminal.lookup(AGENT_WHEEL_ACTION_IDS.toggleView)?.label).toBe('Chat view')
-      act(() => renderer?.unmount())
-
-      const chat = mount(
-        fakeController({ activeSessionTab: chatTab, showNativeChat: true }).controller
-      )
-      expect(chat.lookup(AGENT_WHEEL_ACTION_IDS.toggleView)?.label).toBe('Terminal view')
-    })
-
-    it('is unavailable where there is only one view', () => {
+    it('offers chat/terminal only where there are two views', async () => {
       // A structured agent session is a chat with no terminal behind it.
       const structured = mount(fakeController().controller)
-      expect(structured.lookup(AGENT_WHEEL_ACTION_IDS.toggleView)?.availability).toBe('unavailable')
-      act(() => renderer?.unmount())
-
-      const plain = mount(
-        fakeController({ activeSessionTab: { id: 'p', type: 'terminal' } }).controller
+      expect((await entryOf(structured, VIEW_ACTION_IDS.chatTerminal))?.availability).toBe(
+        'unavailable'
       )
-      expect(plain.lookup(AGENT_WHEEL_ACTION_IDS.toggleView)?.availability).toBe('unavailable')
     })
-  })
 
-  describe('toggle input', () => {
-    it('shows and hides the text-entry strip, and says which it will do', () => {
-      const { controller } = fakeController()
-      const registry = mount(controller, { padAttached: true })
-      const toggle = registry.lookup(AGENT_WHEEL_ACTION_IDS.toggleInput)
-
-      expect(toggle?.availability).toBe('available')
+    it('shows and hides the text-entry strip, and says which it will do', async () => {
+      const registry = mount(fakeController().controller, { padAttached: true })
+      const toggle = await entryOf(registry, VIEW_ACTION_IDS.input)
       expect(toggle?.label).toBe('Show input')
-      act(() => {
-        if (toggle !== null && !isMenuBinding(toggle)) {
-          void toggle.run()
-        }
-      })
 
-      expect(registry.lookup(AGENT_WHEEL_ACTION_IDS.toggleInput)?.label).toBe('Hide input')
+      act(() => void toggle?.run())
+
+      expect((await entryOf(registry, VIEW_ACTION_IDS.input))?.label).toBe('Hide input')
+    })
+
+    it('hides and shows the shortcut row', async () => {
+      const registry = mount(fakeController().controller, { padAttached: true })
+      const toggle = await entryOf(registry, VIEW_ACTION_IDS.shortcuts)
+      expect(toggle?.label).toBe('Hide shortcuts')
+
+      act(() => void toggle?.run())
+
+      expect((await entryOf(registry, VIEW_ACTION_IDS.shortcuts))?.label).toBe('Show shortcuts')
     })
   })
 
   describe('focus mode', () => {
-    it('is available and flips focus mode, updating its label', () => {
+    it('is registered on its own for Select, and flips focus mode, updating its label', () => {
       const { controller } = fakeController()
       const registry = mount(controller, { padAttached: true })
-      const toggle = registry.lookup(NAVIGATION_WHEEL_ACTION_IDS.focusMode)
+      const toggle = registry.lookup(VIEW_ACTION_IDS.focusMode)
 
       expect(toggle?.availability).toBe('available')
       expect(toggle?.label).toBe('Focus mode')
@@ -254,7 +306,7 @@ describe('session wheel actions', () => {
         }
       })
 
-      expect(registry.lookup(NAVIGATION_WHEEL_ACTION_IDS.focusMode)?.label).toBe('Exit focus mode')
+      expect(registry.lookup(VIEW_ACTION_IDS.focusMode)?.label).toBe('Exit focus mode')
     })
   })
 
@@ -272,7 +324,7 @@ describe('session wheel actions', () => {
       }
       function Session(): ReactNode {
         // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook reads a handful of fields, all of which the fake supplies.
-        useSessionWheelActions(controller as unknown as MobileSessionController)
+        useSessionDoWheelActions(controller as unknown as MobileSessionController)
         return null
       }
       // A fresh element each time, or React sees nothing changed and skips the render.
@@ -288,7 +340,7 @@ describe('session wheel actions', () => {
       })
       act(() => publish(neutralSample(1, true)))
       const press = (): void => {
-        const binding = registry.lookup(AGENT_WHEEL_ACTION_IDS.keyboard)
+        const binding = registry.lookup(DO_ACTION_IDS.keyboard)
         act(() => {
           if (binding !== null && !isMenuBinding(binding)) {
             void binding.run()
@@ -307,24 +359,20 @@ describe('session wheel actions', () => {
 
     it('is offered where there is a field to type in, and not on a page or a file', () => {
       const terminal = mountWithStore({ activeSessionTab: { id: 't', type: 'terminal' } })
-      expect(terminal.registry.lookup(AGENT_WHEEL_ACTION_IDS.keyboard)?.availability).toBe(
-        'available'
-      )
+      expect(terminal.registry.lookup(DO_ACTION_IDS.keyboard)?.availability).toBe('available')
       act(() => renderer?.unmount())
 
       const chat = mountWithStore({})
-      expect(chat.registry.lookup(AGENT_WHEEL_ACTION_IDS.keyboard)?.availability).toBe('available')
+      expect(chat.registry.lookup(DO_ACTION_IDS.keyboard)?.availability).toBe('available')
       act(() => renderer?.unmount())
 
       const note = mountWithStore({ activeSessionTab: { id: 'n', type: 'markdown' } })
-      expect(note.registry.lookup(AGENT_WHEEL_ACTION_IDS.keyboard)?.availability).toBe(
-        'unavailable'
-      )
+      expect(note.registry.lookup(DO_ACTION_IDS.keyboard)?.availability).toBe('unavailable')
     })
 
     it('asks for the keyboard, which puts the strip up for the field to focus', () => {
       const session = mountWithStore({})
-      expect(session.registry.lookup(AGENT_WHEEL_ACTION_IDS.keyboard)?.label).toBe('Keyboard')
+      expect(session.registry.lookup(DO_ACTION_IDS.keyboard)?.label).toBe('Keyboard')
 
       session.press()
 
@@ -334,7 +382,7 @@ describe('session wheel actions', () => {
 
     it('says Hide keyboard while it is up, and hides it', () => {
       const session = mountWithStore({ keyboardLift: 300 })
-      expect(session.registry.lookup(AGENT_WHEEL_ACTION_IDS.keyboard)?.label).toBe('Hide keyboard')
+      expect(session.registry.lookup(DO_ACTION_IDS.keyboard)?.label).toBe('Hide keyboard')
 
       session.press()
 
@@ -370,7 +418,7 @@ describe('session wheel actions', () => {
       }
       function Session(): ReactNode {
         // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook reads a handful of fields, all of which the fake supplies.
-        useSessionWheelActions(controller as unknown as MobileSessionController)
+        useSessionDoWheelActions(controller as unknown as MobileSessionController)
         return null
       }
       const tree = (inSession: boolean) =>
@@ -397,27 +445,9 @@ describe('session wheel actions', () => {
     })
   })
 
-  describe('shortcuts', () => {
-    it('is available and flips shortcuts hidden, updating its label', () => {
-      const { controller } = fakeController()
-      const registry = mount(controller, { padAttached: true })
-      const toggle = registry.lookup(NAVIGATION_WHEEL_ACTION_IDS.shortcuts)
-
-      expect(toggle?.availability).toBe('available')
-      expect(toggle?.label).toBe('Hide shortcuts')
-      act(() => {
-        if (toggle !== null && !isMenuBinding(toggle)) {
-          void toggle.run()
-        }
-      })
-
-      expect(registry.lookup(NAVIGATION_WHEEL_ACTION_IDS.shortcuts)?.label).toBe('Show shortcuts')
-    })
-  })
-
   it('retracts all of it when the session goes', () => {
     const registry = mount(fakeController().controller)
-    expect(registry.ids()).toHaveLength(7)
+    expect(registry.ids()).toHaveLength(6)
 
     act(() => renderer?.unmount())
     renderer = null

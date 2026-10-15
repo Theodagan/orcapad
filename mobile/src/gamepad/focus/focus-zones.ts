@@ -1,8 +1,8 @@
 import type { ControllerIntentKind } from '../controller-input/controller-intent'
 
 /**
- * The parts of a screen the controller can be pointed at, in the order `X` walks them (`005`
- * USE-R4). A zone only exists while something mounted has declared it, so a screen with one
+ * The parts of a screen the controller can be pointed at (`005` USE-R4); `X`+direction moves
+ * between them by layout, and this order only breaks ties. A zone only exists while something mounted has declared it, so a screen with one
  * zone has nothing to switch to. `list` is the main content of a list screen (the workspaces of a
  * host) and `agent` the main content of a session; no screen has both.
  */

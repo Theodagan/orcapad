@@ -6,7 +6,23 @@ import { neutralSample, type ControllerSample } from '../controller-input/contro
 import { ControllerProvider, useControllerBinding } from '../controller-provider'
 import { useFocusModeSystemBars } from './use-focus-mode-system-bars'
 
+const appState = vi.hoisted(() => {
+  const listeners = new Map<string, Set<(state?: string) => void>>()
+  return {
+    listeners,
+    emit: (type: string, state?: string) => listeners.get(type)?.forEach((fn) => fn(state))
+  }
+})
+
 vi.mock('react-native', () => ({
+  AppState: {
+    addEventListener: (type: string, listener: (state?: string) => void) => {
+      const set = appState.listeners.get(type) ?? new Set()
+      set.add(listener)
+      appState.listeners.set(type, set)
+      return { remove: () => set.delete(listener) }
+    }
+  },
   StyleSheet: { create: <T,>(styles: T) => styles, absoluteFill: {} },
   View: 'View'
 }))
@@ -53,9 +69,27 @@ describe('the system bars in focus mode', () => {
     }
   }
 
-  it('leaves the bars alone until focus mode is on', () => {
+  it('shows the bars once at boot, then leaves them alone until focus mode is on', () => {
     const bars = mount()
 
+    expect(bars.setImmersive).toHaveBeenCalledExactlyOnceWith(false)
+  })
+
+  it('hides them again when the app resumes or regains focus in focus mode', () => {
+    const bars = mount()
+    bars.toggle()
+    bars.setImmersive.mockClear()
+
+    act(() => appState.emit('change', 'background'))
+    expect(bars.setImmersive).not.toHaveBeenCalled()
+    act(() => appState.emit('change', 'active'))
+    expect(bars.setImmersive).toHaveBeenLastCalledWith(true)
+    act(() => appState.emit('focus'))
+    expect(bars.setImmersive).toHaveBeenCalledTimes(2)
+
+    bars.toggle()
+    bars.setImmersive.mockClear()
+    act(() => appState.emit('change', 'active'))
     expect(bars.setImmersive).not.toHaveBeenCalled()
   })
 

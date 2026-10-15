@@ -2,8 +2,7 @@ import { startAndroidForegroundPushPresentation } from '../src/notifications/and
 import { registerPushDismissalTask } from '../src/notifications/push-background-dismissal'
 import { readNativeNotificationData } from '../src/notifications/native-notification-data'
 import { setNotificationViewingWorkspace } from '../src/notifications/notification-viewing-policy'
-import { useCallback, useEffect, useRef } from 'react'
-import { View, StyleSheet } from 'react-native'
+import { useCallback, useEffect, useRef, type ComponentProps } from 'react'
 import { Stack, useRouter, useGlobalSearchParams, usePathname } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
@@ -12,23 +11,8 @@ import * as Linking from 'expo-linking'
 import { colors } from '../src/theme/mobile-theme'
 import { OrcaLogo } from '../src/components/OrcaLogo'
 import { RpcClientProvider } from '../src/transport/client-context'
-import { ControllerProvider } from '../src/gamepad/controller-provider'
-import { ControllerConnectionNotice } from '../src/gamepad/controller-connection/ControllerConnectionNotice'
-import { MobileDictationStatusPill } from '../src/session/MobileDictationStatusPill'
-import { ActionHintBar } from '../src/gamepad/ActionHintBar'
-import { createControllerRuntime } from '../src/gamepad/controller-input/controller-runtime'
-import { useCancelWheelOnDisconnect } from '../src/gamepad/wheel/use-cancel-wheel-on-disconnect'
-import { WheelOverlay } from '../src/gamepad/wheel/WheelOverlay'
-import { useWheelController } from '../src/gamepad/wheel/use-wheel-controller'
-import { createWheelRegistry } from '../src/gamepad/wheel/wheel-registry'
-import { createActiveDictationRegistry } from '../src/gamepad/bindings/active-dictation'
-import { ACTIVE_WHEEL_TRIAL } from '../src/gamepad/wheel/experiments/active-wheel-trial'
-import { navigationWheelActions } from '../src/gamepad/bindings/navigation-wheel-actions'
-import { useRootBackBinding } from '../src/gamepad/bindings/use-root-back-binding'
-import { useFocusModeSystemBars } from '../src/gamepad/session-chrome/use-focus-mode-system-bars'
-import { hostStackHostRoute } from '../src/navigation/host-stack-navigation'
+import { ControllerShell } from '../src/gamepad/ControllerShell'
 import { NavigatorScreenGate } from '../src/navigation/navigator-screen-gate'
-import { hostNewWorktreeRoute } from '../src/host-route-action-state'
 import { getNotificationNavigationTarget } from '../src/notifications/notification-routing'
 import { useOpenNotificationRoute } from '../src/notifications/use-open-notification-route'
 import {
@@ -47,16 +31,6 @@ import { recoverMobileRelayPairing } from '../src/transport/mobile-relay-pairing
 // between the native splash and the first React paint.
 SplashScreen.preventAutoHideAsync()
 
-// One per process: the reader holds a native subscription and the resolver holds the button
-// edge state, so rebuilding either on a re-render would swallow presses.
-const controllerRuntime = createControllerRuntime()
-// One registry per process, like the runtime: surfaces register into it as they mount.
-const wheelRegistry = createWheelRegistry()
-// Dictation is step 2 of `001` §7, so the mounted session's dictation registers here rather than
-// being dispatched to: a live microphone stays stoppable from wherever focus has gone (unless a
-// wheel is open, which takes every input first).
-const activeDictation = createActiveDictationRegistry()
-
 // Why at boot and not only on subscribe: the gateway's FCM payload targets the
 // 'orca-desktop' channel, and a background push can land before any socket has
 // connected. Android drops a notification whose channel does not exist yet.
@@ -68,66 +42,30 @@ Notifications.setNotificationHandler({
   handleNotification: foregroundNotificationBehavior
 })
 
-/** `B` leaves any screen that has no use for it, which is most of them. Must sit inside the provider. */
-function RootBackBinding(): null {
-  const router = useRouter()
-  useRootBackBinding({
-    goBack: () => {
-      if (!router.canGoBack()) {
-        return false
-      }
-      router.back()
-      return true
-    }
-  })
-  return null
-}
+type StackProps = ComponentProps<typeof Stack>
 
-/** Focus mode hides the system bars. Must sit inside the provider. */
-function FocusModeSystemBars(): null {
-  useFocusModeSystemBars(controllerRuntime.setImmersive)
-  return null
-}
+// Screens kept under the top one must not answer the pad (see NavigatorScreenGate).
+const screenLayout: StackProps['screenLayout'] = ({ navigation, children }) => (
+  <NavigatorScreenGate navigation={navigation}>{children}</NavigatorScreenGate>
+)
+
+const screenOptions = {
+  headerStyle: { backgroundColor: colors.bgPanel },
+  headerTintColor: colors.textPrimary,
+  headerTitleStyle: { fontSize: 16, fontWeight: '600' },
+  contentStyle: { backgroundColor: colors.bgBase },
+  headerShadowVisible: false
+  // Why: deliberately no `orientation` screenOption. react-native-screens
+  // has no value that respects the device rotation lock — even 'default'
+  // calls setRequestedOrientation(UNSPECIFIED) at runtime, overriding the
+  // manifest. Leaving it unset lets the manifest's "fullUser" (set by the
+  // android-respect-rotation-lock config plugin) honor the auto-rotate lock.
+} satisfies StackProps['screenOptions']
 
 export default function RootLayout() {
-  // Whichever layouts are being tried, from experiment data. Not a default: WHEEL-T9 is where a
-  // preset could become one, and only behind a trial record and a recorded human decision.
-  const wheel = useWheelController({
-    presets: ACTIVE_WHEEL_TRIAL,
-    registry: wheelRegistry,
-    deadZone: 0.15,
-    // An open wheel owns the pad: Android must not also move its own focus underneath it.
-    onOpenChange: controllerRuntime.setCaptured
-  })
-  // A pad that drops mid-gesture must not leave an open wheel swallowing the screen.
-  useCancelWheelOnDisconnect(controllerRuntime.reader, wheel.cancel)
   const router = useRouter()
   const pathname = usePathname()
   const { hostId, worktreeId } = useGlobalSearchParams<{ hostId?: string; worktreeId?: string }>()
-  // The left wheel: back to this host's workspace list, and a new worktree on it. Registered here
-  // because this is the one place that owns the router and sees every screen.
-  useEffect(() => {
-    const host = typeof hostId === 'string' ? hostId : null
-    const unregister = navigationWheelActions({
-      hostId: host,
-      atWorkspaceList: host !== null && pathname === hostStackHostRoute(host),
-      onBackToMenu: () => {
-        if (host !== null) {
-          router.dismissTo(hostStackHostRoute(host))
-        }
-      },
-      onNewWorktree: () => {
-        if (host !== null) {
-          router.dismissTo(hostNewWorktreeRoute(host))
-        }
-      }
-    }).map((action) => wheelRegistry.register(action))
-    return () => {
-      for (const retract of unregister) {
-        retract()
-      }
-    }
-  }, [hostId, pathname, router])
   useEffect(() => {
     setNotificationViewingWorkspace(
       pathname.includes('/session/') && typeof hostId === 'string' && typeof worktreeId === 'string'
@@ -274,75 +212,35 @@ export default function RootLayout() {
 
   return (
     <RpcClientProvider>
-      <ControllerProvider
-        reader={controllerRuntime.reader}
-        resolve={controllerRuntime.resolve}
-        intercept={wheel.intercept}
-        captured={wheel.isOpen}
-        registerWheelAction={wheelRegistry.register}
-        activeDictation={activeDictation}
-        requestNativeFocus={controllerRuntime.requestNativeFocus}
-        wheelOverlay={<WheelOverlay controller={wheel} />}
-      >
-        <View style={styles.root} onLayout={onNavigatorLayout}>
-          <StatusBar style="light" />
-          <Stack
-            // Screens kept under the top one must not answer the pad (see NavigatorScreenGate).
-            screenLayout={({ navigation, children }) => (
-              <NavigatorScreenGate navigation={navigation}>{children}</NavigatorScreenGate>
-            )}
-            screenOptions={{
-              headerStyle: { backgroundColor: colors.bgPanel },
-              headerTintColor: colors.textPrimary,
-              headerTitleStyle: { fontSize: 16, fontWeight: '600' },
-              contentStyle: { backgroundColor: colors.bgBase },
-              headerShadowVisible: false
-              // Why: deliberately no `orientation` screenOption. react-native-screens
-              // has no value that respects the device rotation lock — even 'default'
-              // calls setRequestedOrientation(UNSPECIFIED) at runtime, overriding the
-              // manifest. Leaving it unset lets the manifest's "fullUser" (set by the
-              // android-respect-rotation-lock config plugin) honor the auto-rotate lock.
+      <ControllerShell onLayout={onNavigatorLayout}>
+        <StatusBar style="light" />
+        <Stack screenLayout={screenLayout} screenOptions={screenOptions}>
+          <Stack.Screen
+            name="index"
+            options={{
+              headerShown: false,
+              headerTitle: () => <OrcaLogo size={22} />
             }}
-          >
-            <Stack.Screen
-              name="index"
-              options={{
-                headerShown: false,
-                headerTitle: () => <OrcaLogo size={22} />
-              }}
-            />
-            <Stack.Screen name="pair-scan" options={{ headerShown: false }} />
-            <Stack.Screen name="pair" options={{ headerShown: false }} />
-            <Stack.Screen name="pair-confirm" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="mobile-onboarding"
-              options={{ headerShown: false, presentation: 'modal', gestureEnabled: false }}
-            />
-            <Stack.Screen name="settings" options={{ headerShown: false }} />
-            <Stack.Screen name="terminal-settings" options={{ headerShown: false }} />
-            <Stack.Screen name="native-chat-settings" options={{ headerShown: false }} />
-            <Stack.Screen name="browser-settings" options={{ headerShown: false }} />
-            <Stack.Screen name="voice-settings" options={{ headerShown: false }} />
-            <Stack.Screen name="notifications" options={{ headerShown: false }} />
-            <Stack.Screen name="troubleshoot" options={{ headerShown: false }} />
-            <Stack.Screen name="connection-log" options={{ headerShown: false }} />
-            <Stack.Screen name="about" options={{ headerShown: false }} />
-            <Stack.Screen name="h" options={{ headerShown: false }} />
-          </Stack>
-        </View>
-        <RootBackBinding />
-        <FocusModeSystemBars />
-        <ActionHintBar wheelOpen={wheel.view.state.kind === 'open'} />
-        <ControllerConnectionNotice />
-        <MobileDictationStatusPill />
-      </ControllerProvider>
+          />
+          <Stack.Screen name="pair-scan" options={{ headerShown: false }} />
+          <Stack.Screen name="pair" options={{ headerShown: false }} />
+          <Stack.Screen name="pair-confirm" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="mobile-onboarding"
+            options={{ headerShown: false, presentation: 'modal', gestureEnabled: false }}
+          />
+          <Stack.Screen name="settings" options={{ headerShown: false }} />
+          <Stack.Screen name="terminal-settings" options={{ headerShown: false }} />
+          <Stack.Screen name="native-chat-settings" options={{ headerShown: false }} />
+          <Stack.Screen name="browser-settings" options={{ headerShown: false }} />
+          <Stack.Screen name="voice-settings" options={{ headerShown: false }} />
+          <Stack.Screen name="notifications" options={{ headerShown: false }} />
+          <Stack.Screen name="troubleshoot" options={{ headerShown: false }} />
+          <Stack.Screen name="connection-log" options={{ headerShown: false }} />
+          <Stack.Screen name="about" options={{ headerShown: false }} />
+          <Stack.Screen name="h" options={{ headerShown: false }} />
+        </Stack>
+      </ControllerShell>
     </RpcClientProvider>
   )
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.bgBase
-  }
-})

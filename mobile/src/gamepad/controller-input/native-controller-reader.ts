@@ -1,27 +1,9 @@
 import { orcaGamepad } from '../../../modules/orca-gamepad'
 import { createAbsentControllerReader, type ControllerReader } from './controller-reader'
+import { multicastControllerReader } from './multicast-controller-reader'
 import { toControllerSample } from './native-controller-sample'
 
 const SAMPLE_INTERVAL_MS = 8
-
-/**
- * Whether the focused view took the last controller event before the controller layer saw it,
- * and which view that was. `001/tech.md` §6 makes this a device checkpoint: a terminal WebView
- * that swallows controller input pauses the design rather than earning a workaround, so the
- * answer has to be readable rather than inferred from things not working.
- */
-export type ControllerInterception = {
-  readonly consumedByViewTree: boolean
-  readonly focusedView: string
-}
-
-export function readControllerInterception(): ControllerInterception | null {
-  if (orcaGamepad === null) {
-    return null
-  }
-  const sample = orcaGamepad.currentSample()
-  return { consumedByViewTree: sample.consumedByViewTree, focusedView: sample.focusedView }
-}
 
 /**
  * The reader the provider mounts. Falls back to the absent reader wherever the native module is
@@ -33,7 +15,8 @@ export function createNativeControllerReader(): ControllerReader {
     return createAbsentControllerReader()
   }
   const native = orcaGamepad
-  return {
+  // Multicast: a second subscriber's unsubscribe would otherwise stop the native layer for both.
+  return multicastControllerReader({
     support: () => 'available',
     current: () => toControllerSample(native.currentSample()),
     subscribe: (listener) => {
@@ -46,5 +29,5 @@ export function createNativeControllerReader(): ControllerReader {
         native.stop()
       }
     }
-  }
+  })
 }

@@ -47,6 +47,14 @@ export function useTerminalDraftPadEditing(args: {
     setPendingSelection({ start: caret, end: caret })
     setTouchEditing(true)
   }
+  // A pad gone before the input reported its selection must not leave the field controlled.
+  const [seenPadAttached, setSeenPadAttached] = useState(padAttached)
+  if (seenPadAttached !== padAttached) {
+    setSeenPadAttached(padAttached)
+    if (!padAttached) {
+      setPendingSelection(null)
+    }
+  }
   const [seenKeyboardRequest, setSeenKeyboardRequest] = useState(keyboardRequested)
   if (seenKeyboardRequest !== keyboardRequested) {
     setSeenKeyboardRequest(keyboardRequested)

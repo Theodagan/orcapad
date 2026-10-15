@@ -19,21 +19,27 @@ export type InputVisibilityStore = {
   readonly visible: () => boolean
   /** Flips what is on screen now: a shown strip is put away, a hidden one is pinned open. */
   readonly toggle: () => void
-  /** The strip tells the store whether it holds anything, which is what opens it unasked. */
-  readonly reportContent: (hasContent: boolean) => void
+  /**
+   * Each strip tells the store whether it holds anything, which is what opens it unasked. Keyed by
+   * reporter, so one strip emptying or unmounting cannot clear another's draft.
+   */
+  readonly reportContent: (reporter: object, hasContent: boolean) => void
   /** True from a request for the keyboard until it is let go: the field in the strip should take focus. */
   readonly typing: () => boolean
   readonly beginTyping: () => void
   readonly endTyping: () => void
+  /** Forgets the wheel's say and any keyboard request: they belong to the session that ended. */
+  readonly reset: () => void
 }
 
 export function createInputVisibilityStore(): InputVisibilityStore {
   const listeners = new Set<() => void>()
   let mode: InputVisibilityMode = 'auto'
-  let hasContent = false
+  const reporters = new Set<object>()
   let typing = false
 
-  const resolve = (): boolean => typing || mode === 'shown' || (mode === 'auto' && hasContent)
+  const hasContent = (): boolean => reporters.size > 0
+  const resolve = (): boolean => typing || mode === 'shown' || (mode === 'auto' && hasContent())
   const notify = (): void => {
     for (const listener of listeners) {
       listener()
@@ -72,14 +78,29 @@ export function createInputVisibilityStore(): InputVisibilityStore {
         notify()
       }
     },
-    reportContent: (next) => {
+    reportContent: (reporter, next) => {
       const before = resolve()
       // A new draft is a reason to look again, even if the last one was put away.
-      if (next && !hasContent && mode === 'hidden') {
+      if (next && !hasContent() && mode === 'hidden') {
         mode = 'auto'
       }
-      hasContent = next
+      if (next) {
+        reporters.add(reporter)
+      } else {
+        reporters.delete(reporter)
+      }
       notifyIfChanged(before)
+    },
+    reset: () => {
+      const before = resolve()
+      const wasTyping = typing
+      mode = 'auto'
+      typing = false
+      if (wasTyping) {
+        notify()
+      } else {
+        notifyIfChanged(before)
+      }
     }
   }
 }

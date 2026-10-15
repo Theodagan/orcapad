@@ -25,4 +25,6 @@ export type WheelSegment = {
   readonly bindingId: string
   /** Committing opens a second-level wheel instead of running anything (`005` USE-R10). */
   readonly opens?: boolean
+  /** Why an unavailable segment cannot run, shown while it is locked. */
+  readonly reason?: string
 }

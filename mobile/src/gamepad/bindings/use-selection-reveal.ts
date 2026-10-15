@@ -66,6 +66,15 @@ export function useSelectionReveal<T>(options: SelectionRevealOptions<T>): {
   // True only while this hook's own jump is on the stack: a list reports a failed jump from inside
   // the call that asked for it, which is how a failure is told apart from someone else's.
   const jumping = useRef(false)
+  const retry = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(
+    () => () => {
+      if (retry.current !== null) {
+        clearTimeout(retry.current)
+      }
+    },
+    []
+  )
   const jumpTo = useCallback((id: string): void => {
     jumping.current = true
     try {
@@ -90,7 +99,11 @@ export function useSelectionReveal<T>(options: SelectionRevealOptions<T>): {
       }
       latest.current.scrollToOffset(info.index * info.averageItemLength)
       const target = latest.current.selectedId
-      setTimeout(() => {
+      if (retry.current !== null) {
+        clearTimeout(retry.current)
+      }
+      retry.current = setTimeout(() => {
+        retry.current = null
         // The selection may have moved on while the list measured; chase only the live one.
         if (target !== null && latest.current.selectedId === target) {
           jumpTo(target)

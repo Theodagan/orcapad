@@ -13,6 +13,8 @@ export const CONTROLLER_BUTTONS = [
   'rb',
   'l3',
   'r3',
+  'start',
+  'select',
   'dpad-up',
   'dpad-down',
   'dpad-left',

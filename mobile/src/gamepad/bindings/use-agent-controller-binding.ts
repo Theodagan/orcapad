@@ -1,14 +1,11 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { resolveAgentIntervention, type InterventionSurface } from './agent-intervention'
-import { AGENT_WHEEL_ACTION_IDS } from './agent-wheel-action-ids'
-import {
-  createScrollIntegrator,
-  LIST_SCROLL_MINIMUM_FIRST_STEP_POINTS,
-  LIST_SCROLL_POINTS_PER_SECOND_AT_FULL_PRESSURE
-} from './controller-scroll-rate'
+import { DO_ACTION_IDS } from './wheel-action-ids'
+import { LIST_SCROLL_RATE } from './controller-scroll-rate'
 import type { WheelActionBinding } from '../wheel/wheel-registry'
 import { FOCUS_PRIORITY } from '../focus/focus-zones'
 import { focusTargetFor, type IntentHandlerEntry, type SurfaceBinding } from './surface-binding'
+import { useScrollIntentEntry } from './use-scroll-intent-entry'
 import { useSurfaceBinding } from './use-surface-binding'
 
 /**
@@ -20,8 +17,8 @@ import { useSurfaceBinding } from './use-surface-binding'
  * prompt on screen they are not accepted at all, rather than accepted and dropped — an intent
  * nothing answers falls through to whatever is behind it, and hints stay honest (`001` §7).
  *
- * Stopping is no longer on `X`: that became the zone switch (`005` USE-R4). The chat still decides
- * with `canStop` whether a turn can be stopped, and the wheel action below follows it.
+ * Stop is a wheel action, run from DO or Start (`012`); the chat decides with `canStop` whether a
+ * turn can be stopped, and the action below follows it.
  */
 
 /** One D-pad press moves the transcript about three lines, like an arrow key in a reader. */
@@ -46,14 +43,7 @@ export function useAgentControllerBinding(options: AgentControllerBindingOptions
   useLayoutEffect(() => {
     latest.current = options
   })
-  const integrator = useMemo(
-    () =>
-      createScrollIntegrator({
-        unitsPerSecond: LIST_SCROLL_POINTS_PER_SECOND_AT_FULL_PRESSURE,
-        minimumFirstStep: LIST_SCROLL_MINIMUM_FIRST_STEP_POINTS
-      }),
-    []
-  )
+  const scrollEntry = useScrollIntentEntry(LIST_SCROLL_RATE, options.scrollBy)
 
   const { ask, permission, question, onRespondPermission, onCancelAsk, onCancelPrompt } = options
   const intervention = useMemo(
@@ -71,18 +61,7 @@ export function useAgentControllerBinding(options: AgentControllerBindingOptions
 
   const binding = useMemo<SurfaceBinding>(() => {
     const entries: IntentHandlerEntry[] = [
-      [
-        'scroll',
-        (intent) => {
-          if (intent.kind !== 'scroll') {
-            return
-          }
-          const delta = integrator.step(intent)
-          if (delta !== 0) {
-            latest.current.scrollBy(delta)
-          }
-        }
-      ],
+      scrollEntry,
       [
         'move-selection',
         (intent) => {
@@ -103,11 +82,12 @@ export function useAgentControllerBinding(options: AgentControllerBindingOptions
     }
 
     // The chat decides whether a turn can be stopped, and a stop its button would refuse is
-    // unavailable here too. Close, launch and web belong to the session around the chat.
+    // unavailable here too. Close and launch belong to the session around the chat.
     const stopAction: WheelActionBinding = {
-      id: AGENT_WHEEL_ACTION_IDS.stop,
+      id: DO_ACTION_IDS.stop,
       label: 'Stop agent',
       availability: canStop && onStop !== undefined ? 'available' : 'unavailable',
+      reason: 'Nothing running to stop',
       run: () => latest.current.onStop?.()
     }
     const wheelActions: readonly WheelActionBinding[] = [stopAction]
@@ -121,7 +101,7 @@ export function useAgentControllerBinding(options: AgentControllerBindingOptions
       },
       wheelActions
     }
-  }, [sessionId, canStop, onStop, intervention, integrator])
+  }, [sessionId, canStop, onStop, intervention, scrollEntry])
 
   useSurfaceBinding(binding)
 }

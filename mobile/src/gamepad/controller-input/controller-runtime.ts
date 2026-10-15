@@ -8,6 +8,8 @@ import {
   type ControllerResolver
 } from './controller-resolver'
 import { withHeldInputRepeat } from './held-input-repeat'
+import type { ControllerSample } from './controller-sample'
+import { multicastControllerReader } from './multicast-controller-reader'
 import { createNativeControllerReader } from './native-controller-reader'
 import { declaredFlat, triggersAreAnalog } from './native-controller-sample'
 import type { NativeControllerDevice } from '../../../modules/orca-gamepad'
@@ -62,7 +64,12 @@ function nativeFocusRequester(
 export function policyForControllers(
   controllers: readonly NativeControllerDevice[]
 ): ControllerPolicy {
-  const stick = Math.max(declaredFlat(controllers, 'left-x'), declaredFlat(controllers, 'right-x'))
+  const stick = Math.max(
+    declaredFlat(controllers, 'left-x'),
+    declaredFlat(controllers, 'left-y'),
+    declaredFlat(controllers, 'right-x'),
+    declaredFlat(controllers, 'right-y')
+  )
   const trigger = Math.max(declaredFlat(controllers, 'l2'), declaredFlat(controllers, 'r2'))
   return {
     ...DEFAULT_CONTROLLER_POLICY,
@@ -70,6 +77,17 @@ export function policyForControllers(
     triggerDeadZone: trigger > 0 ? trigger : DEFAULT_CONTROLLER_POLICY.triggerDeadZone,
     triggersAnalog: controllers.length === 0 || triggersAreAnalog(controllers)
   }
+}
+
+function samePolicy(a: ControllerPolicy, b: ControllerPolicy): boolean {
+  return (
+    a.stickDeadZone === b.stickDeadZone &&
+    a.triggerDeadZone === b.triggerDeadZone &&
+    a.triggersAnalog === b.triggersAnalog &&
+    a.dpadNavigation === b.dpadNavigation &&
+    a.dpadRepeatDelayMs === b.dpadRepeatDelayMs &&
+    a.dpadRepeatIntervalMs === b.dpadRepeatIntervalMs
+  )
 }
 
 export function createControllerRuntime(): ControllerRuntime {
@@ -87,19 +105,30 @@ export function createControllerRuntime(): ControllerRuntime {
 
   let policy = policyForControllers(module.listControllers())
   let resolve = createControllerIntentResolver(policy)
-  // A new resolver rather than a mutated policy: the old one's edge state belongs to the pad
-  // that is leaving, and carrying it over is how a button stays held after a disconnect.
+  let lastSample: ControllerSample | null = null
+  // Device events fire for unrelated changes too; a rebuild seeded from neutral would read every
+  // button already down as a fresh press, so only a real policy change rebuilds, from the last sample.
   module.addListener('onControllerDevices', ({ controllers }) => {
-    policy = policyForControllers(controllers)
-    resolve = createControllerIntentResolver(policy)
+    const next = policyForControllers(controllers)
+    if (samePolicy(next, policy)) {
+      return
+    }
+    policy = next
+    resolve = createControllerIntentResolver(policy, lastSample ?? undefined)
   })
 
   return {
-    reader: withHeldInputRepeat(native, {
-      policy: () => policy,
-      isActive: () => AppState.currentState === 'active'
-    }),
-    resolve: (sample, context) => resolve(sample, context),
+    // Multicast so the provider and the wheel's disconnect watch share one held-input pump.
+    reader: multicastControllerReader(
+      withHeldInputRepeat(native, {
+        policy: () => policy,
+        isActive: () => AppState.currentState === 'active'
+      })
+    ),
+    resolve: (sample, context) => {
+      lastSample = sample
+      return resolve(sample, context)
+    },
     setCaptured: (captured) => {
       module.setInputCaptured(captured)
     },

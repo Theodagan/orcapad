@@ -163,7 +163,7 @@ Verification commands run from the repository root, e.g.
 
   **Needs:** USE-T1 through USE-T14
 
-  **Verify:** `pnpm --dir mobile test src/gamepad/bindings/controller-binding-evidence.test.ts`
+  **Verify:** `pnpm --dir mobile test src/gamepad/evidence/controller-binding-evidence.test.ts`
 
 ## Round 2 (the second device session, decision 007)
 

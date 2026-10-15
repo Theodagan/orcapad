@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { useControllerBinding } from '../controller-provider'
 
 export type InputVisibility = {
@@ -9,6 +9,7 @@ export type InputVisibility = {
   readonly typing: boolean
   readonly beginTyping: () => void
   readonly endTyping: () => void
+  readonly reset: () => void
 }
 
 /** What a session reads to decide whether to draw its text-entry strip. */
@@ -29,7 +30,8 @@ export function useInputVisibility(): InputVisibility {
     toggle: inputVisibility.toggle,
     typing,
     beginTyping: inputVisibility.beginTyping,
-    endTyping: inputVisibility.endTyping
+    endTyping: inputVisibility.endTyping,
+    reset: inputVisibility.reset
   }
 }
 
@@ -37,8 +39,9 @@ export function useInputVisibility(): InputVisibility {
 export function useReportInputContent(hasContent: boolean): void {
   const { inputVisibility } = useControllerBinding()
   const { reportContent } = inputVisibility
+  const [reporter] = useState(() => ({}))
   useEffect(() => {
-    reportContent(hasContent)
-  }, [hasContent, reportContent])
-  useEffect(() => () => reportContent(false), [reportContent])
+    reportContent(reporter, hasContent)
+  }, [hasContent, reportContent, reporter])
+  useEffect(() => () => reportContent(reporter, false), [reportContent, reporter])
 }

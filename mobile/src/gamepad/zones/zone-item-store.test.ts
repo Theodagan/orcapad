@@ -9,7 +9,7 @@ const left: ControllerIntent = { kind: 'move-horizontal', direction: 'left' }
 const down: ControllerIntent = { kind: 'move-selection', direction: 'down' }
 const confirm: ControllerIntent = { kind: 'confirm' }
 const back: ControllerIntent = { kind: 'back' }
-const switchZone: ControllerIntent = { kind: 'switch-zone' }
+const switchZone: ControllerIntent = { kind: 'switch-zone', direction: 'up' }
 
 function setup() {
   const registry = createFocusRegistry()

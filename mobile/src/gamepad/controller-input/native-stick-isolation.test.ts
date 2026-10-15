@@ -15,7 +15,7 @@ describe('Android gamepad motion ownership', () => {
       native.indexOf('override fun dispatchGenericMotionEvent'),
       native.indexOf('\n  }', native.indexOf('override fun dispatchGenericMotionEvent'))
     )
-    expect(motion).toContain('if (isControllerSource(event.source))')
+    expect(motion).toContain('if (isControllerEvent(event))')
     expect(motion).toContain('onMotion(event, false)')
     expect(motion.indexOf('onMotion(event, false)')).toBeLessThan(
       motion.indexOf('delegate.dispatchGenericMotionEvent(event)')

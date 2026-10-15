@@ -10,7 +10,7 @@ import {
 } from './wheel-product-default-gate'
 
 const mobileRoot = fileURLToPath(new URL('../../..', import.meta.url))
-const experimentsRoot = join(mobileRoot, 'src', 'gamepad', 'wheel', 'experiments')
+const presetsRoot = join(mobileRoot, 'src', 'gamepad', 'wheel')
 const decisionsRoot = fileURLToPath(
   new URL('../../../../docs/decisions/context-wheel/', import.meta.url)
 )
@@ -62,14 +62,14 @@ describe('the promotion lock', () => {
   })
 })
 
-/** Every preset in the experiment tree that declares itself contractual, read from source. */
+/** Every wheel preset that declares itself contractual, read from source. */
 function contractualPresetIds(): string[] {
-  if (!existsSync(experimentsRoot)) {
+  if (!existsSync(presetsRoot)) {
     return []
   }
   const found: string[] = []
-  for (const name of readdirSync(experimentsRoot)) {
-    const path = join(experimentsRoot, name)
+  for (const name of readdirSync(presetsRoot)) {
+    const path = join(presetsRoot, name)
     if (!['.ts', '.tsx'].includes(extname(path)) || /\.test\./.test(name)) {
       continue
     }
@@ -114,7 +114,7 @@ function recordedDecisions(): unknown[] {
 describe('no preset has been promoted behind the gate', () => {
   // WHEEL-AC8. This is live now and passes because nothing is contractual yet — which is the
   // state `002` says this specification ends in. It fails the moment one is, without a decision.
-  it('leaves every experiment preset non-contractual, or accounted for', () => {
+  it('leaves every wheel preset non-contractual, or accounted for', () => {
     const contractual = contractualPresetIds()
     const unapproved = unapprovedProductDefaults(
       contractual.map((entry) => entry.split(':')[1] ?? entry),

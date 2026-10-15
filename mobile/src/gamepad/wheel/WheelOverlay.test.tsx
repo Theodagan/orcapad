@@ -178,6 +178,44 @@ describe('WheelOverlay', () => {
     )
   })
 
+  it('widens the dial for seven or more entries, and caps each label so neighbours never touch', () => {
+    const registry = createWheelRegistry()
+    registry.register({
+      id: 'noop.one',
+      label: 'North',
+      availability: 'available',
+      menu: () =>
+        Array.from({ length: 8 }, (_, index) => ({
+          id: `entry-${index}`,
+          label: `An entry with a long label ${index}`,
+          availability: 'available' as const,
+          run: () => {}
+        }))
+    })
+    let controller: WheelController | null = null
+    mount(registry, (c) => (controller = c))
+    act(() => {
+      controller?.intercept(up)
+    })
+    act(() => {
+      controller?.intercept({ kind: 'confirm' })
+    })
+
+    const dial = renderer?.root.findAll(
+      (node) =>
+        node.type === 'View' &&
+        Array.isArray(node.props.style) &&
+        node.props.style.some(
+          (entry: unknown) => entry !== null && typeof entry === 'object' && 'height' in entry
+        )
+    )[0]
+    expect(dial?.props.style[1]).toEqual({ height: 280, width: 280 })
+    const label = renderer?.root.findAll(
+      (node) => node.type === 'Text' && node.props.numberOfLines === 1
+    )[0]
+    expect(label?.props.style.maxWidth).toBe(96)
+  })
+
   it('names the two triggers, one on each side of the screen', () => {
     let controller: WheelController | null = null
     mount(createWheelRegistry(), (c) => (controller = c))
@@ -292,25 +330,6 @@ describe('WheelOverlay', () => {
         )
     )
     expect(faded?.length).toBe(2)
-  })
-
-  it('cancels an open wheel when the controller goes away mid-gesture (002 §6)', () => {
-    let controller: WheelController | null = null
-    const publish = mount(createWheelRegistry(), (c) => (controller = c))
-
-    act(() => {
-      publish(neutralSample(1, true))
-    })
-    act(() => {
-      controller?.intercept(up)
-    })
-    expect(labels()).toEqual(['North', 'East'])
-
-    act(() => {
-      publish(neutralSample(2, false))
-    })
-
-    expect(labels()).toEqual([])
   })
 
   it('does not cancel merely because no controller has ever been attached', () => {

@@ -52,7 +52,7 @@ const PROBE_BY_KIND: {
 } = {
   confirm: { kind: 'confirm' },
   back: { kind: 'back' },
-  'switch-zone': { kind: 'switch-zone' },
+  'switch-zone': { kind: 'switch-zone', direction: 'up' },
   'toggle-dictation': { kind: 'toggle-dictation' },
   scroll: { kind: 'scroll', direction: 'down', velocity: 1, elapsedMs: 16, begins: true },
   'cycle-tab': { kind: 'cycle-tab', direction: 'next' },
@@ -289,6 +289,6 @@ describe('the agentic loop', () => {
   it('reaches the interrupt step through the wheel, since X now switches zone', () => {
     const interrupt = AGENTIC_LOOP.find((step) => step.id === 'interrupt')
 
-    expect(interrupt?.reachedBy).toEqual([{ kind: 'wheel', bindingId: 'agent.stop' }])
+    expect(interrupt?.reachedBy).toEqual([{ kind: 'wheel', bindingId: 'do.stop' }])
   })
 })

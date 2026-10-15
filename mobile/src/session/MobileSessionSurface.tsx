@@ -1,7 +1,8 @@
 import { useCallback } from 'react'
 import { View } from 'react-native'
 import { useSessionControllerBinding } from '../gamepad/bindings/use-session-controller-binding'
-import { useSessionWheelActions } from './use-session-wheel-actions'
+import { useSessionDoWheelActions } from './use-session-do-wheel-actions'
+import { useSessionGoWheelActions } from './use-session-go-wheel-actions'
 import { styles } from './mobile-session-styles'
 import type { MobileSessionController } from './use-mobile-session-controller'
 import { MobileSessionContentRow } from './MobileSessionContentRow'
@@ -26,8 +27,9 @@ export function MobileSessionSurface({ controller }: { controller: MobileSession
     onBack: goBack
   })
 
-  // The right wheel's close, launch and web actions, over the session's own paths.
-  useSessionWheelActions(controller)
+  // DO on the right stick; GO's Files, Changes and History, which need the panel routes.
+  useSessionDoWheelActions(controller)
+  useSessionGoWheelActions(controller)
 
   return (
     <View ref={setMobileSessionRootRef} style={styles.container}>

@@ -98,4 +98,34 @@ describe('the triggers steer an open wheel', () => {
       { kind: 'scroll', direction: 'up', velocity: 0.4, elapsedMs: 16, begins: true }
     ])
   })
+
+  it('fires once for a pull that jitters around the fire level, and again after a real release', () => {
+    const resolver = createControllerIntentResolver()
+    resolver(sample(0), UNDER_WHEEL)
+
+    expect(resolver(sample(16, {}, { r2: 0.52 }), UNDER_WHEEL)).toEqual([{ kind: 'confirm' }])
+    expect(resolver(sample(32, {}, { r2: 0.45 }), UNDER_WHEEL)).toEqual([])
+    expect(resolver(sample(48, {}, { r2: 0.55 }), UNDER_WHEEL)).toEqual([])
+    resolver(sample(64, {}, { r2: 0.2 }), UNDER_WHEEL)
+    expect(resolver(sample(80, {}, { r2: 0.6 }), UNDER_WHEEL)).toEqual([{ kind: 'confirm' }])
+  })
+})
+
+describe('a trigger resting on its dead zone', () => {
+  it('scrolls as one gesture while it flutters across the dead zone', () => {
+    const resolver = createControllerIntentResolver()
+    resolver(sample(0), NO_WHEEL)
+
+    expect(resolver(sample(16, {}, { r2: 0.12 }), NO_WHEEL)).toEqual([
+      { kind: 'scroll', direction: 'down', velocity: 0.12, elapsedMs: 16, begins: true }
+    ])
+    expect(resolver(sample(32, {}, { r2: 0.09 }), NO_WHEEL)).toEqual([])
+    expect(resolver(sample(48, {}, { r2: 0.12 }), NO_WHEEL)).toEqual([
+      { kind: 'scroll', direction: 'down', velocity: 0.12, elapsedMs: 16, begins: false }
+    ])
+    resolver(sample(64, {}, { r2: 0 }), NO_WHEEL)
+    expect(resolver(sample(80, {}, { r2: 0.12 }), NO_WHEEL)).toEqual([
+      { kind: 'scroll', direction: 'down', velocity: 0.12, elapsedMs: 16, begins: true }
+    ])
+  })
 })

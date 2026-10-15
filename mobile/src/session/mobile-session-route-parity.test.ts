@@ -73,11 +73,13 @@ const HOST_COMPONENT_NAMES = new Set([
 // Re-pinned for the terminal command field's caret: `useDraftCaret` in the runtime, and
 // `useControllerBinding` in the dictation hook so a pad's words land at the caret. A probe diffed the
 // facts: those two hooks and their bindings; callbacks, effects and nested functions are the same.
-const HEAD_MAIN_HOOK_SHA256 = '0b6552367097c7d37dc10fc1496a7ba57b06125ec708fa80ee81d3ac05fd51a7'
-const HEAD_HOOK_BINDING_SHA256 = '88d380f86deaa9bbe8810a75ece4cdb3173774f9b98b7857bedf078075b4a8ea'
+// Re-pinned for a dictation binding that no longer re-registers per render: two `useCallback`s
+// (stop, open setup) and callbacks that read the hook's stable start/stop/cancel. Effects unchanged.
+const HEAD_MAIN_HOOK_SHA256 = '6cd55c6e3595d9568be30ccb0af7b5e11d21960ca8728dd10b9bffe330f62417'
+const HEAD_HOOK_BINDING_SHA256 = 'e875fc3b7b819b9095b13fe56f43c0f76f7352d882e96eaa706498df16a04be1'
 const HEAD_CALLBACK_IDENTITY_SHA256 =
-  'd69eb72e69873a6444dc13b0c500b22bd79cb21607403e9b62f75006945ad498'
-const HEAD_CALLBACK_BODY_SHA256 = 'dffada6778af6a32c17b4d703926eb3b2723b7af405fc159afd4136ed7ac327a'
+  '699aeb879c4d96e2ec27282dcfc17e94d51082ccd65ab7216e82310e337a45c8'
+const HEAD_CALLBACK_BODY_SHA256 = '3211d3f348ef9bc279b13146b9c3dd131fa7fd2f12c7638d66f5baad02088d69'
 const HEAD_EFFECT_SHA256 = '0a9abe81da1200afeb5973771896041811058faa2a7cd51fa955616270daa460'
 const HEAD_CONTENT_HOOK_SHA256 = '9c3b612fef3f370d66873aefdbe1d701f20cb64ded31fef5cc45fde6f8189581'
 const HEAD_NESTED_FUNCTION_SHA256 =
@@ -507,10 +509,10 @@ describe('mobile session route extraction parity', () => {
     const contentBindings = CONTENT_COMPONENT_NAMES.flatMap(
       (name) => readHookFacts(name, definitions).bindings
     )
-    expect(main.hooks).toHaveLength(275)
+    expect(main.hooks).toHaveLength(277)
     expect(hash(main.hooks)).toBe(HEAD_MAIN_HOOK_SHA256)
     expect(hash(main.bindings)).toBe(HEAD_HOOK_BINDING_SHA256)
-    expect(main.callbacks).toHaveLength(78)
+    expect(main.callbacks).toHaveLength(80)
     expect(hash(main.callbacks)).toBe(HEAD_CALLBACK_IDENTITY_SHA256)
     expect(hash(main.callbackBodies)).toBe(HEAD_CALLBACK_BODY_SHA256)
     expect(main.effects).toHaveLength(25)

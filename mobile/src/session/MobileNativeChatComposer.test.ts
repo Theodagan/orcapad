@@ -391,6 +391,73 @@ describe('MobileNativeChatComposer', () => {
     expect(input().props.selection).toBeUndefined()
   })
 
+  it('never drives the native caret from a selection ahead of its text, or after a send', async () => {
+    const onCaretChange = vi.fn()
+    let rendered = 'abc'
+    const props = () => ({
+      value: rendered,
+      onChangeText: vi.fn(),
+      onCaretChange,
+      onSend: vi.fn().mockResolvedValue(true),
+      sendSurfaceId: 'tab-a',
+      getSendCompletionGeneration: getCurrentSendCompletionGeneration
+    })
+    await act(async () => {
+      renderer = create(createElement(MobileNativeChatComposer, props()))
+    })
+    const input = () =>
+      renderer!.root.find((node) => node.type === 'TextInput') as {
+        props: {
+          selection?: { start: number; end: number }
+          onSelectionChange: (e: { nativeEvent: { selection: { end: number } } }) => void
+        }
+      }
+    // The selection event can land before the text that put the caret there.
+    await act(async () =>
+      input().props.onSelectionChange({ nativeEvent: { selection: { end: 4 } } })
+    )
+    expect(input().props.selection).toBeUndefined()
+    rendered = 'abcd'
+    await act(async () => renderer!.update(createElement(MobileNativeChatComposer, props())))
+    expect(input().props.selection).toBeUndefined()
+    // Touch typing keeps the caret in the field, not in the draft's owner.
+    expect(onCaretChange).not.toHaveBeenCalled()
+
+    await act(async () => sendButton().props.onPress())
+    rendered = ''
+    await act(async () => renderer!.update(createElement(MobileNativeChatComposer, props())))
+    expect(input().props.selection).toBeUndefined()
+  })
+
+  it('follows the caret once when dictation placed it', async () => {
+    const props = (caretPlacement: number) => ({
+      value: 'abc def',
+      onChangeText: vi.fn(),
+      caret: 7,
+      caretPlacement,
+      onSend: vi.fn().mockResolvedValue(true),
+      sendSurfaceId: 'tab-a',
+      getSendCompletionGeneration: getCurrentSendCompletionGeneration
+    })
+    await act(async () => {
+      renderer = create(createElement(MobileNativeChatComposer, props(0)))
+    })
+    const input = () =>
+      renderer!.root.find((node) => node.type === 'TextInput') as {
+        props: {
+          selection?: { start: number; end: number }
+          onSelectionChange: (e: { nativeEvent: { selection: { end: number } } }) => void
+        }
+      }
+    expect(input().props.selection).toBeUndefined()
+    await act(async () => renderer!.update(createElement(MobileNativeChatComposer, props(1))))
+    expect(input().props.selection).toEqual({ start: 7, end: 7 })
+    await act(async () =>
+      input().props.onSelectionChange({ nativeEvent: { selection: { end: 7 } } })
+    )
+    expect(input().props.selection).toBeUndefined()
+  })
+
   it('serves the active agent’s shared command catalog with descriptions', async () => {
     await act(async () => {
       renderer = create(

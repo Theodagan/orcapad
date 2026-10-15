@@ -3,6 +3,7 @@
 **Date:** 2026-10-05
 **Status:** applied in `005` USE-T22, pending human ratification
 **Amends:** decision 007 (the hint bar is always on while a pad is attached)
+**Amended by:** decision 012 (Start/Select, and the GO/DO wheels)
 
 ## What the second device session found
 

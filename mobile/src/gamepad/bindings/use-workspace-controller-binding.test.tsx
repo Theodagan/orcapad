@@ -50,7 +50,8 @@ function fakeReader(): {
   }
 }
 
-function mount(rows: Sections = sections) {
+function mount(initialRows: Sections = sections) {
+  let rows = initialRows
   const { reader, publish } = fakeReader()
   const onOpen = vi.fn()
   const onToggleSection = vi.fn()
@@ -86,6 +87,11 @@ function mount(rows: Sections = sections) {
     answers: (intent: ControllerIntent): boolean => dispatch(intent),
     connect: (connected: boolean) => act(() => publish({ ...neutralSample(0), connected })),
     selected: () => selected,
+    showRows: (next: Sections) =>
+      act(() => {
+        rows = next
+        renderer?.update(createElement(ControllerProvider, { reader }, createElement(Workspaces)))
+      }),
     onOpen,
     onToggleSection,
     onBack,
@@ -125,6 +131,19 @@ describe('workspace controller binding', () => {
     expect(list.selected()).toBe('three')
 
     expect(list.onOpen).not.toHaveBeenCalled()
+  })
+
+  it('falls back to the first row when the selected one is no longer rendered', () => {
+    const list = mount()
+    list.connect(true)
+    list.dispatch({ kind: 'cycle-workspace', direction: 'next' })
+    expect(list.selected()).toBe('two')
+
+    list.showRows([{ data: [{ worktreeId: 'one' }] }, { data: [{ worktreeId: 'three' }] }])
+    expect(list.selected()).toBe('one')
+
+    list.dispatch({ kind: 'confirm' })
+    expect(list.onOpen).toHaveBeenCalledExactlyOnceWith({ worktreeId: 'one' })
   })
 
   it('clamps at the last row rather than wrapping', () => {

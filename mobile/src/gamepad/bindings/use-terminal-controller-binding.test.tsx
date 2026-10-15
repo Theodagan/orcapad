@@ -234,10 +234,10 @@ describe('terminal controller binding', () => {
     it('stops an agent in the terminal with the key every agent CLI interrupts on', () => {
       const pane = mount()
 
-      pane.registry.lookup('agent.stop')?.run()
+      pane.registry.lookup('do.stop')?.run()
 
       expect(pane.sendKey).toHaveBeenCalledWith(ESC)
-      expect(pane.registry.lookup('agent.stop')?.availability).toBe('available')
+      expect(pane.registry.lookup('do.stop')?.availability).toBe('available')
     })
 
     it('offers a quick command disabled rather than hidden', () => {

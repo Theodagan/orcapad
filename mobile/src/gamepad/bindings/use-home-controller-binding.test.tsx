@@ -6,6 +6,7 @@ import type { ControllerIntent } from '../controller-input/controller-intent'
 import type { ControllerReader } from '../controller-input/controller-reader'
 import { neutralSample, type ControllerSample } from '../controller-input/controller-sample'
 import { createWheelRegistry } from '../wheel/wheel-registry'
+import { GO_ACTION_IDS } from './wheel-action-ids'
 import { useHomeControllerBinding } from './use-home-controller-binding'
 
 vi.mock('react-native', () => ({
@@ -44,6 +45,8 @@ type Harness = {
   connect: (connected: boolean) => void
   selected: () => string | null
   registry: ReturnType<typeof createWheelRegistry>
+  registerWheelAction: ReturnType<typeof vi.fn>
+  dispatchTogether: (intents: readonly ControllerIntent[]) => void
   onOpen: ReturnType<typeof vi.fn>
   onPairDesktop: ReturnType<typeof vi.fn>
   scrollBy: ReturnType<typeof vi.fn>
@@ -52,6 +55,7 @@ type Harness = {
 function mount(): Harness {
   const { reader, publish } = fakeReader()
   const registry = createWheelRegistry()
+  const registerWheelAction = vi.fn(registry.register)
   const onOpen = vi.fn()
   const onPairDesktop = vi.fn()
   const scrollBy = vi.fn()
@@ -67,11 +71,7 @@ function mount(): Harness {
   let renderer: ReactTestRenderer | null = null
   act(() => {
     renderer = create(
-      createElement(
-        ControllerProvider,
-        { reader, registerWheelAction: registry.register },
-        createElement(Home)
-      )
+      createElement(ControllerProvider, { reader, registerWheelAction }, createElement(Home))
     )
   })
   if (renderer === null) {
@@ -84,6 +84,13 @@ function mount(): Harness {
     connect: (connected) => act(() => publish({ ...neutralSample(0), connected })),
     selected: () => selected,
     registry,
+    registerWheelAction,
+    dispatchTogether: (intents) =>
+      act(() => {
+        for (const intent of intents) {
+          dispatch(intent)
+        }
+      }),
     onOpen,
     onPairDesktop,
     scrollBy
@@ -111,6 +118,26 @@ describe('home controller binding', () => {
 
     expect(home.onOpen).toHaveBeenCalledTimes(1)
     expect(home.onOpen).toHaveBeenCalledWith({ id: 'alpha' })
+  })
+
+  it('opens the host a move in the same sample landed on', () => {
+    const home = mount()
+    home.connect(true)
+
+    home.dispatchTogether([{ kind: 'move-selection', direction: 'down' }, { kind: 'confirm' }])
+
+    expect(home.onOpen).toHaveBeenCalledExactlyOnceWith({ id: 'beta' })
+  })
+
+  it('keeps its wheel action registered while the selection moves', () => {
+    const home = mount()
+    home.connect(true)
+    const registrations = home.registerWheelAction.mock.calls.length
+
+    home.dispatch({ kind: 'move-selection', direction: 'down' })
+    home.dispatch({ kind: 'move-selection', direction: 'up' })
+
+    expect(home.registerWheelAction).toHaveBeenCalledTimes(registrations)
   })
 
   it('opens nothing when nothing is selected', () => {
@@ -151,15 +178,15 @@ describe('home controller binding', () => {
   })
 
   // BIND-R10 plus `003` §10: the action exists exactly as long as the surface does.
-  it('registers its wheel action while mounted and retracts it on unmount', () => {
+  it("registers Pair desktop in GO's New slot while mounted and retracts it on unmount", () => {
     const home = mount()
-    expect(home.registry.lookup('home.pair-desktop')).not.toBeNull()
+    expect(home.registry.lookup(GO_ACTION_IDS.new)?.label).toBe('Pair desktop')
 
-    home.registry.lookup('home.pair-desktop')?.run()
+    home.registry.lookup(GO_ACTION_IDS.new)?.run()
     expect(home.onPairDesktop).toHaveBeenCalledTimes(1)
 
     act(() => home.renderer.unmount())
-    expect(home.registry.lookup('home.pair-desktop')).toBeNull()
+    expect(home.registry.lookup(GO_ACTION_IDS.new)).toBeNull()
   })
 
   it('stops receiving intents once unmounted', () => {

@@ -60,7 +60,8 @@ export function ZoneItem({
   })
 
   useEffect(() => {
-    if (!screenActive) {
+    // Without a pad nothing can land here, so a touch user's screen declares no zone at all.
+    if (!screenActive || !connected) {
       return
     }
     return zoneItems.register({
@@ -73,7 +74,7 @@ export function ZoneItem({
       activate: () => latest.current.onActivate(),
       reveal: () => latest.current.onReveal?.()
     })
-  }, [zoneItems, screenActive, zone, id, row, order, disabled, home])
+  }, [zoneItems, screenActive, connected, zone, id, row, order, disabled, home])
 
   const cursorHere = useSyncExternalStore(
     zoneItems.subscribe,

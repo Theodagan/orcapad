@@ -29,6 +29,8 @@ export type WheelPresetSegment = {
   readonly centerAngle: number
   readonly halfWidth: number
   readonly bindingId: WheelActionBindingId
+  /** Why the segment is unavailable when nothing has registered its binding. */
+  readonly reason?: string
 }
 
 export type WheelPresetDefinition = {
@@ -66,6 +68,7 @@ export function resolveSegments(
 ): readonly WheelSegment[] {
   return preset.segments.map((segment) => {
     const binding = registry.lookup(segment.bindingId)
+    const reason = binding === null ? segment.reason : binding.reason
     return {
       id: segment.id,
       // The binding's own label wins when it is mounted: it knows the live wording, and the
@@ -76,7 +79,8 @@ export function resolveSegments(
       availability: binding?.availability ?? 'unavailable',
       bindingId: segment.bindingId,
       // Only a registered menu opens a second wheel; a preset cannot make an action into one.
-      ...(binding !== null && isMenuBinding(binding) ? { opens: true } : {})
+      ...(binding !== null && isMenuBinding(binding) ? { opens: true } : {}),
+      ...(reason === undefined ? {} : { reason })
     }
   })
 }

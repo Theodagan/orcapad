@@ -1,6 +1,7 @@
 import { PRD_CONTROLLER_BINDINGS, type ControllerBinding } from './controller-bindings'
 import type { ControllerIntentKind, IntentLabels } from './controller-intent'
 import type { ControllerAxis, ControllerButton } from './controller-sample'
+import { DO_ACTION_IDS, VIEW_ACTION_IDS } from '../bindings/wheel-action-ids'
 
 /**
  * What the buttons do right now, derived from the surface that has focus.
@@ -31,7 +32,9 @@ const PRINTED_NAME: Partial<Record<ControllerButton | ControllerAxis, string>> =
   l2: 'L2',
   r2: 'R2',
   l3: 'L3',
-  r3: 'R3'
+  r3: 'R3',
+  start: 'Start',
+  select: 'Select'
 }
 
 /** Used when a surface offers no wording of its own. Never a control name. */
@@ -45,8 +48,25 @@ const DEFAULT_WORDS: Record<ControllerIntentKind, string> = {
   back: 'Back',
   'toggle-dictation': 'Dictate',
   'move-selection': 'Move',
-  'move-horizontal': 'Move'
+  'move-horizontal': 'Move',
+  'run-action': 'Action'
 }
+
+/** What a `run-action` button does, in the bar's words. */
+const RUN_ACTION_WORDS: Readonly<Record<string, string>> = {
+  [DO_ACTION_IDS.stop]: 'Stop',
+  [VIEW_ACTION_IDS.focusMode]: 'Focus'
+}
+
+type RunActionRow = Extract<ControllerBinding, { kind: 'button' }> & { readonly actionId: string }
+
+const RUN_ACTION_ROWS: readonly RunActionRow[] = PRD_CONTROLLER_BINDINGS.filter(
+  (binding): binding is RunActionRow =>
+    binding.kind === 'button' && binding.intent === 'run-action' && binding.actionId !== undefined
+)
+
+/** The action ids a button runs, so the hint bar knows which registrations to watch. */
+export const RUN_ACTION_IDS: readonly string[] = RUN_ACTION_ROWS.map((row) => row.actionId)
 
 /** The order the bar reads in: what you do most, first. It does not reshuffle as surfaces change. */
 const HINT_ORDER: readonly ControllerIntentKind[] = [
@@ -93,7 +113,9 @@ function dpadControl(horizontal: boolean, vertical: boolean): string {
  */
 export function actionHintsFor(
   accepts: ReadonlySet<ControllerIntentKind>,
-  labels: IntentLabels = {}
+  labels: IntentLabels = {},
+  /** Action ids the registry can run now; a button's hint shows only while its action can. */
+  runnable: ReadonlySet<string> = new Set()
 ): readonly ActionHint[] {
   const hints: ActionHint[] = []
   const wording = (intent: ControllerIntentKind): string => labels[intent] ?? DEFAULT_WORDS[intent]
@@ -126,6 +148,14 @@ export function actionHintsFor(
     const control = controlsFor(intent)
     if (control !== null) {
       hints.push({ control, label: wording(intent) })
+    }
+  }
+  for (const row of RUN_ACTION_ROWS) {
+    if (runnable.has(row.actionId)) {
+      hints.push({
+        control: printed(row.button),
+        label: RUN_ACTION_WORDS[row.actionId] ?? DEFAULT_WORDS['run-action']
+      })
     }
   }
   return hints

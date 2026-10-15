@@ -28,6 +28,8 @@ export type MobileNativeChatController = {
   /** Where the caret is in the draft; the end unless someone moved it. */
   chatComposerCaret: number
   setChatComposerCaret: (caret: number) => void
+  /** Bumps when dictation placed the caret. */
+  chatComposerCaretPlacement: number
   /** Dictation lands at the caret, not at the end. */
   insertChatDictation: (transcript: string) => void
   getChatComposerEditGeneration: () => number

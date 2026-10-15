@@ -160,34 +160,42 @@ surface of the session screen, wrapping, and doing nothing with a single tab.
 `Y` with `L1`/`R1` keeps moving between worktrees on the workspace list. It is not
 bound inside a session; see "Known gaps".
 
-### USE-R9 - The left wheel
+### USE-R9 - The left wheel (GO)
 
-**Back to menu** (the workspace list of the current host) and **Create a new worktree**, and, from a
-session, the two view toggles of USE-R20: **Focus mode** (north) and **Shortcuts** (south). The six
-placeholder slots are gone. Off a session the two toggles show greyed out, like every session action.
+Superseded by decision `012`: the left stick is **GO**, where you are. Six fixed 60° slots, of which a
+screen lists only the ones it has; a missing slot is a gap, so an action keeps its angle everywhere.
 
-### USE-R10 - The right wheel
+| Slot | Home | Host list | Session | Other screens |
+| --- | --- | --- | --- | --- |
+| N Up | – | All hosts | Workspaces | Workspaces (All hosts off a host) |
+| NE New | Pair desktop | New worktree | New worktree | New worktree |
+| SE Files | – | – | Files panel | – |
+| S Changes | – | – | Source control | – |
+| SW History | – | – | Agent history, where supported | – |
+| W Settings | Settings | Settings | Settings | Settings |
 
-Six segments, replacing the canned replies (round 2 removed Open a web page and added the two
-toggles, decision `007`; round 3 added Keyboard, decision `009`):
+### USE-R10 - The right wheel (DO)
 
-| Segment | Does |
+Superseded by decision `012`: the right stick is **DO**, acting on the agent or terminal in front of
+you, and exists only in a session; elsewhere it opens nothing.
+
+| Slot | Does |
 | --- | --- |
-| Launch an agent | opens a second wheel of every agent the new-tab drawer offers |
-| Chat / terminal | switches the tab between its chat and its terminal, through the tab menu's own toggle; says where it goes |
-| Stop the agent | interrupts the running turn: Escape in a terminal, the chat's own stop in a chat |
-| Show / hide input | shows or hides the text-entry strip (USE-R16) |
-| Close the agent | closes the current agent, through the existing tab-close path |
-| Keyboard | raises the soft keyboard on the text entry the session is showing, or lowers it when it is up (USE-R23) |
+| N Launch agent ▸ | opens a second wheel of every agent the new-tab drawer offers |
+| NE Stop agent | interrupts the running turn: Escape in a terminal, the chat's own stop in a chat |
+| SE Keys ▸ | terminal tabs only: Ctrl+C, Esc, Tab, Shift+Tab, Enter, Ctrl+D, Ctrl+L, and Paste when there is something to paste |
+| S Close tab | closes the current tab, through the existing tab-close path |
+| SW Keyboard | raises the soft keyboard on the session's text entry, or lowers it when it is up (USE-R23) |
+| NW View ▸ | Chat / terminal, Focus mode, Shortcuts row, Show / hide input |
 
 Hand off was asked for and is out of scope (see the product decision above).
 
-A segment that cannot run where the user is renders disabled and cancels. Stop is
-offered by the surface that can stop, so it is available in a terminal and in a chat
-that has a turn to stop, and nowhere else. Chat / terminal is available on a terminal tab whose
-agent has a chat view, and nowhere else. Close and stop are destructive: the preset says so
-(WHEEL-R7), and the decision to ship them is recorded where the promotion gate reads it. They are
-never adjacent on the dial: a harmless choice sits between them.
+A segment that cannot run where the user is renders disabled, says why while it is lit ("No agent
+here"), and cancels. Stop is offered by the surface that can stop. Close and stop are destructive: the
+preset says so (WHEEL-R7), and they are never adjacent on the dial.
+
+**Start** runs Stop agent and **Select** toggles Focus mode from anywhere; with nothing to run, the pad
+buzzes and a short notice says why. `L3` and `R3` stay unassigned.
 
 ### USE-R11 - An open wheel captures all input
 
@@ -269,8 +277,8 @@ list's cursor leaves with the pad. Where no binding claims `B`, it goes back one
 
 For a session whose agent draws its own prompt and footer (opencode's sits at the bottom of its
 screen and cannot be scrolled away), the app's own chrome is the space it can give back. Two toggles
-on the left wheel, both only while a pad is attached and only in a session, both reset when the
-session ends:
+under the right wheel's View ▸ (decision `012`; Focus mode is also on Select), both only while a pad is
+attached and only in a session, both reset when the session ends:
 
 - **Focus mode** hides the Android status and gesture bars, makes the header one line (back, title with
   its connection dot, the tab chips scrolling and kept in view, then the new-tab, quick-commands, files,
@@ -326,8 +334,8 @@ open on its own.
 - **USE-AC6** - `Y` tapped toggles dictation; `Y` held with `L1`/`R1` cycles
   worktrees and never toggles dictation; `R3` does nothing.
 - **USE-AC7** - `L1`/`R1` cycle tabs with focus in each zone.
-- **USE-AC8** - The left wheel has exactly its four segments; the right wheel has
-  exactly its six; committing each reaches the intended existing path.
+- **USE-AC8** - Each screen's GO wheel has exactly the slots of USE-R9 at their fixed angles; the
+  session's DO wheel has exactly its six; committing each reaches the intended existing path.
 - **USE-AC9** - The second-level wheel lists the live agents, shows
   loading, empty and error states, and cancels with no side effect.
 - **USE-AC10** - With a wheel open, a property test over every intent kind shows

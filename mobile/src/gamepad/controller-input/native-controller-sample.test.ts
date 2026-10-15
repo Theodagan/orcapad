@@ -8,8 +8,6 @@ function nativeSample(overrides: Partial<NativeControllerSample> = {}): NativeCo
     buttons: { a: 1, lb: 0, 'dpad-up': 1 },
     axes: { 'left-x': 0.5, l2: 0.25 },
     sampledAt: 1_234,
-    consumedByViewTree: false,
-    focusedView: 'ReactViewGroup',
     ...overrides
   }
 }
