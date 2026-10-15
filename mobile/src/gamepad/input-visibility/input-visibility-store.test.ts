@@ -72,4 +72,50 @@ describe('the text-entry strip', () => {
     store.toggle()
     expect(listener).toHaveBeenCalledTimes(2)
   })
+
+  describe('asking for the keyboard', () => {
+    it('puts the strip up for as long as the keyboard is wanted, and takes it away after', () => {
+      const store = createInputVisibilityStore()
+
+      store.beginTyping()
+      expect(store.visible()).toBe(true)
+      expect(store.typing()).toBe(true)
+
+      store.endTyping()
+      expect(store.visible()).toBe(false)
+      expect(store.typing()).toBe(false)
+    })
+
+    it('beats a strip that was put away, and leaves a pinned strip pinned', () => {
+      const store = createInputVisibilityStore()
+      store.reportContent(true)
+      store.toggle()
+      expect(store.visible()).toBe(false)
+
+      store.beginTyping()
+      expect(store.visible()).toBe(true)
+      store.endTyping()
+      expect(store.visible()).toBe(false)
+
+      store.toggle()
+      store.beginTyping()
+      store.endTyping()
+      expect(store.visible()).toBe(true)
+    })
+
+    it('tells listeners of each change of the request, even when the strip was up already', () => {
+      const store = createInputVisibilityStore()
+      store.toggle()
+      const listener = vi.fn()
+      store.subscribe(listener)
+
+      store.beginTyping()
+      store.beginTyping()
+      expect(listener).toHaveBeenCalledTimes(1)
+
+      store.endTyping()
+      store.endTyping()
+      expect(listener).toHaveBeenCalledTimes(2)
+    })
+  })
 })

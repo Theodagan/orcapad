@@ -129,8 +129,13 @@ export function resolveControllerIntents(
   }
 
   if (policy.dpadNavigation) {
+    const zoneModifier = isDown(next, 'x')
     for (const binding of DPAD_NAVIGATION_BINDINGS) {
       if (!wentDown(previous, next, binding.button)) {
+        continue
+      }
+      if (zoneModifier) {
+        intents.push({ kind: 'switch-zone', direction: binding.direction })
         continue
       }
       if (binding.intent === 'move-selection') {
@@ -175,7 +180,17 @@ export function createControllerIntentResolver(
       [
         ...resolveControllerIntents(previous, sample, policy),
         ...taps(previous, sample, context.captured),
-        ...(policy.dpadNavigation ? repeat(previous, sample, context.captured) : [])
+        ...(policy.dpadNavigation
+          ? repeat(previous, sample, context.captured).map((intent): ControllerIntent => {
+              if (isDown(sample, 'x') && intent.kind === 'move-selection') {
+                return { kind: 'switch-zone', direction: intent.direction }
+              }
+              if (isDown(sample, 'x') && intent.kind === 'move-horizontal') {
+                return { kind: 'switch-zone', direction: intent.direction }
+              }
+              return intent
+            })
+          : [])
       ],
       context.captured,
       policy.triggerDeadZone

@@ -11,6 +11,7 @@ import { resolveMobileTerminalInputGate } from '../terminal/terminal-input-conne
 import { createInitialSessionAutoCreateState } from './use-initial-session-terminal-autocreate'
 import { TerminalViewportResubscribeBudget } from './mobile-terminal-viewport-resubscribe'
 import { MobileTerminalDiagnostics } from './mobile-terminal-diagnostics'
+import { useDraftCaret } from './use-draft-caret'
 import { useBufferedTerminalDrafts } from '../terminal/use-buffered-terminal-drafts'
 import { useMobileTerminalInventoryRecoveryBridge } from './use-mobile-terminal-inventory-recovery'
 import type {
@@ -77,7 +78,16 @@ export function useMobileSessionTerminalRuntime(scope: MobileSessionScreenStateM
   // Why: don't subscribe until the WebView fires web-ready — iOS may defer JS in hidden WebViews and init() messages would queue unrendered.
   const webReadyHandlesRef = useRef<Set<string>>(new Set())
   const activeHandleRef = useRef<string | null>(null)
-  const bufferedTerminalDraftState = useBufferedTerminalDrafts({ activeHandle, activeHandleRef })
+  const bufferedTerminalDraftState = useBufferedTerminalDrafts({
+    activeHandle,
+    activeHandleRef
+  })
+  // The command field's caret, per terminal, so the pad and dictation edit the draft where it points.
+  const terminalDraftCaret = useDraftCaret({
+    scopeKey: activeHandle,
+    text: bufferedTerminalDraftState.input,
+    setText: bufferedTerminalDraftState.setInput
+  })
   const reconcileBufferedDraftsRef = useRef(bufferedTerminalDraftState.reconcileTerminalTabs)
   const activeSessionTabTypeRef = useRef<MobileSessionTabType | null>(null)
   const pendingActiveSessionTabIdRef = useRef<string | null>(null)
@@ -218,6 +228,7 @@ export function useMobileSessionTerminalRuntime(scope: MobileSessionScreenStateM
     reconcileBufferedDraftsRef,
     input: bufferedTerminalDraftState.input,
     setInput: bufferedTerminalDraftState.setInput,
+    terminalDraftCaret,
     getLiveInteractionGeneration: getLiveInputInteractionGeneration
   }
 }

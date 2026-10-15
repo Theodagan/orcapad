@@ -13,7 +13,7 @@ import { FOCUS_ZONES, ZONE_AGNOSTIC_INTENTS, type FocusZone } from './focus-zone
 export type FocusSnapshot = {
   readonly zones: readonly FocusZone[]
   readonly focusedZone: FocusZone | null
-  /** What `X` would move to; null when there is nowhere to go. */
+  /** The next zone in the legacy ordering; directional movement uses the visual layout. */
   readonly nextZone: FocusZone | null
   /** What a press can reach from the focused zone. */
   readonly reachable: ReadonlySet<ControllerIntentKind>
@@ -130,7 +130,14 @@ export function createFocusRegistry(): FocusRegistry {
       }
     }
     const nextZone = nextOf(present, zone)
-    if (nextZone !== null) {
+    if (
+      zone !== null &&
+      present.some((other) => {
+        const [x, y] = position[zone]
+        const [otherX, otherY] = position[other]
+        return other !== zone && (x === otherX || y === otherY)
+      })
+    ) {
       reachable.add('switch-zone')
     }
     return { zones: present, focusedZone: zone, nextZone, reachable, labels }
@@ -151,6 +158,48 @@ export function createFocusRegistry(): FocusRegistry {
     chosen = next
     changed()
     return next
+  }
+
+  const position: Record<FocusZone, readonly [number, number]> = {
+    list: [0, 0],
+    agent: [0, 0],
+    header: [0, -1],
+    shortcuts: [0, 1],
+    panels: [1, 0]
+  }
+
+  function moveZone(direction: 'up' | 'down' | 'left' | 'right'): boolean {
+    const current = focusedZone()
+    if (current === null) {
+      return false
+    }
+    const [x, y] = position[current]
+    const candidates = presentZones().filter((zone) => {
+      if (zone === current) {
+        return false
+      }
+      const [otherX, otherY] = position[zone]
+      if (direction === 'left') {
+        return otherX < x && otherY === y
+      }
+      if (direction === 'right') {
+        return otherX > x && otherY === y
+      }
+      if (direction === 'up') {
+        return otherY < y && otherX === x
+      }
+      return otherY > y && otherX === x
+    })
+    const next = candidates.sort((a, b) => {
+      const [ax, ay] = position[a]
+      const [bx, by] = position[b]
+      return Math.abs(ax - x) + Math.abs(ay - y) - Math.abs(bx - x) - Math.abs(by - y)
+    })[0]
+    if (next === undefined) {
+      return false
+    }
+    focusZone(next)
+    return true
   }
 
   function register(target: FocusTarget): () => void {
@@ -191,7 +240,7 @@ export function createFocusRegistry(): FocusRegistry {
 
   function dispatch(intent: ControllerIntent): boolean {
     if (intent.kind === 'switch-zone') {
-      return cycleZone() !== null
+      return intent.direction === undefined ? cycleZone() !== null : moveZone(intent.direction)
     }
     const zone = focusedZone()
     for (const target of ranked(zone)) {

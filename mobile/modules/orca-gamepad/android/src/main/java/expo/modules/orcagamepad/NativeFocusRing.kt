@@ -4,6 +4,7 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.view.ViewTreeObserver
+import android.widget.EditText
 import java.util.WeakHashMap
 
 /**
@@ -39,6 +40,8 @@ object NativeFocusRing {
     }
     root.viewTreeObserver.addOnGlobalFocusChangeListener(listener)
     watched[root] = listener
+    // A field that took focus before the watch began (autoFocus) gets the same treatment.
+    root.findFocus()?.let { ring(it) }
   }
 
   /**
@@ -65,6 +68,10 @@ object NativeFocusRing {
   }
 
   private fun ring(view: View) {
+    // A text field in a sheet takes `B` as delete-a-word; a sheet's window has no controller tap.
+    if (view is EditText) {
+      view.setOnKeyListener(TextInputWordDelete.keyListener)
+    }
     if (!displaced.containsKey(view)) {
       displaced[view] = view.foreground
     }
@@ -92,6 +99,9 @@ object NativeFocusRing {
   }
 
   private fun release(view: View) {
+    if (view is EditText) {
+      view.setOnKeyListener(null)
+    }
     if (displaced.containsKey(view)) {
       view.foreground = displaced.remove(view)
     }

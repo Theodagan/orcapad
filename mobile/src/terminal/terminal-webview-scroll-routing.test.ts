@@ -60,13 +60,16 @@ describe('TerminalWebView scroll routing', () => {
     expect(touchMoveBlock.indexOf('if (shouldRouteScrollToTerminalInput())')).toBeLessThan(
       touchMoveBlock.indexOf('if (enqueueNormalBufferScrollDelta(deltaY))')
     )
-    expect(touchMoveBlock).toContain('routeScrollLines(lines, x, y);')
+    expect(touchMoveBlock).toContain('queueTouchTuiScroll(lines, x, y);')
 
-    const momentumBlock = sliceBetween('function momentumStep()', 'if (Math.abs(vel) > MIN_VEL)')
+    const momentumBlock = sliceBetween(
+      'function momentumStep(frameTime)',
+      'if (Math.abs(vel) > MIN_VEL)'
+    )
     expect(momentumBlock.indexOf('if (shouldRouteScrollToTerminalInput())')).toBeLessThan(
       momentumBlock.indexOf('if (!applyNormalBufferScrollDelta(delta))')
     )
-    expect(momentumBlock).toContain('routeScrollLines(lines, ts.lastX, ts.lastY);')
+    expect(momentumBlock).toContain('queueTouchTuiScroll(lines, ts.lastX, ts.lastY);')
   })
 
   it('does not rubber-band normal scroll at scrollback edges', () => {
@@ -87,7 +90,10 @@ describe('TerminalWebView scroll routing', () => {
     expect(touchMoveBlock).toContain('if (enqueueNormalBufferScrollDelta(deltaY))')
     expect(touchMoveBlock).toContain('ts.velY = 0;')
 
-    const momentumBlock = sliceBetween('function momentumStep()', 'if (Math.abs(vel) > MIN_VEL)')
+    const momentumBlock = sliceBetween(
+      'function momentumStep(frameTime)',
+      'if (Math.abs(vel) > MIN_VEL)'
+    )
     expect(momentumBlock).toContain('if (!applyNormalBufferScrollDelta(delta))')
     expect(momentumBlock).toContain('ts.momentumId = null;')
   })
@@ -108,6 +114,29 @@ describe('TerminalWebView scroll routing', () => {
     )
     expect(resetBlock).toContain('pendingNormalScrollDeltaY = 0;')
     expect(resetBlock).toContain('cancelAnimationFrame(normalScrollFrameId);')
+  })
+
+  it('coalesces TUI touch messages per frame and uses real frame elapsed time for momentum', () => {
+    const queue = sliceBetween(
+      'function queueTouchTuiScroll(lines, x, y)',
+      'function updateTouchVelocity'
+    )
+    expect(queue).toContain('pendingTuiLines += lines;')
+    expect(queue).toContain('if (tuiFrame !== null) return;')
+    expect(queue).toContain('requestAnimationFrame(function()')
+    expect(queue).toContain('routeScrollLines(pending, tuiX, tuiY);')
+
+    const momentum = sliceBetween(
+      'function momentumStep(frameTime)',
+      'if (Math.abs(vel) > MIN_VEL)'
+    )
+    expect(momentum).toContain('frameTime - lastFrame')
+    expect(momentum).toContain('Math.pow(FRICTION, elapsed / 16)')
+    expect(momentum).toContain('var delta = vel * elapsed;')
+    expect(source).toContain(
+      'ts.surfaceWidth = term && term.element ? term.element.scrollWidth : 0;'
+    )
+    expect(source).toContain('if (ts.surfaceWidth * getTotalScale() > window.innerWidth + 1)')
   })
 
   it('drains terminal writes without shifting the queued array', () => {

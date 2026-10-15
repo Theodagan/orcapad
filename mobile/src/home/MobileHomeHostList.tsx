@@ -99,6 +99,7 @@ export function MobileHomeHostList(props: MobileHomeHostListProps) {
       {...reveal}
       ref={props.listRef}
       data={props.hosts}
+      extraData={props.selectedHostId}
       keyExtractor={(host) => host.id}
       contentContainerStyle={[
         styles.list,

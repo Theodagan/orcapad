@@ -141,7 +141,12 @@ describe('editing a chat draft with the pad', () => {
     }
   }
 
-  function mount(options: { value: string; caret: number; padAttached?: boolean }) {
+  function mount(options: {
+    value: string
+    caret: number
+    padAttached?: boolean
+    keyboardRequested?: boolean
+  }) {
     const onChangeText = vi.fn()
     const onCaretChange = vi.fn()
     const { reader, publish } = fakeReader()
@@ -161,6 +166,7 @@ describe('editing a chat draft with the pad', () => {
             onChangeText,
             caret: options.caret,
             onCaretChange,
+            keyboardRequested: options.keyboardRequested ?? false,
             onSend: () => Promise.resolve(true),
             sendSurfaceId: 'tab-a',
             getSendCompletionGeneration: () => 0,
@@ -242,5 +248,18 @@ describe('editing a chat draft with the pad', () => {
 
     expect(has('TextInput')).toBe(true)
     expect(renderer?.root.findByType('TextInput').props.selection).toEqual({ start: 3, end: 3 })
+  })
+
+  it('hands over to the keyboard input when the wheel asks for it, with the caret where it was', () => {
+    mount({ value: 'fix the bug', caret: 3, keyboardRequested: true })
+
+    expect(has('TextInput')).toBe(true)
+    expect(renderer?.root.findByType('TextInput').props.selection).toEqual({ start: 3, end: 3 })
+  })
+
+  it('keeps Android’s fullscreen keyboard off the field, so the screen can still be seen', () => {
+    mount({ value: 'fix the bug', caret: 3, keyboardRequested: true })
+
+    expect(renderer?.root.findByType('TextInput').props.disableFullscreenUI).toBe(true)
   })
 })

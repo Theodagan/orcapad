@@ -36,7 +36,7 @@ const WHEEL_HINTS: readonly ActionHint[] = [
 export function ActionHintBar({ wheelOpen = false }: { readonly wheelOpen?: boolean }): ReactNode {
   const { connected } = useControllerBinding()
   const { focusMode } = useSessionChrome()
-  const { reachable, labels, focusedZone, zones, nextZone } = useFocusSnapshot()
+  const { reachable, labels, focusedZone, zones } = useFocusSnapshot()
   const dictation = useActiveDictation()
   const insets = useSafeAreaInsets()
 
@@ -45,11 +45,15 @@ export function ActionHintBar({ wheelOpen = false }: { readonly wheelOpen?: bool
   const live = dictation !== null && isDictationActive(dictation.activity)
   const canDictate = dictation !== null && (live || dictation.canStart)
   const offered = canDictate ? new Set([...reachable, 'toggle-dictation' as const]) : reachable
-  // `X` names where it goes, which says both what it does and where you are headed.
   const wording = {
     ...labels,
-    ...(nextZone === null ? {} : { 'switch-zone': ZONE_NAME[nextZone] }),
-    ...(live ? { 'toggle-dictation': 'Stop dictation' } : {})
+    'switch-zone': 'Zones',
+    ...(live
+      ? {
+          'toggle-dictation':
+            dictation.activity === 'recording' ? 'Stop dictation' : 'Cancel dictation'
+        }
+      : {})
   }
   const hints = wheelOpen ? WHEEL_HINTS : actionHintsFor(offered, wording)
   if (!connected || focusMode || hints.length === 0) {

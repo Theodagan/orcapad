@@ -4,7 +4,7 @@ import type { ControllerAxis, ControllerButton } from './controller-sample'
 /**
  * The accepted PRD mapping (CTRL-R1), as data rather than as branches, so a test can assert the
  * contract row by row and a reader can see the whole scheme at once. `005` moved three rows:
- * `X` became the zone switch, dictation moved from `R3` to a tap of `Y`, and `R3` was freed.
+ * `Y` toggles dictation on tap, while `X` is held for directional zone movement.
  *
  * The D-pad set lives in its own module and must never be merged into this one: the boundary
  * test fails a module that declares both, because the two have different provenance and a
@@ -19,7 +19,7 @@ export type ControllerBinding =
       readonly chord: ControllerButton | null
       readonly intent: Extract<
         ControllerIntentKind,
-        'confirm' | 'back' | 'switch-zone' | 'toggle-dictation' | 'cycle-tab' | 'cycle-workspace'
+        'confirm' | 'back' | 'toggle-dictation' | 'cycle-tab' | 'cycle-workspace'
       >
       readonly direction: 'previous' | 'next' | null
       /**
@@ -44,6 +44,7 @@ export type ControllerBinding =
       readonly label: string
     }
   /** Named so the contract states what stays free, and a test can prove it stays inert. */
+  | { readonly kind: 'modifier'; readonly button: ControllerButton; readonly label: string }
   | { readonly kind: 'unassigned'; readonly button: ControllerButton; readonly label: string }
 
 export type ButtonBinding = Extract<ControllerBinding, { readonly kind: 'button' }>
@@ -119,15 +120,7 @@ export const PRD_CONTROLLER_BINDINGS: readonly ControllerBinding[] = [
     timing: 'press',
     label: 'B'
   },
-  {
-    kind: 'button',
-    button: 'x',
-    chord: null,
-    intent: 'switch-zone',
-    direction: null,
-    timing: 'press',
-    label: 'X'
-  },
+  { kind: 'modifier', button: 'x', label: 'X modifier' },
   {
     kind: 'button',
     button: 'y',

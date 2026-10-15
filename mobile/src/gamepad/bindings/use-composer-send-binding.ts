@@ -17,10 +17,15 @@ export type ComposerSendBindingOptions = {
   /** The composer's own rule for whether its send button would act. */
   readonly canSend: boolean
   readonly onSend: () => void
+  /**
+   * Above the surface for a field whose surface answers `A` itself: a terminal sends Enter, and
+   * while its command field holds a draft, `A` has to send the draft instead.
+   */
+  readonly priority?: number
 }
 
 export function useComposerSendBinding(options: ComposerSendBindingOptions): void {
-  const { composerKey, canSend, onSend } = options
+  const { composerKey, canSend, onSend, priority = FOCUS_PRIORITY.screen } = options
 
   const binding = useMemo<SurfaceBinding | null>(() => {
     if (!canSend) {
@@ -30,12 +35,12 @@ export function useComposerSendBinding(options: ComposerSendBindingOptions): voi
       focusTarget: {
         ...focusTargetFor(`composer:${composerKey}`, [['confirm', onSend]]),
         zone: 'agent',
-        priority: FOCUS_PRIORITY.screen,
+        priority,
         labels: { confirm: 'Send' }
       },
       wheelActions: []
     }
-  }, [composerKey, canSend, onSend])
+  }, [composerKey, canSend, onSend, priority])
 
   useSurfaceBinding(binding)
 }

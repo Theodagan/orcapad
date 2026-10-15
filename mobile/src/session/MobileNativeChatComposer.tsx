@@ -25,7 +25,7 @@ import {
 } from './MobileNativeChatSessionOptionPickers'
 import type { PendingNativeChatImage } from './mobile-native-chat-image-attachment'
 import { MobileNativeChatComposerAttachments } from './MobileNativeChatComposerAttachments'
-import { MobileNativeChatComposerCaretField } from './MobileNativeChatComposerCaretField'
+import { DraftCaretField } from './DraftCaretField'
 import {
   deleteWordBefore,
   moveCaretHorizontally,
@@ -45,6 +45,8 @@ type Props = {
   onCaretChange: (caret: number) => void
   /** Something more urgent than the draft (a permission prompt) has the D-pad. */
   editSuspended?: boolean
+  /** The wheel asked for the keyboard: hand over to the real input. */
+  keyboardRequested?: boolean
   onSend: (text: string) => Promise<boolean>
   /** Changes whenever the route focuses a different chat composer surface. */
   sendSurfaceId: string
@@ -81,6 +83,7 @@ export function MobileNativeChatComposer({
   caret: cursor,
   onCaretChange,
   editSuspended = false,
+  keyboardRequested = false,
   onSend,
   sendSurfaceId,
   getSendCompletionGeneration,
@@ -122,6 +125,15 @@ export function MobileNativeChatComposer({
       setPendingSelection({ start: cursor, end: cursor })
     }
   }, [caretMode, cursor])
+  // A keyboard request hands the draft to the real input, caret where the pad left it.
+  const [seenKeyboardRequest, setSeenKeyboardRequest] = useState(false)
+  if (seenKeyboardRequest !== keyboardRequested) {
+    setSeenKeyboardRequest(keyboardRequested)
+    if (keyboardRequested) {
+      setPendingSelection({ start: cursor, end: cursor })
+      setTouchEditing(true)
+    }
+  }
   const sendingRef = useRef(false)
   const mountedRef = useRef(true)
   const sendSurfaceIdRef = useRef(sendSurfaceId)
@@ -268,8 +280,10 @@ export function MobileNativeChatComposer({
       <View style={styles.composerInset} testID="native-chat-composer-inset">
         <View style={styles.bar} testID="native-chat-composer">
           {caretMode ? (
-            <MobileNativeChatComposerCaretField
+            <DraftCaretField
               value={value}
+              accessibilityLabel="Message draft"
+              testID="native-chat-composer-caret-field"
               caret={cursor}
               placeholder={placeholder}
               onPress={() => {
@@ -283,6 +297,8 @@ export function MobileNativeChatComposer({
               value={value}
               onChangeText={handleChange}
               autoFocus={touchEditing}
+              // Not Android's fullscreen keyboard: in landscape it hides the screen being typed into.
+              disableFullscreenUI
               onBlur={() => setTouchEditing(false)}
               // Controlled only transiently right after an autocomplete insert.
               selection={pendingSelection ?? undefined}

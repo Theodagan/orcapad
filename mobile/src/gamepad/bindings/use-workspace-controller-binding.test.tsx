@@ -15,7 +15,11 @@ vi.mock('react-native', () => ({
 type Row = { readonly worktreeId: string }
 const idOf = (row: Row): string => row.worktreeId
 
-type Sections = readonly { readonly data: readonly Row[] }[]
+type Sections = readonly {
+  readonly key?: string
+  readonly title?: string
+  readonly data: readonly Row[]
+}[]
 
 const sections: Sections = [
   { data: [{ worktreeId: 'one' }, { worktreeId: 'two' }] },
@@ -49,6 +53,7 @@ function fakeReader(): {
 function mount(rows: Sections = sections) {
   const { reader, publish } = fakeReader()
   const onOpen = vi.fn()
+  const onToggleSection = vi.fn()
   const onBack = vi.fn()
   const scrollBy = vi.fn()
   let dispatch: (intent: ControllerIntent) => boolean = () => false
@@ -59,6 +64,7 @@ function mount(rows: Sections = sections) {
       sections: rows,
       idOf,
       onOpen,
+      onToggleSection,
       onBack,
       scrollBy
     })
@@ -77,9 +83,11 @@ function mount(rows: Sections = sections) {
   return {
     renderer,
     dispatch: (intent: ControllerIntent) => act(() => void dispatch(intent)),
+    answers: (intent: ControllerIntent): boolean => dispatch(intent),
     connect: (connected: boolean) => act(() => publish({ ...neutralSample(0), connected })),
     selected: () => selected,
     onOpen,
+    onToggleSection,
     onBack,
     scrollBy
   }
@@ -168,5 +176,106 @@ describe('workspace controller binding', () => {
     list.dispatch({ kind: 'confirm' })
 
     expect(list.onOpen).not.toHaveBeenCalled()
+  })
+
+  describe('section headers are stops of their own', () => {
+    const projects: Sections = [
+      { key: 'a', title: 'Alpha', data: [{ worktreeId: 'one' }, { worktreeId: 'two' }] },
+      // Collapsed: its header is drawn and its rows are not.
+      { key: 'b', title: 'Beta', data: [] },
+      { key: 'c', title: 'Gamma', data: [{ worktreeId: 'three' }] }
+    ]
+    const down: ControllerIntent = { kind: 'move-selection', direction: 'down' }
+    const up: ControllerIntent = { kind: 'move-selection', direction: 'up' }
+    const press = (direction: 'left' | 'right'): ControllerIntent => ({
+      kind: 'move-horizontal',
+      direction
+    })
+
+    it('still starts on the first workspace, so A opens something at once', () => {
+      const list = mount(projects)
+      list.connect(true)
+
+      expect(list.selected()).toBe('one')
+    })
+
+    it('reaches a collapsed project instead of skipping it', () => {
+      const list = mount(projects)
+      list.connect(true)
+
+      list.dispatch(down)
+      list.dispatch(down)
+      expect(list.selected()).toBe('section-header:b')
+
+      list.dispatch(down)
+      expect(list.selected()).toBe('section-header:c')
+      list.dispatch(down)
+      expect(list.selected()).toBe('three')
+    })
+
+    it('opens a collapsed project with A, and does not open a workspace', () => {
+      const list = mount(projects)
+      list.connect(true)
+      list.dispatch(down)
+      list.dispatch(down)
+
+      list.dispatch({ kind: 'confirm' })
+
+      expect(list.onToggleSection).toHaveBeenCalledExactlyOnceWith('b')
+      expect(list.onOpen).not.toHaveBeenCalled()
+    })
+
+    it('opens a collapsed project with right and closes an open one with left, and nothing else', () => {
+      const list = mount(projects)
+      list.connect(true)
+      list.dispatch(down)
+      list.dispatch(down)
+      expect(list.selected()).toBe('section-header:b')
+
+      list.dispatch(press('right'))
+      expect(list.onToggleSection).toHaveBeenLastCalledWith('b')
+      // Already collapsed: left has nothing to close.
+      list.onToggleSection.mockClear()
+      list.dispatch(press('left'))
+      expect(list.onToggleSection).not.toHaveBeenCalled()
+
+      list.dispatch(down)
+      expect(list.selected()).toBe('section-header:c')
+      list.dispatch(press('left'))
+      expect(list.onToggleSection).toHaveBeenLastCalledWith('c')
+      list.onToggleSection.mockClear()
+      list.dispatch(press('right'))
+      expect(list.onToggleSection).not.toHaveBeenCalled()
+    })
+
+    it('goes up from a workspace to its project with left, so a section can be closed from inside it', () => {
+      const list = mount(projects)
+      list.connect(true)
+      list.dispatch(down)
+      expect(list.selected()).toBe('two')
+
+      list.dispatch(press('left'))
+
+      expect(list.selected()).toBe('section-header:a')
+      list.dispatch(up)
+      expect(list.selected()).toBe('section-header:a')
+    })
+
+    it('cycles worktrees without stopping on a header', () => {
+      const list = mount(projects)
+      list.connect(true)
+
+      list.dispatch({ kind: 'cycle-workspace', direction: 'next' })
+      list.dispatch({ kind: 'cycle-workspace', direction: 'next' })
+
+      expect(list.selected()).toBe('three')
+    })
+
+    it('leaves left and right to whatever else wants them when a workspace has no project to go up to', () => {
+      const list = mount()
+      list.connect(true)
+
+      expect(list.answers({ kind: 'move-horizontal', direction: 'left' })).toBe(false)
+    })
   })
 })

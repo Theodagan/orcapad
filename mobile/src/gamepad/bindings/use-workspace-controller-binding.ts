@@ -5,8 +5,13 @@ import {
   LIST_SCROLL_MINIMUM_FIRST_STEP_POINTS,
   LIST_SCROLL_POINTS_PER_SECOND_AT_FULL_PRESSURE
 } from './controller-scroll-rate'
-import { nextSelectedId, selectedItem } from './list-selection'
-import { flattenSectionOrder, type OrderedSection } from './workspace-list-order'
+import { DECLINED } from '../focus/focus-target'
+import {
+  flattenListStops,
+  nextStopId,
+  sectionHeaderId,
+  type OrderedSection
+} from './workspace-list-order'
 import { FOCUS_PRIORITY } from '../focus/focus-zones'
 import { useZoneFocused } from '../zones/use-zone-focused'
 import { focusTargetFor, type IntentHandlerEntry, type SurfaceBinding } from './surface-binding'
@@ -28,6 +33,8 @@ export type WorkspaceControllerBindingOptions<T> = {
   readonly sections: readonly OrderedSection<T>[]
   readonly idOf: (item: T) => string
   readonly onOpen: (item: T) => void
+  /** Opens or closes a section: the same call its header's tap makes. */
+  readonly onToggleSection?: (sectionKey: string) => void
   readonly onBack: () => void
   /** Moves the list from where it really is; the screen wires it to the list's own offset. */
   readonly scrollBy: (delta: number) => void
@@ -36,7 +43,7 @@ export type WorkspaceControllerBindingOptions<T> = {
 export function useWorkspaceControllerBinding<T>(
   options: WorkspaceControllerBindingOptions<T>
 ): string | null {
-  const { sections, idOf, onOpen, onBack } = options
+  const { sections, idOf, onOpen, onBack, onToggleSection } = options
   const scrollByRef = useRef(options.scrollBy)
   useLayoutEffect(() => {
     scrollByRef.current = options.scrollBy
@@ -52,8 +59,10 @@ export function useWorkspaceControllerBinding<T>(
   const { connected } = useControllerBinding()
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  const order = useMemo(() => flattenSectionOrder(sections), [sections])
-  const firstId = order[0] === undefined ? null : idOf(order[0])
+  const stops = useMemo(() => flattenListStops(sections, idOf), [sections, idOf])
+  // A first press lands on the first workspace, so `A` opens something at once; headers are for
+  // moving on to a section that shows no rows.
+  const firstId = (stops.find((stop) => stop.kind === 'item') ?? stops[0])?.id ?? null
 
   useEffect(() => {
     // Selection belongs to the controller, so it appears with one and leaves with it (BIND-AC10).
@@ -61,17 +70,42 @@ export function useWorkspaceControllerBinding<T>(
   }, [connected, firstId])
 
   const binding = useMemo<SurfaceBinding>(() => {
-    const move = (direction: 'up' | 'down'): void => {
-      setSelectedId((current) => nextSelectedId(order, idOf, current, direction))
+    const move = (direction: 'up' | 'down', only: 'all' | 'items'): void => {
+      setSelectedId((current) => nextStopId(stops, current, direction, only))
     }
+    const selected = stops.find((stop) => stop.id === selectedId)
     const entries: IntentHandlerEntry[] = [
       [
         'confirm',
         () => {
-          const item = selectedItem(order, idOf, selectedId)
-          if (item !== null) {
-            onOpen(item)
+          if (selected?.kind === 'item') {
+            onOpen(selected.item)
+          } else if (selected?.kind === 'header') {
+            onToggleSection?.(selected.sectionKey)
           }
+        }
+      ],
+      [
+        // A header opens to the right and closes to the left; a row's left goes up to its header.
+        'move-horizontal',
+        (intent) => {
+          if (intent.kind !== 'move-horizontal' || selected === undefined) {
+            return DECLINED
+          }
+          if (selected.kind === 'header') {
+            if (selected.collapsed === (intent.direction === 'right')) {
+              onToggleSection?.(selected.sectionKey)
+              return undefined
+            }
+            return DECLINED
+          }
+          const headerId =
+            selected.sectionKey === null ? null : sectionHeaderId(selected.sectionKey)
+          if (intent.direction === 'left' && stops.some((stop) => stop.id === headerId)) {
+            setSelectedId(headerId)
+            return undefined
+          }
+          return DECLINED
         }
       ],
       ['back', onBack],
@@ -93,7 +127,7 @@ export function useWorkspaceControllerBinding<T>(
           if (intent.kind !== 'cycle-workspace') {
             return
           }
-          move(intent.direction === 'next' ? 'down' : 'up')
+          move(intent.direction === 'next' ? 'down' : 'up', 'items')
         }
       ],
       [
@@ -101,7 +135,7 @@ export function useWorkspaceControllerBinding<T>(
         'move-selection',
         (intent) => {
           if (intent.kind === 'move-selection') {
-            move(intent.direction)
+            move(intent.direction, 'all')
           }
         }
       ]
@@ -116,7 +150,7 @@ export function useWorkspaceControllerBinding<T>(
       },
       wheelActions: []
     }
-  }, [order, idOf, selectedId, onOpen, onBack, integrator])
+  }, [stops, selectedId, onOpen, onToggleSection, onBack, integrator])
 
   useSurfaceBinding(binding)
   // The ring follows the pad: while it is pointed at the header, no row is where `A` would act.

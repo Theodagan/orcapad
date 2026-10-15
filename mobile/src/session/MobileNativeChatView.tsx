@@ -191,7 +191,7 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
     keyboardInset = 0
   } = props
   const insets = useSafeAreaInsets()
-  const composerVisible = useMobileNativeChatComposerVisibility({
+  const { visible: composerVisible, keyboardRequested } = useMobileNativeChatComposerVisibility({
     hasDraft: composerText.trim().length > 0 || (attachments?.length ?? 0) > 0,
     keyboardInset
   })
@@ -446,6 +446,7 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
           filePaths={filePaths}
           onNeedFiles={onNeedFiles}
           caret={composerCaret}
+          keyboardRequested={keyboardRequested}
           onCaretChange={onComposerCaretChange}
           editSuspended={ask != null || permission != null || question != null}
         />

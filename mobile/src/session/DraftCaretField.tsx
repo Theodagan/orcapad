@@ -1,4 +1,11 @@
-import { Pressable, StyleSheet, Text } from 'react-native'
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle
+} from 'react-native'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import { caretCellLength, clampCaret } from './composer-text-editing'
 
@@ -11,17 +18,26 @@ import { caretCellLength, clampCaret } from './composer-text-editing'
  * width of its own and the text never reflows as it moves.
  */
 
-export function MobileNativeChatComposerCaretField({
+export function DraftCaretField({
   value,
   caret,
   placeholder,
-  onPress
+  onPress,
+  accessibilityLabel,
+  testID,
+  style,
+  textStyle
 }: {
   readonly value: string
   readonly caret: number
   readonly placeholder: string
   /** A touch means the user wants the keyboard: hand over to the real input. */
   readonly onPress: () => void
+  readonly accessibilityLabel: string
+  readonly testID: string
+  /** The field it stands in for, so swapping the two does not move the layout. */
+  readonly style?: StyleProp<ViewStyle>
+  readonly textStyle?: StyleProp<TextStyle>
 }): React.JSX.Element {
   const at = clampCaret(value, caret)
   const cell = caretCellLength(value, at)
@@ -32,13 +48,13 @@ export function MobileNativeChatComposerCaretField({
 
   return (
     <Pressable
-      accessibilityLabel="Message draft"
+      accessibilityLabel={accessibilityLabel}
       accessibilityHint="Tap to type with the keyboard"
       onPress={onPress}
-      style={styles.field}
-      testID="native-chat-composer-caret-field"
+      style={[styles.field, style]}
+      testID={testID}
     >
-      <Text style={styles.text}>
+      <Text style={[styles.text, textStyle]}>
         {value.slice(0, at)}
         <Text style={styles.caret}>{block}</Text>
         {value.length === 0 ? <Text style={styles.placeholder}>{placeholder}</Text> : after}

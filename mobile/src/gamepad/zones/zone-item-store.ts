@@ -113,7 +113,9 @@ export function createZoneItemStore(registry: FocusRegistry): ZoneItemStore {
       // Read when the hint bar asks, because the main zone may mount after this one does.
       get labels() {
         const main = mainZone()
-        return main === undefined ? policy.labels : { ...policy.labels, back: MAIN_ZONE_NAME[main] }
+        return main === undefined || main === zone
+          ? policy.labels
+          : { ...policy.labels, back: MAIN_ZONE_NAME[main] }
       },
       handle: (intent) => {
         if (intent.kind === 'confirm') {
@@ -126,7 +128,7 @@ export function createZoneItemStore(registry: FocusRegistry): ZoneItemStore {
           // B leaves a row of buttons for the thing they belong to. With nothing to go back to it
           // is not this zone's to answer, and falls through to leaving the screen.
           const main = mainZone()
-          if (main === undefined) {
+          if (main === undefined || main === zone) {
             return DECLINED
           }
           registry.focusZone(main)

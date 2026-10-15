@@ -125,7 +125,7 @@ describe('ActionHintBar', () => {
       createElement(Surface, { id: 'header', zone: 'header', accepts: ['confirm'] })
     ])
 
-    expect(texts()).toEqual(['Agent', 'A', 'Select', 'X', 'Header'])
+    expect(texts()).toEqual(['Agent', 'A', 'Select', 'X+D-pad', 'Zones'])
   })
 
   it('does not name a zone when there is only one', () => {
@@ -172,6 +172,16 @@ describe('ActionHintBar', () => {
       })
     })
     expect(texts()).toContain('Stop dictation')
+
+    act(() => {
+      dictation.register({
+        activity: 'processing',
+        toggle: () => {},
+        canStart: false,
+        onUnavailable: () => {}
+      })
+    })
+    expect(texts()).toContain('Cancel dictation')
   })
 
   it('does not offer dictation it cannot start', () => {

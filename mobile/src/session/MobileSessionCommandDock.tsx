@@ -11,7 +11,10 @@ import {
   useInputVisibility,
   useReportInputContent
 } from '../gamepad/input-visibility/use-input-visibility'
-import { colors } from '../theme/mobile-theme'
+import { colors, spacing, typography } from '../theme/mobile-theme'
+import { useFocusOnKeyboardRequest } from './use-focus-on-keyboard-request'
+import { useTerminalDraftPadEditing } from './use-terminal-draft-pad-editing'
+import { DraftCaretField } from './DraftCaretField'
 import { styles } from './mobile-session-styles'
 import type { MobileSessionController } from './use-mobile-session-controller'
 
@@ -47,13 +50,41 @@ export function MobileSessionCommandDock({ controller }: { controller: MobileSes
     activeMarkdownTab,
     activeFileTab,
     activeBrowserTab,
-    keyboardLift
+    keyboardLift,
+    activeHandle,
+    terminalDraftCaret
   } = controller
   // With a pad attached the strip stays away until the wheel asks for it, or a typed command is
   // waiting in it; a raised keyboard means someone is typing into it, so it never goes then.
   const inputVisibility = useInputVisibility()
   useReportInputContent(!liveInputEnabled && bufferedTerminalDraftState.input.trim().length > 0)
   const inputBarVisible = inputVisibility.visible || keyboardLift > 0
+  const padEditing = useTerminalDraftPadEditing({
+    handle: activeHandle,
+    draft: bufferedTerminalDraftState.input,
+    setDraft: bufferedTerminalDraftState.setInput,
+    caret: terminalDraftCaret.caret,
+    setCaret: terminalDraftCaret.setCaret,
+    available:
+      inputBarVisible &&
+      !liveInputEnabled &&
+      canCompose &&
+      !activeMarkdownTab &&
+      !activeFileTab &&
+      !activeBrowserTab &&
+      !showNativeChat,
+    canSend,
+    onSend: () => void handleSend(),
+    keyboardRequested: inputVisibility.typing
+  })
+  // The wheel asked for the keyboard: the field takes focus once the bar is on screen.
+  useFocusOnKeyboardRequest(inputVisibility.typing, () => {
+    if (liveInputEnabled) {
+      focusLiveInput()
+    } else {
+      commandInputRef.current?.focus()
+    }
+  })
   return (
     !activeMarkdownTab &&
     !activeFileTab &&
@@ -62,7 +93,10 @@ export function MobileSessionCommandDock({ controller }: { controller: MobileSes
       <View
         style={[
           styles.commandDock,
-          { paddingBottom: insets.bottom, transform: [{ translateY: -keyboardLift }] }
+          {
+            paddingBottom: insets.bottom,
+            transform: [{ translateY: -keyboardLift }]
+          }
         ]}
       >
         <MobileSessionAccessoryKeys controller={controller} />
@@ -126,6 +160,8 @@ export function MobileSessionCommandDock({ controller }: { controller: MobileSes
                   )
                 }}
                 placeholder=""
+                // Not Android's fullscreen keyboard: in landscape it hides the screen being typed into.
+                disableFullscreenUI
                 showSoftInputOnFocus
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -142,35 +178,52 @@ export function MobileSessionCommandDock({ controller }: { controller: MobileSes
             </View>
           ) : (
             <View style={styles.inputBar}>
-              <TextInput
-                ref={commandInputRef}
-                // Why: Android caches IME inputType at mount, so toggling autocomplete must remount there; iOS updates in place.
-                key={
-                  Platform.OS === 'android'
-                    ? autocompleteEnabled
-                      ? 'cmd-input-ac-on'
-                      : 'cmd-input-ac-off'
-                    : 'cmd-input'
-                }
-                style={styles.textInput}
-                value={bufferedTerminalDraftState.input}
-                // Why: iOS kills active dictation/IME if JS writes a value differing from native text; store raw, normalize at send.
-                onChangeText={bufferedTerminalDraftState.setInput}
-                placeholder="Type a command…"
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="none"
-                autoCorrect={autocompleteEnabled}
-                spellCheck={autocompleteEnabled}
-                smartInsertDelete={false}
-                // Why: not autofill content, but keyboard must stay default so non-Latin IMEs remain selectable.
-                autoComplete="off"
-                keyboardType={getTerminalCommandKeyboardType(Platform.OS, autocompleteEnabled)}
-                returnKeyType="send"
-                blurOnSubmit={false}
-                // Why: composing is local — an outage must not lock the field or discard typed text (#6713).
-                editable={canCompose}
-                onSubmitEditing={() => void handleSend()}
-              />
+              {padEditing.caretMode ? (
+                <DraftCaretField
+                  value={bufferedTerminalDraftState.input}
+                  caret={terminalDraftCaret.caret}
+                  placeholder="Type a command…"
+                  onPress={padEditing.beginTouchEditing}
+                  accessibilityLabel="Command draft"
+                  testID="terminal-command-caret-field"
+                  style={caretFieldStyle}
+                  textStyle={caretTextStyle}
+                />
+              ) : (
+                <TextInput
+                  ref={commandInputRef}
+                  // Why: Android caches IME inputType at mount, so toggling autocomplete must remount there; iOS updates in place.
+                  key={
+                    Platform.OS === 'android'
+                      ? autocompleteEnabled
+                        ? 'cmd-input-ac-on'
+                        : 'cmd-input-ac-off'
+                      : 'cmd-input'
+                  }
+                  style={styles.textInput}
+                  value={bufferedTerminalDraftState.input}
+                  // Why: iOS kills active dictation/IME if JS writes a value differing from native text; store raw, normalize at send.
+                  onChangeText={bufferedTerminalDraftState.setInput}
+                  placeholder="Type a command…"
+                  placeholderTextColor={colors.textMuted}
+                  disableFullscreenUI
+                  autoCapitalize="none"
+                  autoCorrect={autocompleteEnabled}
+                  spellCheck={autocompleteEnabled}
+                  smartInsertDelete={false}
+                  // Why: not autofill content, but keyboard must stay default so non-Latin IMEs remain selectable.
+                  autoComplete="off"
+                  keyboardType={getTerminalCommandKeyboardType(Platform.OS, autocompleteEnabled)}
+                  returnKeyType="send"
+                  blurOnSubmit={false}
+                  // Why: composing is local — an outage must not lock the field or discard typed text (#6713).
+                  editable={canCompose}
+                  onSubmitEditing={() => void handleSend()}
+                  selection={padEditing.selection}
+                  onSelectionChange={padEditing.onSelectionChange}
+                  onBlur={padEditing.endTouchEditing}
+                />
+              )}
               <MobileTerminalInputActions
                 canSend={canSend}
                 isAttaching={isAttaching}
@@ -203,3 +256,19 @@ export function MobileSessionCommandDock({ controller }: { controller: MobileSes
 }
 
 const hiddenInputBar = { display: 'none' } as const
+
+// Sized like the command field it stands in for, so the strip does not jump when the two swap.
+const caretFieldStyle = {
+  flex: 1,
+  width: undefined,
+  minHeight: 34,
+  maxHeight: 102,
+  paddingTop: spacing.xs,
+  paddingBottom: spacing.xs,
+  marginRight: spacing.sm,
+  justifyContent: 'center'
+} as const
+const caretTextStyle = {
+  fontSize: 14,
+  fontFamily: typography.monoFamily
+} as const

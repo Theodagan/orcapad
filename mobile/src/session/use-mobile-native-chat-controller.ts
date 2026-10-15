@@ -4,7 +4,7 @@ import type { ConnectionState } from '../transport/types'
 import type { MobileNativeChatTab } from './mobile-native-chat-eligibility'
 import { useMobileNativeChatAskDismiss } from './use-mobile-native-chat-ask-dismiss'
 import { mobileNativeChatScopeKey } from './mobile-native-chat-scope-key'
-import { useMobileNativeChatComposerCaret } from './use-mobile-native-chat-composer-caret'
+import { useDraftCaret } from './use-draft-caret'
 import { useMobileNativeChatDrafts } from './use-mobile-native-chat-drafts'
 import { useMobileNativeChatFileSearch } from './use-mobile-native-chat-file-search'
 import { useMobileNativeChatMessageSend } from './use-mobile-native-chat-message-send'
@@ -127,12 +127,15 @@ export function useMobileNativeChatController(args: {
     transcriptSettled: nativeChatSession.status === 'ready'
   })
 
-  const { chatComposerCaret, setChatComposerCaret, insertChatDictation } =
-    useMobileNativeChatComposerCaret({
-      scopeKey: mobileNativeChatScopeKey(hostId, worktreeId, activeSessionTabId),
-      text: chatComposerText,
-      setText: setChatComposerText
-    })
+  const {
+    caret: chatComposerCaret,
+    setCaret: setChatComposerCaret,
+    insertDictation: insertChatDictation
+  } = useDraftCaret({
+    scopeKey: mobileNativeChatScopeKey(hostId, worktreeId, activeSessionTabId),
+    text: chatComposerText,
+    setText: setChatComposerText
+  })
 
   // Deliberately not gated on the chat view being visible: the streaming gate
   // has to tell "hidden mid-turn" from "the turn ended".

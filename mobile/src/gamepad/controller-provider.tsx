@@ -111,7 +111,10 @@ const INERT_INPUT_VISIBILITY: InputVisibilityStore = {
   subscribe: () => () => {},
   visible: () => true,
   toggle: () => {},
-  reportContent: () => {}
+  reportContent: () => {},
+  typing: () => false,
+  beginTyping: () => {},
+  endTyping: () => {}
 }
 
 const INERT_SESSION_CHROME: SessionChromeStore = {

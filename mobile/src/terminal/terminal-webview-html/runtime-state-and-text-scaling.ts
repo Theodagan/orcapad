@@ -155,6 +155,7 @@ export const TERMINAL_HTML_RUNTIME_STATE_AND_TEXT_SCALING = `  var PRIVATE_MODE_
 
   function updateScrollIndicator(reveal) {
     if (!scrollIndicator || !scrollThumb || !term || !term.buffer || !term.buffer.active) return;
+    if (!reveal && !scrollIndicator.classList.contains('visible')) return;
     var buffer = term.buffer.active;
     var maxViewportY = buffer.baseY || 0;
     if (maxViewportY <= 0 || shouldRouteScrollToTerminalInput()) {

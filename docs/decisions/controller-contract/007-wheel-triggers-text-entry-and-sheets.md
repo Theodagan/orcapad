@@ -3,6 +3,7 @@
 **Date:** 2026-10-05
 **Status:** applied in `005` round 2 (USE-T16 to USE-T21), pending human ratification
 **Amends:** decision 004 (`A` and `B` steer an open wheel), decision 006 (the right wheel's contents)
+**Amended by:** `009` (a Keyboard segment on the right wheel; `B` deletes in any text field)
 
 ## What the specifications said
 

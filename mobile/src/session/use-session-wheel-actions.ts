@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { AGENT_WHEEL_ACTION_IDS } from '../gamepad/bindings/agent-wheel-action-ids'
 import { NAVIGATION_WHEEL_ACTION_IDS } from '../gamepad/bindings/navigation-wheel-actions'
 import { useWheelActions } from '../gamepad/bindings/use-wheel-actions'
@@ -19,6 +19,9 @@ import type { MobileSessionController } from './use-mobile-session-controller'
  * Stopping is not here: it belongs to the surface that can stop, which is the chat or the
  * terminal in front of you.
  */
+/** If the keyboard has not come up this long after it was asked for, the strip stops waiting for it. */
+const KEYBOARD_REQUEST_PATIENCE_MS = 4000
+
 export function useSessionWheelActions(controller: MobileSessionController): void {
   const {
     client,
@@ -28,11 +31,34 @@ export function useSessionWheelActions(controller: MobileSessionController): voi
     showNativeChat,
     nativeChatTranscriptIsLocalReadable,
     toggleTabChatView,
+    keyboardLift,
+    dismissSoftwareKeyboard,
     handleCloseSessionTab,
     handleCreateTerminal
   } = controller
   const connected = connState === 'connected' && client !== null
   const input = useInputVisibility()
+  const { endTyping } = input
+  const keyboardUp = keyboardLift > 0
+  // A request for the keyboard ends when it has come up and gone again, or when it never came.
+  const keyboardWasUp = useRef(false)
+  useEffect(() => {
+    if (keyboardUp) {
+      keyboardWasUp.current = true
+      return
+    }
+    if (keyboardWasUp.current) {
+      keyboardWasUp.current = false
+      endTyping()
+    }
+  }, [keyboardUp, endTyping])
+  useEffect(() => {
+    if (!input.typing || keyboardUp) {
+      return
+    }
+    const gaveUp = setTimeout(endTyping, KEYBOARD_REQUEST_PATIENCE_MS)
+    return () => clearTimeout(gaveUp)
+  }, [input.typing, keyboardUp, endTyping])
   const chrome = useSessionChrome()
   const resetChrome = chrome.reset
   // Focus mode and the hidden shortcuts belong to the session: they end when it does.
@@ -45,6 +71,9 @@ export function useSessionWheelActions(controller: MobileSessionController): voi
         (activeSessionTab.type === 'terminal' &&
           resolveMobileTerminalTabAgentId(activeSessionTab) !== null))
     const availability = connected ? ('available' as const) : ('unavailable' as const)
+    // A terminal has its live input and an agent session its composer; a file or a page has no field.
+    const canType =
+      activeSessionTab?.type === 'terminal' || activeSessionTab?.type === 'agent-session'
 
     return [
       {
@@ -86,6 +115,13 @@ export function useSessionWheelActions(controller: MobileSessionController): voi
         }
       },
       {
+        id: AGENT_WHEEL_ACTION_IDS.keyboard,
+        // The on-screen keyboard for the field in front of you, for words the dictation gets wrong.
+        label: keyboardUp ? 'Hide keyboard' : 'Keyboard',
+        availability: canType ? 'available' : 'unavailable',
+        run: () => (keyboardUp ? dismissSoftwareKeyboard() : input.beginTyping())
+      },
+      {
         id: AGENT_WHEEL_ACTION_IDS.toggleInput,
         label: input.visible ? 'Hide input' : 'Show input',
         availability: 'available',
@@ -114,6 +150,9 @@ export function useSessionWheelActions(controller: MobileSessionController): voi
     toggleTabChatView,
     input.visible,
     input.toggle,
+    input.beginTyping,
+    keyboardUp,
+    dismissSoftwareKeyboard,
     chrome.focusMode,
     chrome.shortcutsHidden,
     chrome.toggleFocusMode,

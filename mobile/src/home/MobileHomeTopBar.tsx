@@ -2,6 +2,8 @@ import { Settings } from 'lucide-react-native'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { OrcaLogo } from '../components/OrcaLogo'
 import { colors, spacing } from '../theme/mobile-theme'
+import { ZoneItem } from '../gamepad/zones/ZoneItem'
+import { ControllerFocusRing } from '../gamepad/focus/ControllerFocusRing'
 
 export function MobileHomeTopBar({ onOpenSettings }: { onOpenSettings: () => void }) {
   return (
@@ -12,12 +14,20 @@ export function MobileHomeTopBar({ onOpenSettings }: { onOpenSettings: () => voi
         </View>
         <Text style={styles.brandName}>Orca</Text>
       </View>
-      <Pressable
-        style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
-        onPress={onOpenSettings}
-      >
-        <Settings size={18} color={colors.textSecondary} />
-      </Pressable>
+      <ZoneItem zone="header" id="home:settings" order={0} onActivate={onOpenSettings}>
+        {({ focused, focusRef }) => (
+          <Pressable
+            ref={focusRef}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+            style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+            onPress={onOpenSettings}
+          >
+            <Settings size={18} color={colors.textSecondary} />
+            {focused ? <ControllerFocusRing /> : null}
+          </Pressable>
+        )}
+      </ZoneItem>
     </View>
   )
 }

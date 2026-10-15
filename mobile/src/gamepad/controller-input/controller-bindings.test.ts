@@ -19,7 +19,7 @@ describe('the accepted PRD mapping', () => {
       'Right stick',
       'A',
       'B',
-      'X',
+      'X modifier',
       'Y',
       'R3',
       'L3'
@@ -70,12 +70,12 @@ describe('the accepted PRD mapping', () => {
     ])
   })
 
-  it('switches zone on X and no longer stops anything with it', () => {
+  it('reserves X for directional zone chords without an action of its own', () => {
     const x = PRD_CONTROLLER_BINDINGS.find(
-      (binding) => binding.kind === 'button' && binding.button === 'x'
+      (binding) => binding.kind === 'modifier' && binding.button === 'x'
     )
 
-    expect(x).toMatchObject({ intent: 'switch-zone', timing: 'press' })
+    expect(x).toEqual({ kind: 'modifier', button: 'x', label: 'X modifier' })
   })
 
   it('gives the chord button exactly one action of its own: a tap that toggles dictation', () => {

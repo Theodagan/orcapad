@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useControllerBinding } from '../controller-provider'
+import { useControllerBinding, useFocusSnapshot } from '../controller-provider'
 import {
   createScrollIntegrator,
   LIST_SCROLL_MINIMUM_FIRST_STEP_POINTS,
@@ -47,6 +47,7 @@ export function useHomeControllerBinding<T extends { readonly id: string }>(
     []
   )
   const { connected } = useControllerBinding()
+  const { focusedZone } = useFocusSnapshot()
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const firstHostId = hosts[0]?.id ?? null
@@ -57,9 +58,9 @@ export function useHomeControllerBinding<T extends { readonly id: string }>(
       if (!connected) {
         return null
       }
-      return current ?? firstHostId
+      return current !== null && hosts.some((host) => host.id === current) ? current : firstHostId
     })
-  }, [connected, firstHostId])
+  }, [connected, firstHostId, hosts])
 
   const binding = useMemo(() => {
     const entries: IntentHandlerEntry[] = [
@@ -97,12 +98,12 @@ export function useHomeControllerBinding<T extends { readonly id: string }>(
       ]
     ]
     return {
-      focusTarget: focusTargetFor('home', entries),
+      focusTarget: { ...focusTargetFor('home', entries), zone: 'list' as const },
       // BIND-R10: an id a preset may name, declared next door so preset data never imports React.
       wheelActions: homeWheelActions(onPairDesktop)
     }
   }, [hosts, selectedId, onOpen, onPairDesktop, integrator])
 
   useSurfaceBinding(binding)
-  return selectedId
+  return focusedZone === 'list' ? selectedId : null
 }

@@ -8,26 +8,27 @@ import {
   type SetStateAction
 } from 'react'
 import { useControllerBinding } from '../gamepad/controller-provider'
-import { clampCaret, insertDictation } from './composer-text-editing'
+import { clampCaret, insertDictation as insertDictationAt } from './composer-text-editing'
 
 /**
- * Where the caret is in each chat's draft. It lives above the composer, next to the draft it
- * points into, because the things that move it are not all the composer's: the D-pad edits it and
- * dictation inserts at it, and a composer that is hidden or remounted must not lose its place.
+ * Where the caret is in each draft: a chat's composer or a terminal's command field. It lives above
+ * the field, next to the draft it points into, because the things that move it are not all the
+ * field's: the D-pad edits it and dictation inserts at it, and a field that is hidden or remounted
+ * must not lose its place.
  *
  * A draft nobody has moved the caret in has it at the end, which is where words have always been
  * appended, so nothing changes for a user who never touches it.
  */
-export function useMobileNativeChatComposerCaret(args: {
-  /** Which draft the caret belongs to; null while there is no chat tab. */
+export function useDraftCaret(args: {
+  /** Which draft the caret belongs to; null while there is none. */
   scopeKey: string | null
   text: string
   setText: Dispatch<SetStateAction<string>>
 }): {
-  chatComposerCaret: number
-  setChatComposerCaret: (caret: number) => void
+  caret: number
+  setCaret: (caret: number) => void
   /** Sets a dictated phrase into the draft at the caret, and leaves the caret after it. */
-  insertChatDictation: (transcript: string) => void
+  insertDictation: (transcript: string) => void
 } {
   const { scopeKey, text, setText } = args
   const { connected: padAttached } = useControllerBinding()
@@ -51,7 +52,7 @@ export function useMobileNativeChatComposerCaret(args: {
     }
   }, [scopeKey, text])
 
-  const setChatComposerCaret = useCallback(
+  const setCaret = useCallback(
     (next: number) => {
       if (scopeKey === null) {
         return
@@ -63,19 +64,19 @@ export function useMobileNativeChatComposerCaret(args: {
     [scopeKey]
   )
 
-  const insertChatDictation = useCallback(
+  const insertDictation = useCallback(
     (transcript: string) => {
       if (scopeKey === null) {
         return
       }
       // Without a pad nobody can have placed the caret on purpose, so words go where they always did.
       const { text: current, caret: placed } = latest.current
-      const edit = insertDictation(current, padAttached ? placed : current.length, transcript)
+      const edit = insertDictationAt(current, padAttached ? placed : current.length, transcript)
       setText(edit.text)
       setCarets((previous) => ({ ...previous, [scopeKey]: edit.caret }))
     },
     [scopeKey, setText, padAttached]
   )
 
-  return { chatComposerCaret: caret, setChatComposerCaret, insertChatDictation }
+  return { caret, setCaret, insertDictation }
 }

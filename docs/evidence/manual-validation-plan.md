@@ -178,6 +178,15 @@ ends in something to read.
     come back.
 18. **Shortcuts.** Hide them from the left wheel: the row goes, `X` skips its zone. Show them again.
     With the soft keyboard up the row must stay.
+19. **Collapsed projects.** On the host list collapse a project by touch, then walk the D-pad: it must
+    stop on the collapsed project's header. `A` or right opens it, left closes it, left on a row goes
+    up to its header, and `L1`/`R1` still step over worktrees only.
+20. **`B` in a text field.** Raise the keyboard on a chat draft, press `B`: a word goes and the screen
+    stays. Do the same in a sheet's field and in a terminal's input bar. In an opencode terminal with
+    the strip hidden and no keyboard, `B` is still Escape.
+21. **Keyboard.** From the right wheel pick Keyboard in a terminal and in a chat: the soft keyboard
+    rises on the input without taking the whole screen, the session stays visible above it, and the
+    segment now reads Hide keyboard. Dismiss it and check the strip goes back to how it was.
 
 ## What to write down
 
@@ -258,7 +267,7 @@ Do these with the pad, and note every time you reach for the screen.
 7. **Tabs.** `L1`/`R1` cycle the tabs from every zone, wrap, and do nothing with one tab.
 8. **Left wheel.** Two segments. Back to menu lands on this host's workspace list; New
    worktree opens the new-worktree form.
-9. **Right wheel.** Five segments. Launch agent opens a second wheel of the agents the
+9. **Right wheel.** Six segments. Launch agent opens a second wheel of the agents the
    new-tab drawer offers; `L2` steps back a level. Chat / terminal switches the tab's view and
    says where it goes; Show / hide input shows or hides the text-entry strip. Stop interrupts the
    turn; Close closes the agent's tab. These two are destructive: try them on something you can

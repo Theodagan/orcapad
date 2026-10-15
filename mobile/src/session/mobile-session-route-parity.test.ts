@@ -69,12 +69,16 @@ const HOST_COMPONENT_NAMES = new Set([
 // Re-pinned in 005: one more callback in that hook (`explainDictationUnavailable`, so a press with
 // nowhere for the words is refused out loud), and two toast strings with the `connected` checks
 // that choose between them. Effects, nested functions and every host element are unchanged.
-const HEAD_MAIN_HOOK_SHA256 = '9bd13cd9bd8e1f5c69b23841687781bd1ee98bdf8e5e81118f174666ecd3e7c7'
-const HEAD_HOOK_BINDING_SHA256 = 'eca65b095da992f8a9169e3d6a2c3e995b62af93cded89e451f22316b11c3a04'
+// Re-pinned for the dictation status notice and direct stop/cancel actions.
+// Re-pinned for the terminal command field's caret: `useDraftCaret` in the runtime, and
+// `useControllerBinding` in the dictation hook so a pad's words land at the caret. A probe diffed the
+// facts: those two hooks and their bindings; callbacks, effects and nested functions are the same.
+const HEAD_MAIN_HOOK_SHA256 = '0b6552367097c7d37dc10fc1496a7ba57b06125ec708fa80ee81d3ac05fd51a7'
+const HEAD_HOOK_BINDING_SHA256 = '88d380f86deaa9bbe8810a75ece4cdb3173774f9b98b7857bedf078075b4a8ea'
 const HEAD_CALLBACK_IDENTITY_SHA256 =
   'd69eb72e69873a6444dc13b0c500b22bd79cb21607403e9b62f75006945ad498'
-const HEAD_CALLBACK_BODY_SHA256 = '6cd9096b01ab4ec9bccf780cb73f9dbaa04c422dad8e72dfb532e9a46dd8416d'
-const HEAD_EFFECT_SHA256 = '73d80845e0a4b6363cfb4bb55551af97965b1f676b97adf0b2a8504219b9a501'
+const HEAD_CALLBACK_BODY_SHA256 = 'dffada6778af6a32c17b4d703926eb3b2723b7af405fc159afd4136ed7ac327a'
+const HEAD_EFFECT_SHA256 = '0a9abe81da1200afeb5973771896041811058faa2a7cd51fa955616270daa460'
 const HEAD_CONTENT_HOOK_SHA256 = '9c3b612fef3f370d66873aefdbe1d701f20cb64ded31fef5cc45fde6f8189581'
 const HEAD_NESTED_FUNCTION_SHA256 =
   '97ce5457d8059974f500022a4382ff687074e26843d6c1525be938d6c0537928'
@@ -83,20 +87,27 @@ const HEAD_NATIVE_REGISTRATION_SHA256 =
 const HEAD_NATIVE_REMOVAL_SHA256 =
   '4c994574675a2a0f9c607b3ea89ab7a2ed5a83f7c72fa42342ddcb5f00fc3f4f'
 const HEAD_TIMER_CREATION_SHA256 =
-  '1a31b625e2174c3db77272249843196d2b6b06ab1e654a96d8f7858e3082e66b'
-const HEAD_TIMER_CLEANUP_SHA256 = 'c73f1d1c2cc89642f3d727d6f3b6b81860a9d6f34234541a2065ec3d1a8cd116'
+  '6f28fc750c9ac646fb788a3ba49822e9ef89320c4f91b5081ac903a623f6d654'
+const HEAD_TIMER_CLEANUP_SHA256 = 'ffbe5cc9b19d65867b04d3b3364defedfb058fcd4d40902c6b1f056c80d82a30'
 // Re-pinned in 005 round 2: the dock's input bar sits in a `View` that is `display: 'none'` while a
 // pad is attached and nothing asks for it. One host element and one string (`none`); a probe diffed
 // the facts against the previous pin and showed nothing else, and the leaf and style facts are the
 // same. Hidden rather than unmounted so the bar's refs and the live input's state stay put.
+// Re-pinned for the terminal command field's caret: the dock draws a `DraftCaretField` in place of the
+// buffered input while a pad is attached, and the input takes `selection`, `onSelectionChange` and
+// `onBlur` to hand the caret over. The probe showed that leaf, that one host element and four strings
+// (the field's label, placeholder, test id and `center`), and nothing else.
 const HEAD_RUNTIME_STRING_SHA256 =
-  '4cd3f4335943be31bc744718b9a34e5e14b8b863fb6d0750e50c53ce2cc22735'
+  'd948867dadf5d34770d6c67e380aee7baaf5260641ad883abf4d2c0b35d72491'
 // Re-pinned in 005 focus mode: the header is one line while focus mode is on, so the tab strip and its
 // pinned buttons are built once and placed either in their own row or beside the title. A probe diffed
 // the facts against the previous pin: the same elements, the tab and button stops now come before the
 // icon stops with `row`/`order` computed from the layout, the title block and meta row take a compact
 // style, and the compact style adds two references; no string changed.
-const HEAD_HOST_JSX_SHA256 = '54085ed6988fcf33531ab8b6b302ee5b6ae71ad72ed7e708b418c4f635e7c36d'
+// Re-pinned in 005 round 3: the dock's two text inputs (live and buffered) take `disableFullscreenUI`,
+// so the keyboard does not cover the screen being typed into. A probe diffed the facts against the
+// previous pin: those two host elements and nothing else; strings, leaf and style facts are the same.
+const HEAD_HOST_JSX_SHA256 = '66349542c469c8e1ddc462877f283ac125ea07881f666b55b8029e421f5d0216'
 // Re-pinned in 005: `controllerFocused` and `onControllerKey` on TerminalPaneView, which is how a
 // pane learns whether it is the one on screen. Then the controller zones: each header and shortcut
 // stop is a `ZoneItem` around the same host element, the `ControllerFocusRing` it shows when
@@ -105,7 +116,7 @@ const HEAD_HOST_JSX_SHA256 = '54085ed6988fcf33531ab8b6b302ee5b6ae71ad72ed7e708b4
 // `ref={focusRef}` so Android's focus can follow the cursor, and the shortcut row's scroll view and
 // keys take the strip-reveal props. The strings are the zone and stop ids. The shortcut row now
 // lives in MobileSessionAccessoryKeys, and the agent zone has a `ZoneFrame` of its own.
-const HEAD_LEAF_JSX_SHA256 = 'c02d83c322661561b6c3bcfb0ccb6f5a0b5e8ef82b37623e4349877b08b6bf61'
+const HEAD_LEAF_JSX_SHA256 = '62f97f35a60546516ea4dff174ffa26179bba12e5d598bc5a0f5f2534f7628ac'
 const HEAD_STYLE_REFERENCE_SHA256 =
   'a83f9be988bffe24775dad927db0e043f9328102a31c4d403f377c9e9297b30f'
 const HEAD_IDENTITY_FIELD_SHA256 =
@@ -496,13 +507,13 @@ describe('mobile session route extraction parity', () => {
     const contentBindings = CONTENT_COMPONENT_NAMES.flatMap(
       (name) => readHookFacts(name, definitions).bindings
     )
-    expect(main.hooks).toHaveLength(271)
+    expect(main.hooks).toHaveLength(275)
     expect(hash(main.hooks)).toBe(HEAD_MAIN_HOOK_SHA256)
     expect(hash(main.bindings)).toBe(HEAD_HOOK_BINDING_SHA256)
     expect(main.callbacks).toHaveLength(78)
     expect(hash(main.callbacks)).toBe(HEAD_CALLBACK_IDENTITY_SHA256)
     expect(hash(main.callbackBodies)).toBe(HEAD_CALLBACK_BODY_SHA256)
-    expect(main.effects).toHaveLength(24)
+    expect(main.effects).toHaveLength(25)
     expect(hash(main.effects)).toBe(HEAD_EFFECT_SHA256)
     expect(contentBindings).toHaveLength(14)
     expect(hash(contentBindings)).toBe(HEAD_CONTENT_HOOK_SHA256)
@@ -518,13 +529,13 @@ describe('mobile session route extraction parity', () => {
     expect(hash(native.registrations)).toBe(HEAD_NATIVE_REGISTRATION_SHA256)
     expect(native.removals).toHaveLength(9)
     expect(hash(native.removals)).toBe(HEAD_NATIVE_REMOVAL_SHA256)
-    expect(native.creations.filter((fact) => fact.startsWith('setTimeout'))).toHaveLength(7)
+    expect(native.creations.filter((fact) => fact.startsWith('setTimeout'))).toHaveLength(8)
     expect(native.creations.filter((fact) => fact.startsWith('setInterval'))).toHaveLength(1)
     expect(
       native.creations.filter((fact) => fact.startsWith('requestAnimationFrame'))
     ).toHaveLength(1)
     expect(hash(native.creations)).toBe(HEAD_TIMER_CREATION_SHA256)
-    expect(native.cleanups.filter((fact) => fact.startsWith('clearTimeout'))).toHaveLength(11)
+    expect(native.cleanups.filter((fact) => fact.startsWith('clearTimeout'))).toHaveLength(12)
     expect(native.cleanups.filter((fact) => fact.startsWith('clearInterval'))).toHaveLength(1)
     expect(native.cleanups.filter((fact) => fact.startsWith('cancelAnimationFrame'))).toHaveLength(
       1
@@ -541,12 +552,12 @@ describe('mobile session route extraction parity', () => {
 
   it('preserves runtime strings, styles, and the expanded JSX tree', () => {
     const strings = readRuntimeStrings()
-    expect(strings).toHaveLength(585)
+    expect(strings).toHaveLength(592)
     expect(hash(strings)).toBe(HEAD_RUNTIME_STRING_SHA256)
     const jsx = readJsxFacts(readDefinitions())
     expect(jsx.host).toHaveLength(125)
     expect(hash(jsx.host)).toBe(HEAD_HOST_JSX_SHA256)
-    expect(jsx.leaf).toHaveLength(88)
+    expect(jsx.leaf).toHaveLength(89)
     expect(hash(jsx.leaf)).toBe(HEAD_LEAF_JSX_SHA256)
     expect(jsx.styleReferences).toHaveLength(174)
     expect(hash(jsx.styleReferences)).toBe(HEAD_STYLE_REFERENCE_SHA256)

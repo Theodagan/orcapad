@@ -68,8 +68,8 @@ function printed(name: ControllerButton | ControllerAxis): string {
 /** `L1/R1`, `Y+L1/R1`: the controls a cycling or scrolling pair is spread over, said once. */
 function controlsFor(intent: ControllerIntentKind): string | null {
   const rows = PRD_CONTROLLER_BINDINGS.filter(
-    (binding): binding is Exclude<ControllerBinding, { kind: 'stick' | 'unassigned' }> =>
-      binding.kind !== 'stick' && binding.kind !== 'unassigned' && binding.intent === intent
+    (binding): binding is Extract<ControllerBinding, { kind: 'button' | 'trigger' }> =>
+      (binding.kind === 'button' || binding.kind === 'trigger') && binding.intent === intent
   )
   if (rows.length === 0) {
     return null
@@ -117,6 +117,10 @@ export function actionHintsFor(
           : dpadControl(intent === 'move-horizontal', intent === 'move-selection'),
         label: wording(intent)
       })
+      continue
+    }
+    if (intent === 'switch-zone') {
+      hints.push({ control: 'X+D-pad', label: wording(intent) })
       continue
     }
     const control = controlsFor(intent)

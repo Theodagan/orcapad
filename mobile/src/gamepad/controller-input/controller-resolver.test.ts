@@ -59,7 +59,30 @@ describe('buttons', () => {
   it('maps the PRD face buttons to their intents', () => {
     expect(resolve(idle, sample({ a: 1 }))).toEqual([{ kind: 'confirm' }])
     expect(resolve(idle, sample({ b: 1 }))).toEqual([{ kind: 'back' }])
-    expect(resolve(idle, sample({ x: 1 }))).toEqual([{ kind: 'switch-zone' }])
+    expect(resolve(idle, sample({ x: 1 }))).toEqual([])
+  })
+
+  it('reserves X plus D-pad for zones instead of forwarding arrow input', () => {
+    for (const direction of ['up', 'down', 'left', 'right'] as const) {
+      expect(resolve(sample({ x: 1 }), sample({ x: 1, [`dpad-${direction}`]: 1 }))).toEqual([
+        { kind: 'switch-zone', direction }
+      ])
+    }
+  })
+
+  it('keeps repeated X+down as zone movement, then restores plain D-pad after release', () => {
+    const resolveHeld = createControllerIntentResolver()
+    resolveHeld(sample({ x: 1 }, {}, true, 0))
+    expect(resolveHeld(sample({ x: 1, 'dpad-down': 1 }, {}, true, 1))).toEqual([
+      { kind: 'switch-zone', direction: 'down' }
+    ])
+    expect(resolveHeld(sample({ x: 1, 'dpad-down': 1 }, {}, true, 400))).toEqual([
+      { kind: 'switch-zone', direction: 'down' }
+    ])
+    resolveHeld(sample({}, {}, true, 420))
+    expect(resolveHeld(sample({ 'dpad-down': 1 }, {}, true, 430))).toEqual([
+      { kind: 'move-selection', direction: 'down' }
+    ])
   })
 
   it('leaves both stick clicks inert (CTRL-R1, 005)', () => {

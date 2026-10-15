@@ -15,13 +15,18 @@ export function useDictationBinding(options: {
   readonly toggle: () => void
   readonly canStart: boolean
   readonly onUnavailable: () => void
+  readonly notice?: string | null
+  readonly onNoticeAction?: () => void
+  readonly stop?: () => void
+  readonly cancel?: () => void
 }): void {
-  const { activity, toggle, canStart, onUnavailable } = options
+  const { activity, toggle, canStart, onUnavailable, notice, onNoticeAction, stop, cancel } =
+    options
   const { registerActiveDictation } = useControllerBinding()
 
   const dictation = useMemo<ActiveDictation>(
-    () => ({ activity, toggle, canStart, onUnavailable }),
-    [activity, toggle, canStart, onUnavailable]
+    () => ({ activity, toggle, canStart, onUnavailable, notice, onNoticeAction, stop, cancel }),
+    [activity, toggle, canStart, onUnavailable, notice, onNoticeAction, stop, cancel]
   )
 
   useEffect(() => registerActiveDictation(dictation), [registerActiveDictation, dictation])

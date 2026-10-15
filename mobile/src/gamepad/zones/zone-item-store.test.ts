@@ -43,6 +43,12 @@ function setup() {
 }
 
 describe('zone item store', () => {
+  it('lets root Back leave a list screen instead of swallowing it in its own zone', () => {
+    const { registry, add } = setup()
+    add('list', 'settings', { row: 0 })
+    expect(registry.dispatch(back)).toBe(false)
+  })
+
   describe('a zone exists only while it has an item', () => {
     it('registers a navigator for the zone, and withdraws it with the last item', () => {
       const { registry, add } = setup()
