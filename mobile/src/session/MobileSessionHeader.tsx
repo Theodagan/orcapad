@@ -235,15 +235,22 @@ export function MobileSessionHeader({ controller }: { controller: MobileSessionC
     <SafeAreaView style={styles.sessionChrome} edges={['top']}>
       <View style={styles.sessionTopBar}>
         {revealSidebar ? (
-          <Pressable
-            style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
-            onPress={revealSidebar}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Show sidebar"
-          >
-            <PanelLeftOpen size={18} color={colors.textSecondary} />
-          </Pressable>
+          // Drawn left of Back, so its stop comes first along the row.
+          <ZoneItem zone="header" id="show-sidebar" order={-1} onActivate={revealSidebar}>
+            {({ focused, focusRef }) => (
+              <Pressable
+                ref={focusRef}
+                style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
+                onPress={revealSidebar}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Show sidebar"
+              >
+                <PanelLeftOpen size={18} color={colors.textSecondary} />
+                {focused ? <ControllerFocusRing radius={8} /> : null}
+              </Pressable>
+            )}
+          </ZoneItem>
         ) : null}
         <ZoneItem zone="header" id="back" order={0} onActivate={requestLeaveSession}>
           {({ focused, focusRef }) => (
