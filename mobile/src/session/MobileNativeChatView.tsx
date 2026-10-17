@@ -1,9 +1,15 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNativeChatControllerBinding } from './use-native-chat-controller-binding'
-import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native'
+import {
+  ActivityIndicator,
+  FlatList,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Text,
+  View
+} from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler'
-import { ArrowDown, ChevronsDownUp, ChevronsUpDown } from 'lucide-react-native'
 import type { AskAnswerSelection, AskPrompt } from '../../../src/shared/native-chat-ask'
 import type { NativeChatMessage } from '../../../src/shared/native-chat-types'
 import type {
@@ -11,6 +17,7 @@ import type {
   NativeChatSettledTurns
 } from '../../../src/shared/native-chat-turn-status'
 import type { NativeChatTurnJournal } from '../../../src/shared/native-chat-turn-membership'
+import type { NativeChatResolvedPrompt } from '../../../src/shared/native-chat-resolution-receipt'
 import { colors } from '../theme/mobile-theme'
 import { styles } from './mobile-native-chat-view-styles'
 import { mobileNativeChatListFooter } from './mobile-native-chat-list-footer'
@@ -35,18 +42,17 @@ import {
   useSettledMobileNativeChatInputLock
 } from './use-mobile-native-chat-input-lease'
 import { MobileNativeChatLiveLine } from './MobileNativeChatLiveLine'
-import { MobileNativeChatStopButton } from './MobileNativeChatStopButton'
-import { MobileAgentWorkingIndicator } from './MobileAgentWorkingIndicator'
+import { MobileNativeChatFloatingControls } from './MobileNativeChatFloatingControls'
 import type { PendingNativeChatImage } from './mobile-native-chat-image-attachment'
 import { MobileNativeChatComposer } from './MobileNativeChatComposer'
+import { mobileNativeChatToolCallCount } from './mobile-native-chat-composer-layout'
 import { MobileNativeChatPromptCard } from './MobileNativeChatPromptCard'
 import { NO_COMPOSER_TRAY, type ComposerTrayProps } from './use-mobile-native-chat-composer-tray'
 import type { MobileChatPermission } from './mobile-native-chat-permission'
 import type { MobileChatQuestion } from './mobile-native-chat-question'
 import type { MobileNativeChatSessionOptionPickersProps } from './MobileNativeChatSessionOptionPickers'
-import { MobileNativeChatMessage } from './MobileNativeChatMessage'
 import { MobileNativeChatScrollHold } from './MobileNativeChatScrollHold'
-import { mobileNativeChatUnsentNotices } from './mobile-native-chat-unsent-notices'
+import { useMobileNativeChatRowRenderer } from './use-mobile-native-chat-row-renderer'
 import type { MobileNativeChatStatus } from './use-mobile-native-chat-session'
 
 /** Why the composer input is locked: the transport is disconnected, or the
@@ -76,8 +82,9 @@ type Props = ComposerTrayProps & {
   settledTurns?: NativeChatSettledTurns | null
   /** Structured lane: the journal that places each row in its turn. */
   turnJournal?: NativeChatTurnJournal | null
-  /** Interrupt the agent mid-turn (shown as a Stop button on the working bar). */
-  /** Interrupt a provider turn. */
+  receipts?: ReadonlyMap<string, NativeChatResolvedPrompt> | null
+  actionablePromptIds?: readonly string[]
+  /** Interrupt a provider turn (Stop takes the composer's Send slot). */
   onStop?: () => void
   /** Live partial assistant text to show as an in-progress bubble, already gated
    *  by the overlay against the transcript catching up. */
@@ -173,6 +180,8 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
     workingStartedAt,
     settledTurns,
     turnJournal = null,
+    receipts = null,
+    actionablePromptIds,
     onStop,
     streaming,
     hasMore,
@@ -260,7 +269,7 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
     recordScrollMetrics,
     onListLayout,
     scrollBy
-  } = useMobileNativeChatTailFollow<NativeChatMessage>({ hasItems: data.length > 0 })
+  } = useMobileNativeChatTailFollow<NativeChatMessage>({ items: data, scopeKey: sendSurfaceId })
 
   useNativeChatControllerBinding({ ...props, sessionId: sendSurfaceId, scrollBy })
 
@@ -275,10 +284,7 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
   })
 
   // Per-turn status rows: one live indicator while the turn runs, then a settled
-  // "Worked for N" row. The structured lane owns them; the bridge lane keeps its
-  // three-dot indicator.
-  // The display status, decided once in the session hook.
-  const stopping = turnIndicator?.stopping === true
+  // "Worked for N" row. The structured lane owns them; the bridge lane gets the live line only.
   const turns = useMobileNativeChatTurnDisclosure({
     messages: data,
     enabled: structuredActivityUi,
@@ -288,32 +294,25 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
     turnJournal,
     thinking: turnIndicator?.thinking === true,
     activityText: turnIndicator?.activityText ?? null,
-    stopping,
-    lineYields: structuredActivityUi && (ask != null || permission != null || question != null),
+    // The display status, decided once in the session hook.
+    stopping: turnIndicator?.stopping === true,
+    lineYields: ask != null || permission != null || question != null,
     scopeKey: sendSurfaceId
   })
 
-  const unsentNotices = useMemo(
-    () => mobileNativeChatUnsentNotices(turnJournal, agent),
-    [turnJournal, agent]
-  )
-  const renderItem = useCallback(
-    ({ item, index }: { item: NativeChatMessage; index: number }) => (
-      <MobileNativeChatMessage
-        message={item}
-        toolsExpanded={toolsExpanded}
-        fontScale={fontScale}
-        onOpenFile={onOpenFile}
-        structuredActivityUi={structuredActivityUi}
-        onToggleTurn={turns.onToggleTurn}
-        unsentNotice={item.unsent ? unsentNotices.get(item.id) : undefined}
-        {...turns.resolveRow(index, item)}
-      />
-    ),
-    [toolsExpanded, fontScale, onOpenFile, structuredActivityUi, turns, unsentNotices]
-  )
+  const renderItem = useMobileNativeChatRowRenderer({
+    toolsExpanded,
+    fontScale,
+    onOpenFile,
+    structuredActivityUi,
+    turns,
+    turnJournal,
+    agent,
+    receipts,
+    actionablePromptIds
+  })
 
-  const history = useMobileNativeChatPageHistory(turns.listMessages, renderItem)
+  const history = useMobileNativeChatPageHistory(turns.listMessages, renderItem, sendSurfaceId)
 
   const liveStatus = turns.liveLine ? (
     <MobileNativeChatLiveLine
@@ -323,9 +322,10 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
       onOpenFile={onOpenFile}
     />
   ) : null
+  const toolCallCount = useMemo(() => mobileNativeChatToolCallCount(folded), [folded])
+  const toggleTools = useCallback(() => setToolsExpanded((v) => !v), [])
 
   const emptyState = mobileNativeChatEmptyState(status, agent ?? null, error)
-  const showLoading = status === 'loading' && messages.length === 0
 
   const lockReason = useSettledMobileNativeChatInputLock(inputLockReason)
   // Why only Send, terminal-backed only: that send types into the agent's prompt and can answer it,
@@ -347,7 +347,7 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
 
   return (
     <View style={[styles.root, { paddingBottom: bottomPad }]}>
-      {showLoading ? (
+      {status === 'loading' && messages.length === 0 ? (
         <View style={styles.center}>
           <ActivityIndicator color={colors.textSecondary} />
         </View>
@@ -360,7 +360,9 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
               data={history.listRows}
               keyExtractor={(item) => item.id}
               renderItem={history.renderListRow}
-              contentContainerStyle={styles.listContent}
+              contentContainerStyle={
+                toolCallCount > 0 ? styles.listContentUnderFloatingControls : styles.listContent
+              }
               // Let link/file taps land while the composer keyboard is up
               // instead of being swallowed by the dismiss gesture.
               keyboardShouldPersistTaps="handled"
@@ -384,16 +386,13 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
               ListEmptyComponent={emptyStateView}
             />
           </GestureDetector>
-          {/* Jump-to-latest control. */}
-          {showJumpToTail ? (
-            <Pressable
-              accessibilityLabel="Scroll to latest"
-              style={[styles.fab, styles.fabBottom]}
-              onPress={jumpToTail}
-            >
-              <ArrowDown size={18} color={colors.textPrimary} strokeWidth={2.2} />
-            </Pressable>
-          ) : null}
+          <MobileNativeChatFloatingControls
+            toolCallCount={toolCallCount}
+            toolsExpanded={toolsExpanded}
+            onToggleTools={toggleTools}
+            showJumpToTail={showJumpToTail}
+            onJumpToTail={jumpToTail}
+          />
         </GestureHandlerRootView>
       )}
       {trayContent}
@@ -403,30 +402,6 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
         {...{ permission, onRespondPermission, question, onAnswerQuestion, onCollapsePrompt }}
         collapsedPrompt={collapsedPrompt}
       />
-      <View style={styles.chromeRow}>
-        <View style={styles.chromeLeft}>
-          {agentWorking && !structuredActivityUi ? <MobileAgentWorkingIndicator /> : null}
-          <Pressable
-            style={({ pressed }) => [styles.chromeToggle, pressed && styles.pressed]}
-            onPress={() => setToolsExpanded((v) => !v)}
-            hitSlop={8}
-          >
-            {toolsExpanded ? (
-              <ChevronsDownUp size={14} color={colors.textMuted} strokeWidth={2} />
-            ) : (
-              <ChevronsUpDown size={14} color={colors.textMuted} strokeWidth={2} />
-            )}
-            <Text style={styles.chromeToggleLabel}>{toolsExpanded ? 'Collapse' : 'Tools'}</Text>
-          </Pressable>
-        </View>
-        {canStop ? (
-          // Only this phone's own request holds Stop: a repeat is how a stuck stop escalates.
-          <MobileNativeChatStopButton
-            onStop={onStop}
-            held={agentWorking === true && turnIndicator?.stopRequestInFlight === true}
-          />
-        ) : null}
-      </View>
       {sendErrorMessage ? (
         // This banner is the only channel for a send failure — announce it.
         <View
@@ -465,6 +440,14 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
           placeholder={mobileNativeChatComposerPlaceholder(lockReason, turnIndicator?.afterStop)}
           filePaths={filePaths}
           onNeedFiles={onNeedFiles}
+          stop={
+            canStop
+              ? {
+                  onStop,
+                  held: agentWorking === true && turnIndicator?.stopRequestInFlight === true
+                }
+              : null
+          }
           caret={composerCaret}
           {...{ keyboardRequested, caretPlacement: composerCaretPlacement }}
           onCaretChange={onComposerCaretChange}
