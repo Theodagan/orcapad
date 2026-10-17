@@ -130,6 +130,9 @@ docs/**
 # Product-decision records the wheel promotion gate reads (002 WHEEL-T9).
 !docs/decisions/
 !docs/decisions/**
+# Fork exploration reports for the opencode chat enhancements branch.
+!docs/explorations/
+!docs/explorations/**
 # The fork's product definition and architecture decision, cited by every spec above.
 !docs/PRD.md
 !docs/architecture.md
