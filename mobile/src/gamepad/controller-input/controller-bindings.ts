@@ -6,7 +6,8 @@ import { DO_ACTION_IDS, VIEW_ACTION_IDS } from '../bindings/wheel-action-ids'
  * The accepted PRD mapping (CTRL-R1), as data rather than as branches, so a test can assert the
  * contract row by row and a reader can see the whole scheme at once. `005` moved three rows:
  * `Y` toggles dictation on tap, while `X` is held for directional zone movement. `012` gave Start
- * and Select one wheel action each, run through the wheel registry so both paths stay one.
+ * and Select one wheel action each, run through the wheel registry so both paths stay one. `X` is
+ * now the only modifier: X+LB/RB cycle workspaces, X+Y shows or hides the prompt, X+Select stops.
  *
  * The D-pad set lives in its own module and must never be merged into this one: the boundary
  * test fails a module that declares both, because the two have different provenance and a
@@ -77,20 +78,20 @@ export const PRD_CONTROLLER_BINDINGS: readonly ControllerBinding[] = [
   {
     kind: 'button',
     button: 'lb',
-    chord: 'y',
+    chord: 'x',
     intent: 'cycle-workspace',
     direction: 'previous',
     timing: 'press',
-    label: 'Y+LB'
+    label: 'X+LB'
   },
   {
     kind: 'button',
     button: 'rb',
-    chord: 'y',
+    chord: 'x',
     intent: 'cycle-workspace',
     direction: 'next',
     timing: 'press',
-    label: 'Y+RB'
+    label: 'X+RB'
   },
   {
     kind: 'stick',
@@ -136,13 +137,23 @@ export const PRD_CONTROLLER_BINDINGS: readonly ControllerBinding[] = [
   },
   {
     kind: 'button',
-    button: 'start',
-    chord: null,
+    button: 'y',
+    chord: 'x',
+    intent: 'run-action',
+    direction: null,
+    actionId: VIEW_ACTION_IDS.question,
+    timing: 'press',
+    label: 'X+Y'
+  },
+  {
+    kind: 'button',
+    button: 'select',
+    chord: 'x',
     intent: 'run-action',
     direction: null,
     actionId: DO_ACTION_IDS.stop,
     timing: 'press',
-    label: 'Start'
+    label: 'X+Select'
   },
   {
     kind: 'button',
@@ -154,12 +165,13 @@ export const PRD_CONTROLLER_BINDINGS: readonly ControllerBinding[] = [
     timing: 'press',
     label: 'Select'
   },
+  { kind: 'unassigned', button: 'start', label: 'Start' },
   { kind: 'unassigned', button: 'r3', label: 'R3' },
   { kind: 'unassigned', button: 'l3', label: 'L3' }
 ]
 
-/** The one modifier the PRD defines. Held through another button it never fires on its own. */
-export const CHORD_BUTTON: ControllerButton = 'y'
+/** The one modifier. Held through another button it never fires on its own. */
+export const CHORD_BUTTON: ControllerButton = 'x'
 
 /** A tap is a quick press and release; longer than this and `Y` held alone stays inert. */
 export const TAP_MAX_MS = 500

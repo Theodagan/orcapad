@@ -19,7 +19,7 @@ import { useSurfaceBinding } from './use-surface-binding'
  * and go back. Opening is the list's own action, so a press and a tap reach the same activation
  * and produce one effect (BIND-AC3).
  *
- * `Y+LB/RB` and the provisional D-pad both move the selection rather than opening as they go.
+ * `X+LB/RB` and the provisional D-pad both move the selection rather than opening as they go.
  * That matters: cycling is how the PRD contract navigates a list at all — without it, a pad with
  * the experimental D-pad set disabled could select nothing here — and a cycle that activated
  * each workspace it passed would fire a `worktree.activate` per step.

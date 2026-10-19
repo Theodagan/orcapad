@@ -137,7 +137,7 @@ export function ControllerShell({
       </View>
       <RootBackBinding />
       <FocusModeSystemBars />
-      <ActionHintBar wheel={wheel.view} actions={wheelRegistry} />
+      <ActionHintBar wheel={wheel.view} actions={wheelRegistry} reader={controllerRuntime.reader} />
       <ControllerNoticeStack>
         <ControllerConnectionNotice />
         <ActionRefusalNotice store={actionRefusals} />

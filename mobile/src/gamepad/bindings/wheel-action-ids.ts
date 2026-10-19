@@ -27,5 +27,6 @@ export const VIEW_ACTION_IDS = {
   chatTerminal: 'view.chat-terminal',
   focusMode: 'view.focus-mode',
   shortcuts: 'view.shortcuts',
-  input: 'view.input'
+  input: 'view.input',
+  question: 'view.question'
 } as const

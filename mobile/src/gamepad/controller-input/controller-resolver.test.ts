@@ -97,40 +97,48 @@ describe('buttons', () => {
   })
 
   // `012`: Start and Select run a wheel action each, once per press.
-  it('runs Stop agent on Start and Focus mode on Select, on the way down', () => {
-    const start = sample({ start: 1 })
-    expect(resolve(idle, start)).toEqual([{ kind: 'run-action', actionId: DO_ACTION_IDS.stop }])
-    expect(resolve(start, start)).toEqual([])
-    expect(resolve(idle, sample({ select: 1 }))).toEqual([
+  it('runs Focus mode on Select and Stop agent on X+Select, on the way down', () => {
+    const select = sample({ select: 1 })
+    expect(resolve(idle, select)).toEqual([
       { kind: 'run-action', actionId: VIEW_ACTION_IDS.focusMode }
+    ])
+    expect(resolve(select, select)).toEqual([])
+    expect(resolve(sample({ x: 1 }), sample({ x: 1, select: 1 }))).toEqual([
+      { kind: 'run-action', actionId: DO_ACTION_IDS.stop }
     ])
   })
 
-  it('keeps Start and Select out of the Y chord', () => {
-    expect(resolve(sample({ y: 1 }), sample({ y: 1, start: 1 }))).toEqual([])
+  it('shows or hides the prompt on X+Y', () => {
+    expect(resolve(sample({ x: 1 }), sample({ x: 1, y: 1 }))).toEqual([
+      { kind: 'run-action', actionId: VIEW_ACTION_IDS.question }
+    ])
+  })
+
+  it('leaves Start unassigned', () => {
+    expect(resolve(idle, sample({ start: 1 }))).toEqual([])
   })
 })
 
-describe('the Y chord (CTRL-R4, CTRL-AC2)', () => {
+describe('the X chord (CTRL-R4, CTRL-AC2)', () => {
   it('cycles tabs on a bare shoulder press', () => {
     expect(resolve(idle, sample({ lb: 1 }))).toEqual([{ kind: 'cycle-tab', direction: 'previous' }])
     expect(resolve(idle, sample({ rb: 1 }))).toEqual([{ kind: 'cycle-tab', direction: 'next' }])
   })
 
-  it('cycles workspaces while Y is held, and only that', () => {
-    const chord = sample({ y: 1, lb: 1 })
+  it('cycles workspaces while X is held, and only that', () => {
+    const chord = sample({ x: 1, lb: 1 })
 
-    expect(resolve(sample({ y: 1 }), chord)).toEqual([
+    expect(resolve(sample({ x: 1 }), chord)).toEqual([
       { kind: 'cycle-workspace', direction: 'previous' }
     ])
   })
 
-  it('is inert when Y is held alone', () => {
-    expect(resolve(idle, sample({ y: 1 }))).toEqual([])
+  it('is inert when X is held alone', () => {
+    expect(resolve(idle, sample({ x: 1 }))).toEqual([])
   })
 
-  it('restores the unmodified action as soon as Y is released', () => {
-    const afterChord = sample({ y: 1 })
+  it('restores the unmodified action as soon as X is released', () => {
+    const afterChord = sample({ x: 1 })
 
     expect(resolve(afterChord, sample({ lb: 1 }))).toEqual([
       { kind: 'cycle-tab', direction: 'previous' }
@@ -266,16 +274,26 @@ describe('Y: a tap that toggles dictation, and the workspace chord (005 USE-R7)'
     expect(resolver(down(120, {}))).toEqual([{ kind: 'toggle-dictation' }])
   })
 
-  it('never toggles once Y has been a chord, and still cycles the workspace', () => {
+  it('never toggles once another button went down under Y', () => {
     const resolver = createControllerIntentResolver()
 
     resolver(down(0, {}))
     resolver(down(10, { y: 1 }))
     expect(resolver(down(40, { y: 1, lb: 1 }))).toEqual([
-      { kind: 'cycle-workspace', direction: 'previous' }
+      { kind: 'cycle-tab', direction: 'previous' }
     ])
     resolver(down(60, { y: 1 }))
     expect(resolver(down(90, {}))).toEqual([])
+  })
+
+  it('shows or hides the prompt for X+Y, and never toggles dictation with it', () => {
+    const resolver = createControllerIntentResolver()
+
+    resolver(down(0, { x: 1 }))
+    expect(resolver(down(10, { x: 1, y: 1 }))).toEqual([
+      { kind: 'run-action', actionId: VIEW_ACTION_IDS.question }
+    ])
+    expect(resolver(down(40, { x: 1 }))).toEqual([])
   })
 
   it('is not a tap when another button was already held as Y went down', () => {
@@ -287,14 +305,12 @@ describe('Y: a tap that toggles dictation, and the workspace chord (005 USE-R7)'
     expect(resolver(down(30, {}))).toEqual([])
   })
 
-  it('swallows A and the others while Y is held, as before, and spends the tap', () => {
+  it('swallows A and the others while X is held', () => {
     const resolver = createControllerIntentResolver()
 
     resolver(down(0, {}))
-    resolver(down(10, { y: 1 }))
-    expect(resolver(down(20, { y: 1, a: 1 }))).toEqual([])
-    resolver(down(30, { y: 1 }))
-    expect(resolver(down(40, {}))).toEqual([])
+    resolver(down(10, { x: 1 }))
+    expect(resolver(down(20, { x: 1, a: 1 }))).toEqual([])
   })
 
   it('stays inert for a long lone hold', () => {

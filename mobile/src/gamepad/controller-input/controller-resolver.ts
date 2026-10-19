@@ -74,7 +74,7 @@ export function resolveControllerIntents(
       if (binding.timing === 'tap') {
         continue
       }
-      // The chord is read from the current sample, so releasing Y restores the plain action on
+      // The chord is read from the current sample, so releasing X restores the plain action on
       // the very next press rather than leaving a mode behind (CTRL-R4).
       const chordMatches = binding.chord === null ? !chordHeld : isDown(next, binding.chord)
       if (!chordMatches || !wentDown(previous, next, binding.button)) {

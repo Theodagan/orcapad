@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { resolveAgentIntervention, type InterventionSurface } from './agent-intervention'
-import { DO_ACTION_IDS } from './wheel-action-ids'
+import { DO_ACTION_IDS, VIEW_ACTION_IDS } from './wheel-action-ids'
 import { LIST_SCROLL_RATE } from './controller-scroll-rate'
 import type { WheelActionBinding } from '../wheel/wheel-registry'
 import { FOCUS_PRIORITY } from '../focus/focus-zones'
@@ -17,8 +17,8 @@ import { useSurfaceBinding } from './use-surface-binding'
  * prompt on screen they are not accepted at all, rather than accepted and dropped — an intent
  * nothing answers falls through to whatever is behind it, and hints stay honest (`001` §7).
  *
- * Stop is a wheel action, run from DO or Start (`012`); the chat decides with `canStop` whether a
- * turn can be stopped, and the action below follows it.
+ * Stop is a wheel action, run from DO or X+Select (`012`); the chat decides with `canStop` whether
+ * a turn can be stopped, and the action below follows it. X+Y hides or shows the prompt card.
  */
 
 /** One D-pad press moves the transcript about three lines, like an arrow key in a reader. */
@@ -29,6 +29,8 @@ export type AgentControllerBindingOptions = InterventionSurface & {
   readonly sessionId: string
   readonly canStop: boolean
   readonly onStop?: () => void
+  /** The prompt card's collapse or expand; absent while no prompt can be hidden or shown. */
+  readonly onTogglePrompt?: () => void
   /**
    * Moves the transcript by a signed distance from where it is now. The view owns where that is:
    * a remembered offset of our own would disagree with a touch scroll, new messages and the
@@ -39,6 +41,8 @@ export type AgentControllerBindingOptions = InterventionSurface & {
 
 export function useAgentControllerBinding(options: AgentControllerBindingOptions): void {
   const { sessionId, canStop, onStop } = options
+  // A boolean, not the callback: the card's toggle is rebuilt per render and runs through `latest`.
+  const canTogglePrompt = options.onTogglePrompt !== undefined
   const latest = useRef(options)
   useLayoutEffect(() => {
     latest.current = options
@@ -90,7 +94,14 @@ export function useAgentControllerBinding(options: AgentControllerBindingOptions
       reason: 'Nothing running to stop',
       run: () => latest.current.onStop?.()
     }
-    const wheelActions: readonly WheelActionBinding[] = [stopAction]
+    const promptAction: WheelActionBinding = {
+      id: VIEW_ACTION_IDS.question,
+      label: 'Show or hide prompt',
+      availability: canTogglePrompt ? 'available' : 'unavailable',
+      reason: 'No prompt to show or hide',
+      run: () => latest.current.onTogglePrompt?.()
+    }
+    const wheelActions: readonly WheelActionBinding[] = [stopAction, promptAction]
 
     return {
       focusTarget: {
@@ -101,7 +112,7 @@ export function useAgentControllerBinding(options: AgentControllerBindingOptions
       },
       wheelActions
     }
-  }, [sessionId, canStop, onStop, intervention, scrollEntry])
+  }, [sessionId, canStop, onStop, canTogglePrompt, intervention, scrollEntry])
 
   useSurfaceBinding(binding)
 }

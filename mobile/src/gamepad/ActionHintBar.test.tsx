@@ -89,7 +89,8 @@ describe('ActionHintBar', () => {
           createElement(FocusHelper),
           ...children,
           createElement(ActionHintBar, {
-            wheel: options.wheelOpen ? openWheel : undefined
+            wheel: options.wheelOpen ? openWheel : undefined,
+            reader
           })
         )
       )
@@ -98,6 +99,7 @@ describe('ActionHintBar', () => {
     if (options.focusMode) {
       act(() => held.toggleFocusMode?.())
     }
+    return { publish }
   }
 
   function texts(): string[] {
@@ -137,7 +139,28 @@ describe('ActionHintBar', () => {
       createElement(Surface, { id: 'header', zone: 'header', accepts: ['confirm'] })
     ])
 
-    expect(texts()).toEqual(['Agent', 'A', 'Select', 'X+D-pad', 'Zones'])
+    expect(texts()).toEqual(['Agent', 'A', 'Select', 'X', 'More'])
+  })
+
+  it('swaps to the X combos while X is held, and back once it is released', () => {
+    const { publish } = mount([
+      createElement(Surface, {
+        id: 'agent',
+        zone: 'agent',
+        accepts: ['confirm']
+      }),
+      createElement(Surface, {
+        id: 'header',
+        zone: 'header',
+        accepts: ['confirm']
+      })
+    ])
+
+    act(() => publish({ ...neutralSample(2, true), buttons: new Map([['x', 1]]) }))
+    expect(texts()).toEqual(['Agent', 'X+D-pad', 'Zones'])
+
+    act(() => publish(neutralSample(3, true)))
+    expect(texts()).toEqual(['Agent', 'A', 'Select', 'X', 'More'])
   })
 
   it('does not name a zone when there is only one', () => {

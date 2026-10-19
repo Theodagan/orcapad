@@ -14,23 +14,25 @@ describe('the accepted PRD mapping', () => {
       'R2',
       'LB',
       'RB',
-      'Y+LB',
-      'Y+RB',
+      'X+LB',
+      'X+RB',
       'Left stick',
       'Right stick',
       'A',
       'B',
       'X modifier',
       'Y',
-      'Start',
+      'X+Y',
+      'X+Select',
       'Select',
+      'Start',
       'R3',
       'L3'
     ])
   })
 
-  // `012`: Start stops the agent and Select toggles focus mode, through the wheel registry.
-  it('runs one wheel action each from Start and Select, on the way down and unchorded', () => {
+  // Via the wheel registry: X+Y shows or hides the prompt, X+Select stops, Select is focus mode.
+  it('runs wheel actions from X+Y, X+Select and Select, on the way down', () => {
     const runs = PRD_CONTROLLER_BINDINGS.filter(
       (binding) => binding.kind === 'button' && binding.intent === 'run-action'
     )
@@ -42,7 +44,8 @@ describe('the accepted PRD mapping', () => {
           : null
       )
     ).toEqual([
-      ['start', DO_ACTION_IDS.stop, 'press', null],
+      ['y', VIEW_ACTION_IDS.question, 'press', CHORD_BUTTON],
+      ['select', DO_ACTION_IDS.stop, 'press', CHORD_BUTTON],
       ['select', VIEW_ACTION_IDS.focusMode, 'press', null]
     ])
   })
@@ -79,19 +82,21 @@ describe('the accepted PRD mapping', () => {
     ).toEqual([
       ['LB', null, 'cycle-tab', 'previous'],
       ['RB', null, 'cycle-tab', 'next'],
-      ['Y+LB', CHORD_BUTTON, 'cycle-workspace', 'previous'],
-      ['Y+RB', CHORD_BUTTON, 'cycle-workspace', 'next']
+      ['X+LB', CHORD_BUTTON, 'cycle-workspace', 'previous'],
+      ['X+RB', CHORD_BUTTON, 'cycle-workspace', 'next']
     ])
   })
 
-  it('leaves both stick clicks unassigned as a stated contract rather than an omission', () => {
+  it('leaves Start and both stick clicks unassigned as a stated contract', () => {
     expect(PRD_CONTROLLER_BINDINGS.filter((binding) => binding.kind === 'unassigned')).toEqual([
+      { kind: 'unassigned', button: 'start', label: 'Start' },
       { kind: 'unassigned', button: 'r3', label: 'R3' },
       { kind: 'unassigned', button: 'l3', label: 'L3' }
     ])
   })
 
-  it('reserves X for directional zone chords without an action of its own', () => {
+  it('makes X the chord button, with no action of its own', () => {
+    expect(CHORD_BUTTON).toBe('x')
     const x = PRD_CONTROLLER_BINDINGS.find(
       (binding) => binding.kind === 'modifier' && binding.button === 'x'
     )
@@ -99,10 +104,9 @@ describe('the accepted PRD mapping', () => {
     expect(x).toEqual({ kind: 'modifier', button: 'x', label: 'X modifier' })
   })
 
-  it('gives the chord button exactly one action of its own: a tap that toggles dictation', () => {
+  it('gives Y exactly one action of its own: a tap that toggles dictation', () => {
     const own = PRD_CONTROLLER_BINDINGS.filter(
-      (binding) =>
-        binding.kind === 'button' && binding.button === CHORD_BUTTON && binding.chord === null
+      (binding) => binding.kind === 'button' && binding.button === 'y' && binding.chord === null
     )
 
     expect(own).toEqual([
@@ -118,7 +122,7 @@ describe('the accepted PRD mapping', () => {
     ])
   })
 
-  it('fires every other button on the way down, so only the chord button waits for release', () => {
+  it('fires every other button on the way down, so only Y waits for release', () => {
     const onRelease = PRD_CONTROLLER_BINDINGS.filter(
       (binding) => binding.kind === 'button' && binding.timing === 'tap'
     )

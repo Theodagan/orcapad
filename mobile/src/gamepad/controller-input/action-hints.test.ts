@@ -39,10 +39,10 @@ describe('action hints', () => {
     expect(hints.map((hint) => hint.label)).toEqual([
       'Select',
       'Back',
-      'Zone',
       'Dictate',
       'Scroll',
-      'Tabs'
+      'Tabs',
+      'More'
     ])
     for (const hint of hints) {
       expect(hint.label).not.toBe(hint.control)
@@ -50,17 +50,23 @@ describe('action hints', () => {
   })
 
   it('prints the shoulders and triggers as they are printed on the pad', () => {
-    const hints = actionHintsFor(accepting('cycle-tab', 'scroll', 'cycle-workspace'))
+    const accepts = accepting('cycle-tab', 'scroll', 'cycle-workspace')
 
-    expect(hints.map((hint) => hint.control)).toEqual(['L2/R2', 'L1/R1', 'Y+L1/R1'])
+    expect(actionHintsFor(accepts).map((hint) => hint.control)).toEqual(['L2/R2', 'L1/R1', 'X'])
+    expect(actionHintsFor(accepts, {}, new Set(), true).map((hint) => hint.control)).toEqual([
+      'X+L1/R1'
+    ])
   })
 
-  it('shows Y as the dictation tap, and X as the zone switch', () => {
-    const hints = actionHintsFor(accepting('toggle-dictation', 'switch-zone'))
+  it('shows Y as the dictation tap, and X as the only modifier until it is held', () => {
+    const accepts = accepting('toggle-dictation', 'switch-zone')
 
-    expect(hints).toEqual([
-      { control: 'X+D-pad', label: 'Zone' },
-      { control: 'Y', label: 'Dictate' }
+    expect(actionHintsFor(accepts)).toEqual([
+      { control: 'Y', label: 'Dictate' },
+      { control: 'X', label: 'More' }
+    ])
+    expect(actionHintsFor(accepts, {}, new Set(), true)).toEqual([
+      { control: 'X+D-pad', label: 'Zone' }
     ])
   })
 
@@ -111,31 +117,39 @@ describe('action hints', () => {
     expect(more.filter((control) => fewer.includes(control))).toEqual(fewer)
   })
 
-  it('shows a chorded control as the chord', () => {
-    const hints = actionHintsFor(accepting('cycle-workspace'))
+  it('shows a chorded control as the chord while X is held', () => {
+    const hints = actionHintsFor(accepting('cycle-workspace'), {}, new Set(), true)
 
-    expect(hints).toEqual([{ control: 'Y+L1/R1', label: 'Worktrees' }])
+    expect(hints).toEqual([{ control: 'X+L1/R1', label: 'Worktrees' }])
   })
 
-  // `012`: Start and Select are named only while the action they run can run.
-  it('shows Start Stop and Select Focus only while those actions are available', () => {
+  it('names a button action only while it can run, its X combos only while X is held', () => {
     expect(actionHintsFor(accepting('confirm'))).toEqual([{ control: 'A', label: 'Select' }])
 
-    const hints = actionHintsFor(
-      accepting('confirm'),
-      {},
-      new Set([DO_ACTION_IDS.stop, VIEW_ACTION_IDS.focusMode])
-    )
-    expect(hints.slice(1)).toEqual([
-      { control: 'Start', label: 'Stop' },
-      { control: 'Select', label: 'Focus' }
+    const runnable = new Set([
+      DO_ACTION_IDS.stop,
+      VIEW_ACTION_IDS.focusMode,
+      VIEW_ACTION_IDS.question
+    ])
+    expect(actionHintsFor(accepting('confirm'), {}, runnable)).toEqual([
+      { control: 'A', label: 'Select' },
+      { control: 'Select', label: 'Focus' },
+      { control: 'X', label: 'More' }
+    ])
+    expect(actionHintsFor(accepting('confirm'), {}, runnable, true)).toEqual([
+      { control: 'X+Y', label: 'Prompt' },
+      { control: 'X+Select', label: 'Stop' }
     ])
     expect(actionHintsFor(accepting(), {}, new Set([VIEW_ACTION_IDS.focusMode]))).toEqual([
       { control: 'Select', label: 'Focus' }
     ])
   })
 
-  it('watches exactly the actions Start and Select run', () => {
-    expect(RUN_ACTION_IDS).toEqual([DO_ACTION_IDS.stop, VIEW_ACTION_IDS.focusMode])
+  it('watches exactly the actions the buttons run', () => {
+    expect(RUN_ACTION_IDS).toEqual([
+      VIEW_ACTION_IDS.question,
+      DO_ACTION_IDS.stop,
+      VIEW_ACTION_IDS.focusMode
+    ])
   })
 })

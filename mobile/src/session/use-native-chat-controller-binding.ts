@@ -1,5 +1,6 @@
 import { useAgentControllerBinding } from '../gamepad/bindings/use-agent-controller-binding'
 import type { InterventionSurface } from '../gamepad/bindings/agent-intervention'
+import { promptToggleFor, type PromptToggleSurface } from './native-chat-prompt-toggle'
 
 /**
  * The agent view's controller edge: the same intervention callbacks, stop and transcript the
@@ -7,15 +8,20 @@ import type { InterventionSurface } from '../gamepad/bindings/agent-intervention
  * It lives here rather than in the view so the view keeps its size budget, and rather than in
  * `gamepad/` so the binding layer never learns what a `FlatList` is.
  */
-export type NativeChatControllerBindingOptions = InterventionSurface & {
-  readonly sessionId: string
-  /** The view's own prop: absent means the turn cannot be stopped. */
-  readonly canStop?: boolean
-  readonly onStop?: () => void
-  /** The view's own tail-following scroll, which knows where the transcript really is. */
-  readonly scrollBy: (delta: number) => void
-}
+export type NativeChatControllerBindingOptions = InterventionSurface &
+  PromptToggleSurface & {
+    readonly sessionId: string
+    /** The view's own prop: absent means the turn cannot be stopped. */
+    readonly canStop?: boolean
+    readonly onStop?: () => void
+    /** The view's own tail-following scroll, which knows where the transcript really is. */
+    readonly scrollBy: (delta: number) => void
+  }
 
 export function useNativeChatControllerBinding(options: NativeChatControllerBindingOptions): void {
-  useAgentControllerBinding({ ...options, canStop: options.canStop === true })
+  useAgentControllerBinding({
+    ...options,
+    canStop: options.canStop === true,
+    onTogglePrompt: promptToggleFor(options)
+  })
 }

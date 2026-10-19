@@ -1,4 +1,8 @@
-import { PRD_CONTROLLER_BINDINGS, type ControllerBinding } from './controller-bindings'
+import {
+  CHORD_BUTTON,
+  PRD_CONTROLLER_BINDINGS,
+  type ControllerBinding
+} from './controller-bindings'
 import type { ControllerIntentKind, IntentLabels } from './controller-intent'
 import type { ControllerAxis, ControllerButton } from './controller-sample'
 import { DO_ACTION_IDS, VIEW_ACTION_IDS } from '../bindings/wheel-action-ids'
@@ -55,7 +59,8 @@ const DEFAULT_WORDS: Record<ControllerIntentKind, string> = {
 /** What a `run-action` button does, in the bar's words. */
 const RUN_ACTION_WORDS: Readonly<Record<string, string>> = {
   [DO_ACTION_IDS.stop]: 'Stop',
-  [VIEW_ACTION_IDS.focusMode]: 'Focus'
+  [VIEW_ACTION_IDS.focusMode]: 'Focus',
+  [VIEW_ACTION_IDS.question]: 'Prompt'
 }
 
 type RunActionRow = Extract<ControllerBinding, { kind: 'button' }> & { readonly actionId: string }
@@ -85,8 +90,8 @@ function printed(name: ControllerButton | ControllerAxis): string {
   return PRINTED_NAME[name] ?? name.toUpperCase()
 }
 
-/** `L1/R1`, `Y+L1/R1`: the controls a cycling or scrolling pair is spread over, said once. */
-function controlsFor(intent: ControllerIntentKind): string | null {
+/** `L1/R1`, `X+L1/R1`: the controls a cycling or scrolling pair is spread over, said once. */
+function controlsFor(intent: ControllerIntentKind): { control: string; chorded: boolean } | null {
   const rows = PRD_CONTROLLER_BINDINGS.filter(
     (binding): binding is Extract<ControllerBinding, { kind: 'button' | 'trigger' }> =>
       (binding.kind === 'button' || binding.kind === 'trigger') && binding.intent === intent
@@ -96,8 +101,9 @@ function controlsFor(intent: ControllerIntentKind): string | null {
   }
   const names = rows.map((row) => (row.kind === 'button' ? printed(row.button) : printed(row.axis)))
   const first = rows[0]
-  const prefix = first?.kind === 'button' && first.chord !== null ? `${printed(first.chord)}+` : ''
-  return `${prefix}${names.join('/')}`
+  const chord = first?.kind === 'button' ? first.chord : null
+  const prefix = chord === null ? '' : `${printed(chord)}+`
+  return { control: `${prefix}${names.join('/')}`, chorded: chord !== null }
 }
 
 function dpadControl(horizontal: boolean, vertical: boolean): string {
@@ -107,17 +113,21 @@ function dpadControl(horizontal: boolean, vertical: boolean): string {
   return vertical ? 'D-pad ↑↓' : 'D-pad ←→'
 }
 
+type ChordedHint = ActionHint & { readonly chorded: boolean }
+
 /**
  * One hint per control the focused surface actually answers for. Both D-pad axes with the same
  * wording read as one hint, because "arrows" is one thing to a user and four buttons to a table.
+ * At rest the modifier's combos fold into one `X` hint; held, they are all the bar shows.
  */
 export function actionHintsFor(
   accepts: ReadonlySet<ControllerIntentKind>,
   labels: IntentLabels = {},
   /** Action ids the registry can run now; a button's hint shows only while its action can. */
-  runnable: ReadonlySet<string> = new Set()
+  runnable: ReadonlySet<string> = new Set(),
+  modifierHeld = false
 ): readonly ActionHint[] {
-  const hints: ActionHint[] = []
+  const hints: ChordedHint[] = []
   const wording = (intent: ControllerIntentKind): string => labels[intent] ?? DEFAULT_WORDS[intent]
   const vertical = accepts.has('move-selection')
   const horizontal = accepts.has('move-horizontal')
@@ -137,26 +147,45 @@ export function actionHintsFor(
         control: merged
           ? 'D-pad'
           : dpadControl(intent === 'move-horizontal', intent === 'move-selection'),
-        label: wording(intent)
+        label: wording(intent),
+        chorded: false
       })
       continue
     }
     if (intent === 'switch-zone') {
-      hints.push({ control: 'X+D-pad', label: wording(intent) })
+      hints.push({
+        control: `${printed(CHORD_BUTTON)}+D-pad`,
+        label: wording(intent),
+        chorded: true
+      })
       continue
     }
-    const control = controlsFor(intent)
-    if (control !== null) {
-      hints.push({ control, label: wording(intent) })
+    const controls = controlsFor(intent)
+    if (controls !== null) {
+      hints.push({
+        control: controls.control,
+        label: wording(intent),
+        chorded: controls.chorded
+      })
     }
   }
   for (const row of RUN_ACTION_ROWS) {
     if (runnable.has(row.actionId)) {
+      const { chord } = row
       hints.push({
-        control: printed(row.button),
-        label: RUN_ACTION_WORDS[row.actionId] ?? DEFAULT_WORDS['run-action']
+        control: chord === null ? printed(row.button) : `${printed(chord)}+${printed(row.button)}`,
+        label: RUN_ACTION_WORDS[row.actionId] ?? DEFAULT_WORDS['run-action'],
+        chorded: chord !== null
       })
     }
   }
-  return hints
+  const shown = hints.filter((hint) => hint.chorded === modifierHeld)
+  if (!modifierHeld && shown.length < hints.length) {
+    shown.push({
+      control: printed(CHORD_BUTTON),
+      label: 'More',
+      chorded: false
+    })
+  }
+  return shown.map(({ control, label }) => ({ control, label }))
 }
