@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import {
   NATIVE_CHAT_RECEIPT_COPY,
   nativeChatReceiptAnswerHeading,
@@ -6,6 +6,7 @@ import {
   nativeChatReceiptSubject,
   type NativeChatResolvedPrompt
 } from '../../../src/shared/native-chat-resolution-receipt'
+import { MobileSelectableText as Text } from '../components/MobileSelectableText'
 import { INLINE_TEXT_SELECTION } from '../components/inline-text-selection'
 import { colors, spacing, typography } from '../theme/mobile-theme'
 import { MobileNativeChatAwaitingInputRow } from './MobileNativeChatAwaitingInputRow'

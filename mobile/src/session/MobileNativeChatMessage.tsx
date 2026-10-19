@@ -1,5 +1,6 @@
+import { MobileSelectableText as Text } from '../components/MobileSelectableText'
 import { memo, useCallback, useContext, useLayoutEffect, useRef } from 'react'
-import { Text, View } from 'react-native'
+import { Text as NativeText, View } from 'react-native'
 import { INLINE_TEXT_SELECTION } from '../components/inline-text-selection'
 import { MobileNativeChatLongPressContent as Content } from './MobileNativeChatLongPressContent'
 import { splitNativeChatBlocks } from '../../../src/shared/native-chat-tool-fold'
@@ -293,7 +294,7 @@ function MobileNativeChatMessageImpl({
             />
           ) : null}
         </Content>
-        {unsentNotice ? <Text style={styles.unsentNotice}>{unsentNotice}</Text> : null}
+        {unsentNotice ? <NativeText style={styles.unsentNotice}>{unsentNotice}</NativeText> : null}
         {/* Always shown, so the row never shifts when copy appears. */}
         {isChatTurn ? (
           <View style={styles.meta}>

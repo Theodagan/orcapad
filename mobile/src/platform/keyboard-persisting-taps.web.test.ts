@@ -7,7 +7,7 @@
  * focus, so the same taps keep the keyboard up.
  */
 import { afterEach, describe, expect, it } from 'vitest'
-import { keepTextFocusThroughTaps } from './keyboard-persisting-taps'
+import { keepTextFocusThroughTaps } from './keyboard-persisting-taps.web'
 
 function plant() {
   const container = document.createElement('div')
