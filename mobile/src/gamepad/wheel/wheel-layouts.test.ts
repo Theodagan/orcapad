@@ -37,12 +37,12 @@ describe('wheel layouts', () => {
     expect(angles.get(GO_ACTION_IDS.new)).toBeCloseTo(EIGHTH)
     expect(angles.get(GO_ACTION_IDS.files)).toBeCloseTo(2 * EIGHTH)
     expect(angles.get(GO_ACTION_IDS.changes)).toBeCloseTo(3 * EIGHTH)
-    expect(angles.get(GO_ACTION_IDS.back)).toBeCloseTo(4 * EIGHTH)
+    expect(angles.get(GO_ACTION_IDS.settings)).toBeCloseTo(4 * EIGHTH)
     expect(angles.get(GO_ACTION_IDS.history)).toBeCloseTo(5 * EIGHTH)
-    expect(angles.get(GO_ACTION_IDS.settings)).toBeCloseTo(6 * EIGHTH)
+    expect(angles.get(GO_ACTION_IDS.back)).toBeCloseTo(6 * EIGHTH)
   })
 
-  it('gives every screen the whole GO wheel, Back straight down', () => {
+  it('gives every screen the whole GO wheel, Back to the left', () => {
     const goIds = (screen: WheelScreen) =>
       wheelLayoutsFor(screen)[1]
         ?.segments.map((segment) => segment.bindingId)

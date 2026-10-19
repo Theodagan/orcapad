@@ -16,7 +16,6 @@ function options(overrides: Partial<GoWheelOptions> = {}): GoWheelOptions {
     workspace: null,
     onBack: vi.fn(),
     onWorkspacePage: vi.fn(),
-    onAllHosts: vi.fn(),
     onWorkspaces: vi.fn(),
     onNewWorktree: vi.fn(),
     onSettings: vi.fn(),
@@ -28,24 +27,25 @@ const byId = (actions: ReturnType<typeof goWheelActions>, id: string) =>
   actions.find((action) => action.id === id)
 
 describe('GO wheel actions', () => {
-  it('goes up to the workspaces from inside a host, and to every host from its list', () => {
+  it('goes up to the workspaces from inside a host, and never to every host', () => {
     const inside = options()
     byId(goWheelActions(inside), GO_ACTION_IDS.up)?.run()
     expect(inside.onWorkspaces).toHaveBeenCalledTimes(1)
-    expect(byId(goWheelActions(inside), GO_ACTION_IDS.up)?.label).toBe('Workspaces')
 
-    const list = options({ screen: 'host' })
-    byId(goWheelActions(list), GO_ACTION_IDS.up)?.run()
-    expect(list.onAllHosts).toHaveBeenCalledTimes(1)
-    expect(byId(goWheelActions(list), GO_ACTION_IDS.up)?.label).toBe('All hosts')
+    const list = byId(goWheelActions(options({ screen: 'host' })), GO_ACTION_IDS.up)
+    expect([list?.label, list?.availability, list?.reason]).toEqual([
+      'Workspaces',
+      'unavailable',
+      'Already here'
+    ])
   })
 
   // Home's New is Pair desktop; registering it here too would retract one with the other.
-  it('leaves New to the home screen itself, and says Up has nowhere to go', () => {
+  it('leaves New to the home screen itself, and has no workspaces to go up to there', () => {
     const home = goWheelActions(options({ screen: 'home', hostId: null }))
 
     expect(byId(home, GO_ACTION_IDS.new)).toBeUndefined()
-    expect(byId(home, GO_ACTION_IDS.up)?.availability).toBe('unavailable')
+    expect(byId(home, GO_ACTION_IDS.up)?.reason).toBe('Open a host first')
   })
 
   it('goes back while there is somewhere to go', () => {

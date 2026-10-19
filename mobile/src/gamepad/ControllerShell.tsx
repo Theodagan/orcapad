@@ -99,7 +99,6 @@ function useGoWheelActions(
       canGoBack: router.canGoBack(),
       workspace: inWorkspace ? { page } : null,
       onBack: () => router.back(),
-      onAllHosts: () => router.dismissTo('/'),
       onWorkspaces: () => {
         if (host !== null) {
           router.dismissTo(hostStackHostRoute(host))

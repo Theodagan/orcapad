@@ -65,15 +65,15 @@ function segmentOf(slot: Slot, count: number): WheelPresetSegment {
   }
 }
 
-// Back sits straight down, where a thumb pulls to go back; the rest keep their old neighbours.
+// Back points left, the way back reads; Settings sits straight down.
 const GO_SLOTS: readonly Slot[] = [
   { index: 0, id: 'up', label: 'Workspaces', bindingId: GO_ACTION_IDS.up },
   { index: 1, id: 'new', label: 'New worktree', bindingId: GO_ACTION_IDS.new },
   { index: 2, id: 'files', label: 'Files', bindingId: GO_ACTION_IDS.files },
   { index: 3, id: 'changes', label: 'Changes', bindingId: GO_ACTION_IDS.changes },
-  { index: 4, id: 'back', label: 'Back', bindingId: GO_ACTION_IDS.back },
+  { index: 4, id: 'settings', label: 'Settings', bindingId: GO_ACTION_IDS.settings },
   { index: 5, id: 'history', label: 'History', bindingId: GO_ACTION_IDS.history },
-  { index: 6, id: 'settings', label: 'Settings', bindingId: GO_ACTION_IDS.settings }
+  { index: 6, id: 'back', label: 'Back', bindingId: GO_ACTION_IDS.back }
 ]
 
 const DO_SLOTS: readonly Slot[] = [
