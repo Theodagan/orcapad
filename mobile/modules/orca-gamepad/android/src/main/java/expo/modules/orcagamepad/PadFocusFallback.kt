@@ -1,9 +1,11 @@
 package expo.modules.orcagamepad
 
 import android.app.Activity
+import android.graphics.Rect
 import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.View
+import android.view.ViewGroup
 import android.widget.EditText
 
 /**
@@ -72,5 +74,58 @@ object PadFocusFallback {
     val down = KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0)
     focused.dispatchKeyEvent(down)
     return focused.dispatchKeyEvent(KeyEvent.changeAction(down, KeyEvent.ACTION_UP))
+  }
+
+  /**
+   * L2/R2 on a screen nothing else scrolls: the nearest area around the focused control that can
+   * still move that way, or with nothing focused the largest such area on screen.
+   */
+  fun scroll(activity: Activity, deltaDp: Double): Boolean {
+    val root = activity.window?.decorView ?: return false
+    if (!root.hasWindowFocus() || deltaDp == 0.0) {
+      return false
+    }
+    val direction = if (deltaDp > 0) 1 else -1
+    val target = scrollableAround(root.findFocus(), direction)
+      ?: activity.findViewById<View>(android.R.id.content)?.let { largestScrollable(it, direction) }
+      ?: return false
+    target.scrollBy(0, (deltaDp * target.resources.displayMetrics.density).toInt())
+    return true
+  }
+
+  private fun scrollableAround(view: View?, direction: Int): View? {
+    var current: View? = view
+    while (current != null) {
+      if (current.isShown && current.canScrollVertically(direction)) {
+        return current
+      }
+      current = current.parent as? View
+    }
+    return null
+  }
+
+  private fun largestScrollable(container: View, direction: Int): View? {
+    var best: View? = null
+    var bestArea = 0
+    val visible = Rect()
+    fun visit(view: View) {
+      if (!view.isShown) {
+        return
+      }
+      if (view.canScrollVertically(direction) && view.getGlobalVisibleRect(visible)) {
+        val area = visible.width() * visible.height()
+        if (area > bestArea) {
+          best = view
+          bestArea = area
+        }
+      }
+      if (view is ViewGroup) {
+        for (index in 0 until view.childCount) {
+          visit(view.getChildAt(index))
+        }
+      }
+    }
+    visit(container)
+    return best
   }
 }

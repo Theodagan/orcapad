@@ -35,6 +35,8 @@ export type FocusRegistry = {
   readonly activate: (id: string) => void
   /** Whoever answers first from the focused zone: the head of the chain. */
   readonly activeTarget: () => FocusTarget | null
+  /** Whether any target but this one accepts the intent, whatever zone it is in. */
+  readonly acceptedElsewhere: (kind: ControllerIntentKind, exceptId: string) => boolean
   /** True when a target accepted and handled the intent. `switch-zone` is the registry's own. */
   readonly dispatch: (intent: ControllerIntent) => boolean
   readonly focusedZone: () => FocusZone | null
@@ -256,9 +258,19 @@ export function createFocusRegistry(): FocusRegistry {
     return false
   }
 
+  function acceptedElsewhere(kind: ControllerIntentKind, exceptId: string): boolean {
+    for (const [id, { target }] of entries) {
+      if (id !== exceptId && target.accepts.has(kind)) {
+        return true
+      }
+    }
+    return false
+  }
+
   return {
     register,
     activate,
+    acceptedElsewhere,
     activeTarget: () => ranked(focusedZone())[0] ?? null,
     dispatch,
     focusedZone,

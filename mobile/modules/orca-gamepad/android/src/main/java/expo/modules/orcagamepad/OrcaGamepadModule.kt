@@ -125,6 +125,10 @@ class OrcaGamepadModule : Module() {
       appContext.currentActivity?.let { PadFocusFallback.move(it, direction) } ?: false
     }.runOnQueue(Queues.MAIN)
 
+    AsyncFunction("scrollNativeBy") { deltaDp: Double ->
+      appContext.currentActivity?.let { PadFocusFallback.scroll(it, deltaDp) } ?: false
+    }.runOnQueue(Queues.MAIN)
+
     AsyncFunction("activateNativeFocus") {
       appContext.currentActivity?.let { PadFocusFallback.activate(it) } ?: false
     }.runOnQueue(Queues.MAIN)

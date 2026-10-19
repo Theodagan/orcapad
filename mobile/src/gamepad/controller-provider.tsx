@@ -46,7 +46,10 @@ import {
  */
 
 /** The registry's read side. Stable for the provider's life, so holding it re-renders nothing. */
-export type FocusReader = Pick<FocusRegistry, 'subscribe' | 'snapshot' | 'focusZone'>
+export type FocusReader = Pick<
+  FocusRegistry,
+  'subscribe' | 'snapshot' | 'focusZone' | 'acceptedElsewhere'
+>
 
 export type DictationReader = Pick<ActiveDictationRegistry, 'subscribe' | 'current'>
 
@@ -129,7 +132,8 @@ const INERT_SESSION_CHROME: SessionChromeStore = {
 const INERT_FOCUS: FocusReader = {
   subscribe: () => () => {},
   snapshot: () => INERT_SNAPSHOT,
-  focusZone: () => {}
+  focusZone: () => {},
+  acceptedElsewhere: () => false
 }
 
 export function useController(): ControllerContextValue {
@@ -289,7 +293,8 @@ export function ControllerProvider({
     () => ({
       subscribe: registry.subscribe,
       snapshot: registry.snapshot,
-      focusZone: registry.focusZone
+      focusZone: registry.focusZone,
+      acceptedElsewhere: registry.acceptedElsewhere
     }),
     [registry]
   )

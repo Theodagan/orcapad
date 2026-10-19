@@ -53,6 +53,8 @@ export type OrcaGamepadModule = {
    * Resolves false when Android already moved it for this press, or nothing lies that way.
    */
   readonly moveNativeFocus?: (direction: 'up' | 'down' | 'left' | 'right') => Promise<boolean>
+  /** Scrolls the area around Android's focus, or the largest on screen, by this many dp. */
+  readonly scrollNativeBy?: (deltaDp: number) => Promise<boolean>
   /** Presses the control Android has focused, as a keyboard's centre key would. */
   readonly activateNativeFocus?: () => Promise<boolean>
   /**

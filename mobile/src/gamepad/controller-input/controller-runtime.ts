@@ -44,9 +44,15 @@ export type ControllerRuntime = {
 export type NativeFocusFallback = {
   readonly move: (direction: 'up' | 'down' | 'left' | 'right') => void
   readonly activate: () => void
+  /** Positive scrolls down, in dp. */
+  readonly scroll: (delta: number) => void
 }
 
-const INERT_NATIVE_FOCUS: NativeFocusFallback = { move: () => {}, activate: () => {} }
+const INERT_NATIVE_FOCUS: NativeFocusFallback = {
+  move: () => {},
+  activate: () => {},
+  scroll: () => {}
+}
 
 function nativeFocusFallback(module: NonNullable<typeof orcaGamepad>): NativeFocusFallback {
   if (Platform.OS !== 'android') {
@@ -58,6 +64,9 @@ function nativeFocusFallback(module: NonNullable<typeof orcaGamepad>): NativeFoc
     },
     activate: () => {
       module.activateNativeFocus?.().catch(() => {})
+    },
+    scroll: (delta) => {
+      module.scrollNativeBy?.(delta).catch(() => {})
     }
   }
 }
