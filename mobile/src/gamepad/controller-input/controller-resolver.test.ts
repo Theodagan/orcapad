@@ -146,6 +146,19 @@ describe('the X chord (CTRL-R4, CTRL-AC2)', () => {
   })
 })
 
+describe('X+L2/R2: a step between the user messages', () => {
+  it('steps once per pull and never scrolls under X', () => {
+    const held = sample({ x: 1 })
+    const pulled = sample({ x: 1 }, { l2: 0.8 })
+
+    expect(resolve(held, pulled)).toEqual([{ kind: 'jump-message', direction: 'previous' }])
+    expect(resolve(pulled, pulled)).toEqual([])
+    expect(resolve(held, sample({ x: 1 }, { r2: 0.8 }))).toEqual([
+      { kind: 'jump-message', direction: 'next' }
+    ])
+  })
+})
+
 describe('triggers (CTRL-R5)', () => {
   it('scrolls continuously while held, with the analog value as velocity', () => {
     const quarter = sample({}, { l2: 0.25 })

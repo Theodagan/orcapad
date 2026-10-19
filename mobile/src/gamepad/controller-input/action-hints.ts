@@ -53,6 +53,7 @@ const DEFAULT_WORDS: Record<ControllerIntentKind, string> = {
   'toggle-dictation': 'Dictate',
   'move-selection': 'Move',
   'move-horizontal': 'Move',
+  'jump-message': 'My messages',
   'run-action': 'Action'
 }
 
@@ -82,6 +83,7 @@ const HINT_ORDER: readonly ControllerIntentKind[] = [
   'switch-zone',
   'toggle-dictation',
   'scroll',
+  'jump-message',
   'cycle-tab',
   'cycle-workspace'
 ]
@@ -93,15 +95,20 @@ function printed(name: ControllerButton | ControllerAxis): string {
 /** `L1/R1`, `X+L1/R1`: the controls a cycling or scrolling pair is spread over, said once. */
 function controlsFor(intent: ControllerIntentKind): { control: string; chorded: boolean } | null {
   const rows = PRD_CONTROLLER_BINDINGS.filter(
-    (binding): binding is Extract<ControllerBinding, { kind: 'button' | 'trigger' }> =>
-      (binding.kind === 'button' || binding.kind === 'trigger') && binding.intent === intent
+    (
+      binding
+    ): binding is Extract<ControllerBinding, { kind: 'button' | 'trigger' | 'chord-trigger' }> =>
+      (binding.kind === 'button' ||
+        binding.kind === 'trigger' ||
+        binding.kind === 'chord-trigger') &&
+      binding.intent === intent
   )
   if (rows.length === 0) {
     return null
   }
   const names = rows.map((row) => (row.kind === 'button' ? printed(row.button) : printed(row.axis)))
   const first = rows[0]
-  const chord = first?.kind === 'button' ? first.chord : null
+  const chord = first === undefined || first.kind === 'trigger' ? null : first.chord
   const prefix = chord === null ? '' : `${printed(chord)}+`
   return { control: `${prefix}${names.join('/')}`, chorded: chord !== null }
 }

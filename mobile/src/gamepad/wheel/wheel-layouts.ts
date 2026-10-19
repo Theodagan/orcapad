@@ -5,14 +5,15 @@ import type { WheelId } from './wheel-segment'
 /**
  * The wheels each screen runs (`012`). The left stick is GO and the right stick is DO.
  *
- * Both are dials of six fixed 60° slots. A screen lists only the slots it has, and a missing slot
- * is a gap that holds the wheel open with nothing lit, so an action keeps its angle on every
- * screen and the thumb learns one place for it. DO exists only in a session.
+ * GO is a dial of eight fixed 45° slots and DO of six 60° ones. GO is the same on every screen, so
+ * navigation is always there and an action keeps its angle everywhere; a slot that cannot act on a
+ * screen says why. DO exists only in a session.
  */
 
 const FULL_TURN = Math.PI * 2
 const BOUNDARY_OVERLAP = 0.001
-const SLOT_COUNT = 6
+const GO_SLOT_COUNT = 8
+const DO_SLOT_COUNT = 6
 
 /** Clockwise from twelve o'clock: slot `index` of `count` evenly spaced slots. */
 export function slotAngle(index: number, count: number): number {
@@ -53,25 +54,27 @@ type Slot = {
   readonly reason?: string
 }
 
-function segmentOf(slot: Slot): WheelPresetSegment {
+function segmentOf(slot: Slot, count: number): WheelPresetSegment {
   return {
     id: slot.id,
     label: slot.label,
-    centerAngle: slotAngle(slot.index, SLOT_COUNT),
-    halfWidth: slotHalfWidth(SLOT_COUNT),
+    centerAngle: slotAngle(slot.index, count),
+    halfWidth: slotHalfWidth(count),
     bindingId: slot.bindingId,
     ...(slot.reason === undefined ? {} : { reason: slot.reason })
   }
 }
 
-const GO_SLOTS = {
-  up: { index: 0, id: 'up', label: 'Workspaces', bindingId: GO_ACTION_IDS.up },
-  new: { index: 1, id: 'new', label: 'New worktree', bindingId: GO_ACTION_IDS.new },
-  files: { index: 2, id: 'files', label: 'Files', bindingId: GO_ACTION_IDS.files },
-  changes: { index: 3, id: 'changes', label: 'Changes', bindingId: GO_ACTION_IDS.changes },
-  history: { index: 4, id: 'history', label: 'History', bindingId: GO_ACTION_IDS.history },
-  settings: { index: 5, id: 'settings', label: 'Settings', bindingId: GO_ACTION_IDS.settings }
-} as const satisfies Record<string, Slot>
+// Back sits straight down, where a thumb pulls to go back; the rest keep their old neighbours.
+const GO_SLOTS: readonly Slot[] = [
+  { index: 0, id: 'up', label: 'Workspaces', bindingId: GO_ACTION_IDS.up },
+  { index: 1, id: 'new', label: 'New worktree', bindingId: GO_ACTION_IDS.new },
+  { index: 2, id: 'files', label: 'Files', bindingId: GO_ACTION_IDS.files },
+  { index: 3, id: 'changes', label: 'Changes', bindingId: GO_ACTION_IDS.changes },
+  { index: 4, id: 'back', label: 'Back', bindingId: GO_ACTION_IDS.back },
+  { index: 5, id: 'history', label: 'History', bindingId: GO_ACTION_IDS.history },
+  { index: 6, id: 'settings', label: 'Settings', bindingId: GO_ACTION_IDS.settings }
+]
 
 const DO_SLOTS: readonly Slot[] = [
   { index: 0, id: 'launch', label: 'Launch agent', bindingId: DO_ACTION_IDS.launch },
@@ -94,20 +97,6 @@ const DO_SLOTS: readonly Slot[] = [
   { index: 5, id: 'view', label: 'View', bindingId: DO_ACTION_IDS.view }
 ]
 
-const GO_SLOTS_BY_SCREEN: Record<WheelScreen, readonly Slot[]> = {
-  home: [GO_SLOTS.new, GO_SLOTS.settings],
-  host: [GO_SLOTS.up, GO_SLOTS.new, GO_SLOTS.settings],
-  session: [
-    GO_SLOTS.up,
-    GO_SLOTS.new,
-    GO_SLOTS.files,
-    GO_SLOTS.changes,
-    GO_SLOTS.history,
-    GO_SLOTS.settings
-  ],
-  other: [GO_SLOTS.up, GO_SLOTS.new, GO_SLOTS.settings]
-}
-
 const LAYOUT_TRIAL = {
   targetDevice: 'any controller-capable Android device',
   controller: 'any Android gamepad'
@@ -125,7 +114,7 @@ function goPreset(screen: WheelScreen): WheelPresetDefinition {
       destructivePolicy: 'excludes-destructive',
       notes: 'Navigation only: every slot opens a screen the app already has.'
     },
-    segments: GO_SLOTS_BY_SCREEN[screen].map(segmentOf)
+    segments: GO_SLOTS.map((slot) => segmentOf(slot, GO_SLOT_COUNT))
   })
 }
 
@@ -141,7 +130,7 @@ const DO_PRESET = loadPreset({
     notes:
       'Stop interrupts the agent and Close ends the tab; they sit apart so one is never a slip from the other.'
   },
-  segments: DO_SLOTS.map(segmentOf)
+  segments: DO_SLOTS.map((slot) => segmentOf(slot, DO_SLOT_COUNT))
 })
 
 export type WheelLayouts = Readonly<Partial<Record<WheelId, WheelPresetDefinition>>>

@@ -12,6 +12,8 @@ describe('the accepted PRD mapping', () => {
     expect(PRD_CONTROLLER_BINDINGS.map((binding) => binding.label)).toEqual([
       'L2',
       'R2',
+      'X+L2',
+      'X+R2',
       'LB',
       'RB',
       'X+LB',

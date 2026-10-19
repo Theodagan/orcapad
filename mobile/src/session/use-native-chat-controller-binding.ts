@@ -16,6 +16,7 @@ export type NativeChatControllerBindingOptions = InterventionSurface &
     readonly onStop?: () => void
     /** The view's own tail-following scroll, which knows where the transcript really is. */
     readonly scrollBy: (delta: number) => void
+    readonly jumpToUserMessage?: (direction: 'previous' | 'next') => void
   }
 
 export function useNativeChatControllerBinding(options: NativeChatControllerBindingOptions): void {

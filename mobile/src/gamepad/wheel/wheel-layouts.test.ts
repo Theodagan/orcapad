@@ -5,6 +5,7 @@ import { slotAngle, wheelLayoutsFor, wheelScreenFor, type WheelScreen } from './
 
 const SCREENS: readonly WheelScreen[] = ['home', 'host', 'session', 'other']
 const SIXTH = Math.PI / 3
+const EIGHTH = Math.PI / 4
 
 describe('wheel screens', () => {
   // Segments, not the pathname: a real workspace id is `repo::/abs/path`, so its pathname has
@@ -33,21 +34,23 @@ describe('wheel layouts', () => {
       }
     }
     expect(angles.get(GO_ACTION_IDS.up)).toBe(0)
-    expect(angles.get(GO_ACTION_IDS.new)).toBeCloseTo(SIXTH)
-    expect(angles.get(GO_ACTION_IDS.files)).toBeCloseTo(2 * SIXTH)
-    expect(angles.get(GO_ACTION_IDS.changes)).toBeCloseTo(3 * SIXTH)
-    expect(angles.get(GO_ACTION_IDS.history)).toBeCloseTo(4 * SIXTH)
-    expect(angles.get(GO_ACTION_IDS.settings)).toBeCloseTo(5 * SIXTH)
+    expect(angles.get(GO_ACTION_IDS.new)).toBeCloseTo(EIGHTH)
+    expect(angles.get(GO_ACTION_IDS.files)).toBeCloseTo(2 * EIGHTH)
+    expect(angles.get(GO_ACTION_IDS.changes)).toBeCloseTo(3 * EIGHTH)
+    expect(angles.get(GO_ACTION_IDS.back)).toBeCloseTo(4 * EIGHTH)
+    expect(angles.get(GO_ACTION_IDS.history)).toBeCloseTo(5 * EIGHTH)
+    expect(angles.get(GO_ACTION_IDS.settings)).toBeCloseTo(6 * EIGHTH)
   })
 
-  it('lists only the slots each screen has', () => {
+  it('gives every screen the whole GO wheel, Back straight down', () => {
     const goIds = (screen: WheelScreen) =>
-      wheelLayoutsFor(screen)[1]?.segments.map((segment) => segment.bindingId)
+      wheelLayoutsFor(screen)[1]
+        ?.segments.map((segment) => segment.bindingId)
+        .sort()
 
-    expect(goIds('home')).toEqual([GO_ACTION_IDS.new, GO_ACTION_IDS.settings])
-    expect(goIds('host')).toEqual([GO_ACTION_IDS.up, GO_ACTION_IDS.new, GO_ACTION_IDS.settings])
-    expect(goIds('other')).toEqual(goIds('host'))
-    expect(goIds('session')).toEqual(Object.values(GO_ACTION_IDS))
+    for (const screen of SCREENS) {
+      expect(goIds(screen), screen).toEqual(Object.values(GO_ACTION_IDS).sort())
+    }
   })
 
   it('puts DO on the right stick in a session only', () => {

@@ -22,6 +22,8 @@ export type ControllerIntent =
   | { readonly kind: 'toggle-dictation' }
   | { readonly kind: 'move-selection'; readonly direction: 'up' | 'down' }
   | { readonly kind: 'move-horizontal'; readonly direction: 'left' | 'right' }
+  /** X+L2/R2: one step between the user's own messages, once per pull. */
+  | { readonly kind: 'jump-message'; readonly direction: 'previous' | 'next' }
   /** A registered wheel action run straight from a button, so the button and the wheel share one path. */
   | { readonly kind: 'run-action'; readonly actionId: string }
 

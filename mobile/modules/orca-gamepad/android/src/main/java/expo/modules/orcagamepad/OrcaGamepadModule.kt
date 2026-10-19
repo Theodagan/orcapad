@@ -120,6 +120,15 @@ class OrcaGamepadModule : Module() {
       }
     }.runOnQueue(Queues.MAIN)
 
+    // D-pad and `A` for a screen no JavaScript surface answers for (see PadFocusFallback).
+    AsyncFunction("moveNativeFocus") { direction: String ->
+      appContext.currentActivity?.let { PadFocusFallback.move(it, direction) } ?: false
+    }.runOnQueue(Queues.MAIN)
+
+    AsyncFunction("activateNativeFocus") {
+      appContext.currentActivity?.let { PadFocusFallback.activate(it) } ?: false
+    }.runOnQueue(Queues.MAIN)
+
     // Hides or reveals Android status and navigation/gesture bars. Transient bars appear
     // on edge swipe and retreat automatically.
     AsyncFunction("setImmersive") { enabled: Boolean ->
@@ -309,6 +318,7 @@ class OrcaGamepadModule : Module() {
     if (!isControllerEvent(event)) {
       return
     }
+    PadFocusFallback.recordKey(event, consumed)
     if (event.repeatCount > 0) {
       return
     }

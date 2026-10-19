@@ -29,6 +29,8 @@ export type AgentControllerBindingOptions = InterventionSurface & {
   readonly sessionId: string
   readonly canStop: boolean
   readonly onStop?: () => void
+  /** X+L2/R2: the nearest of the user's own messages that way. */
+  readonly jumpToUserMessage?: (direction: 'previous' | 'next') => void
   /** The prompt card's collapse or expand; absent while no prompt can be hidden or shown. */
   readonly onTogglePrompt?: () => void
   /**
@@ -78,6 +80,15 @@ export function useAgentControllerBinding(options: AgentControllerBindingOptions
       ]
     ]
 
+    entries.push([
+      'jump-message',
+      (intent) => {
+        if (intent.kind === 'jump-message') {
+          latest.current.jumpToUserMessage?.(intent.direction)
+        }
+      }
+    ])
+
     if (intervention?.accept != null) {
       entries.push(['confirm', intervention.accept])
     }
@@ -108,7 +119,13 @@ export function useAgentControllerBinding(options: AgentControllerBindingOptions
         ...focusTargetFor(`agent:${sessionId}`, entries),
         zone: 'agent',
         priority: FOCUS_PRIORITY.surface,
-        labels: { scroll: 'Scroll', 'move-selection': 'Scroll', confirm: 'Allow', back: 'Dismiss' }
+        labels: {
+          scroll: 'Scroll',
+          'move-selection': 'Scroll',
+          'jump-message': 'My messages',
+          confirm: 'Allow',
+          back: 'Dismiss'
+        }
       },
       wheelActions
     }

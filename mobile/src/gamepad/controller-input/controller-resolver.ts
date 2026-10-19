@@ -87,9 +87,20 @@ export function resolveControllerIntents(
       continue
     }
 
+    if (binding.kind === 'chord-trigger') {
+      const crossed =
+        axisOf(next, binding.axis) > policy.triggerDeadZone &&
+        axisOf(previous, binding.axis) <= policy.triggerDeadZone
+      if (crossed && isDown(next, binding.chord)) {
+        intents.push({ kind: binding.intent, direction: binding.direction })
+      }
+      continue
+    }
+
     if (binding.kind === 'trigger') {
       const value = axisOf(next, binding.axis)
-      if (value <= policy.triggerDeadZone) {
+      // Under the chord a trigger is a step, not a scroll.
+      if (value <= policy.triggerDeadZone || chordHeld) {
         continue
       }
       const wasHeld = axisOf(previous, binding.axis) > policy.triggerDeadZone

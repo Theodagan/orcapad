@@ -7,7 +7,8 @@ import { DO_ACTION_IDS, VIEW_ACTION_IDS } from '../bindings/wheel-action-ids'
  * contract row by row and a reader can see the whole scheme at once. `005` moved three rows:
  * `Y` toggles dictation on tap, while `X` is held for directional zone movement. `012` gave Start
  * and Select one wheel action each, run through the wheel registry so both paths stay one. `X` is
- * now the only modifier: X+LB/RB cycle workspaces, X+Y shows or hides the prompt, X+Select stops.
+ * now the only modifier: X+LB/RB cycle workspaces, X+Y shows or hides the prompt, X+Select stops,
+ * X+L2/R2 step between the user's own messages.
  *
  * The D-pad set lives in its own module and must never be merged into this one: the boundary
  * test fails a module that declares both, because the two have different provenance and a
@@ -42,6 +43,15 @@ export type ControllerBinding =
       readonly label: string
     }
   | {
+      /** Fires once as the trigger crosses its dead zone with the chord held; never scrolls. */
+      readonly kind: 'chord-trigger'
+      readonly axis: Extract<ControllerAxis, 'l2' | 'r2'>
+      readonly chord: ControllerButton
+      readonly intent: Extract<ControllerIntentKind, 'jump-message'>
+      readonly direction: 'previous' | 'next'
+      readonly label: string
+    }
+  | {
       readonly kind: 'stick'
       readonly axes: readonly [ControllerAxis, ControllerAxis]
       readonly intent: Extract<ControllerIntentKind, 'wheel-motion'>
@@ -57,6 +67,22 @@ export type ButtonBinding = Extract<ControllerBinding, { readonly kind: 'button'
 export const PRD_CONTROLLER_BINDINGS: readonly ControllerBinding[] = [
   { kind: 'trigger', axis: 'l2', intent: 'scroll', direction: 'up', label: 'L2' },
   { kind: 'trigger', axis: 'r2', intent: 'scroll', direction: 'down', label: 'R2' },
+  {
+    kind: 'chord-trigger',
+    axis: 'l2',
+    chord: 'x',
+    intent: 'jump-message',
+    direction: 'previous',
+    label: 'X+L2'
+  },
+  {
+    kind: 'chord-trigger',
+    axis: 'r2',
+    chord: 'x',
+    intent: 'jump-message',
+    direction: 'next',
+    label: 'X+R2'
+  },
   {
     kind: 'button',
     button: 'lb',

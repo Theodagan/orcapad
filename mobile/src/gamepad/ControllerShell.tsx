@@ -16,7 +16,8 @@ import { useWheelController } from './wheel/use-wheel-controller'
 import { createWheelRegistry, type WheelRegistry } from './wheel/wheel-registry'
 import { createActiveDictationRegistry } from './bindings/active-dictation'
 import { wheelLayoutsFor, wheelScreenFor, type WheelScreen } from './wheel/wheel-layouts'
-import { goWheelActions } from './bindings/go-wheel-actions'
+import { goWheelActions, workspaceOfRoute, type WorkspacePage } from './bindings/go-wheel-actions'
+import { useNativeFocusFallbackBinding } from './bindings/use-native-focus-fallback-binding'
 import { ActionRefusalNotice } from './action-refusal/ActionRefusalNotice'
 import { createActionRefusalStore, refusalMessageFor } from './action-refusal/action-refusal-store'
 import { triggerError } from '../platform/haptics'
@@ -66,16 +67,38 @@ function FocusModeSystemBars(): null {
   return null
 }
 
-/** GO's Up, New and Settings, which need only the router. */
-function useGoWheelActions(registry: WheelRegistry, screen: WheelScreen, pathname: string): void {
+const WORKSPACE_PAGE_PATH: Record<WorkspacePage, string> = {
+  files: '/h/[hostId]/files/[worktreeId]',
+  changes: '/h/[hostId]/source-control/[worktreeId]',
+  history: '/h/[hostId]/agent-history/[worktreeId]'
+}
+
+/** GO's shell-owned slots, which need only the router and the route's own params. */
+function useGoWheelActions(
+  registry: WheelRegistry,
+  screen: WheelScreen,
+  segments: readonly string[],
+  pathname: string
+): void {
   const router = useRouter()
-  const { hostId } = useGlobalSearchParams<{ hostId?: string }>()
+  const { hostId, worktreeId, name, executionHost } = useGlobalSearchParams<{
+    hostId?: string
+    worktreeId?: string
+    name?: string
+    executionHost?: string
+  }>()
+  const workspace = workspaceOfRoute(segments)
+  const page = workspace?.page ?? null
+  const inWorkspace = workspace !== null
   useEffect(() => {
     const host = typeof hostId === 'string' ? hostId : null
     const unregister = goWheelActions({
       screen,
       hostId: host,
       atSettings: pathname === '/settings',
+      canGoBack: router.canGoBack(),
+      workspace: inWorkspace ? { page } : null,
+      onBack: () => router.back(),
       onAllHosts: () => router.dismissTo('/'),
       onWorkspaces: () => {
         if (host !== null) {
@@ -87,6 +110,20 @@ function useGoWheelActions(registry: WheelRegistry, screen: WheelScreen, pathnam
           router.dismissTo(hostNewWorktreeRoute(host))
         }
       },
+      onWorkspacePage: (target) => {
+        if (host === null || typeof worktreeId !== 'string') {
+          return
+        }
+        router.push({
+          pathname: WORKSPACE_PAGE_PATH[target],
+          params: {
+            hostId: host,
+            worktreeId,
+            name: typeof name === 'string' ? name : '',
+            ...(typeof executionHost === 'string' ? { executionHost } : {})
+          }
+        })
+      },
       onSettings: () => router.push('/settings')
     }).map((action) => registry.register(action))
     return () => {
@@ -94,7 +131,24 @@ function useGoWheelActions(registry: WheelRegistry, screen: WheelScreen, pathnam
         retract()
       }
     }
-  }, [hostId, pathname, screen, registry, router])
+  }, [
+    hostId,
+    worktreeId,
+    name,
+    executionHost,
+    inWorkspace,
+    page,
+    pathname,
+    screen,
+    registry,
+    router
+  ])
+}
+
+/** D-pad and `A` through Android's own focus on screens with no pad zones. Inside the provider. */
+function NativeFocusFallback(): null {
+  useNativeFocusFallbackBinding(controllerRuntime.nativeFocus)
+  return null
 }
 
 export function ControllerShell({
@@ -105,7 +159,8 @@ export function ControllerShell({
   readonly onLayout?: (event: LayoutChangeEvent) => void
 }): ReactNode {
   const pathname = usePathname()
-  const screen = wheelScreenFor(useSegments())
+  const segments = useSegments()
+  const screen = wheelScreenFor(segments)
   // GO on the left stick and, in a session, DO on the right (`012`).
   const wheel = useWheelController({
     presets: wheelLayoutsFor(screen),
@@ -116,7 +171,7 @@ export function ControllerShell({
   })
   // A pad that drops mid-gesture must not leave an open wheel swallowing the screen.
   useCancelWheelOnDisconnect(controllerRuntime.reader, wheel.cancel)
-  useGoWheelActions(wheelRegistry, screen, pathname)
+  useGoWheelActions(wheelRegistry, screen, segments, pathname)
   const overlay = useMemo(() => <WheelOverlay controller={wheel} />, [wheel])
 
   return (
@@ -136,6 +191,7 @@ export function ControllerShell({
         {children}
       </View>
       <RootBackBinding />
+      <NativeFocusFallback />
       <FocusModeSystemBars />
       <ActionHintBar wheel={wheel.view} actions={wheelRegistry} reader={controllerRuntime.reader} />
       <ControllerNoticeStack>

@@ -49,6 +49,13 @@ export type OrcaGamepadModule = {
    */
   readonly requestNativeFocusWithin?: (viewTag: number) => Promise<boolean>
   /**
+   * Moves Android's own focus one step, for a screen no JavaScript surface answers the D-pad on.
+   * Resolves false when Android already moved it for this press, or nothing lies that way.
+   */
+  readonly moveNativeFocus?: (direction: 'up' | 'down' | 'left' | 'right') => Promise<boolean>
+  /** Presses the control Android has focused, as a keyboard's centre key would. */
+  readonly activateNativeFocus?: () => Promise<boolean>
+  /**
    * Hides or reveals Android status and navigation/gesture bars (immersive mode).
    * Optional in older native builds.
    */

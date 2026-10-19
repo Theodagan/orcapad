@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject
+} from 'react'
 import {
   Platform,
   type FlatList,
@@ -62,6 +70,8 @@ export type MobileNativeChatTailFollow<TItem> = {
   onListLayout: (event: LayoutChangeEvent) => void
   /** Controller scroll: a signed distance from where the transcript really is. Leaves and rejoins the tail. */
   scrollBy: (delta: number) => void
+  /** Stops following the tail, for a jump that is about to move the reader somewhere else. */
+  leaveTail: () => void
 }
 
 /** Sole owner of transcript scroll position.
@@ -256,18 +266,23 @@ export function useMobileNativeChatTailFollow<TItem>(args: {
     []
   )
 
+  // Going up leaves the tail, or the next token would snap the view back to the newest line.
+  const leaveTail = useCallback(() => {
+    controllerMovedUpRef.current = true
+    clearUserScrollSettle()
+    userScrollActiveRef.current = false
+    setAtTail(false)
+    setFollowing(false)
+  }, [clearUserScrollSettle, setAtTail, setFollowing])
+
   const scrollBy = useCallback(
     (delta: number) => {
       if (!hasItems) {
         return
       }
       controllerMovedUpRef.current = delta < 0
-      // Going up leaves the tail, or the next token would snap the view back to the newest line.
       if (delta < 0) {
-        clearUserScrollSettle()
-        userScrollActiveRef.current = false
-        setAtTail(false)
-        setFollowing(false)
+        leaveTail()
       }
       const step = scrollTracker.by(delta)
       // Reaching the bottom again resumes following, as a finger lifting there does.
@@ -276,7 +291,7 @@ export function useMobileNativeChatTailFollow<TItem>(args: {
         setFollowing(true)
       }
     },
-    [hasItems, clearUserScrollSettle, scrollTracker, setAtTail, setFollowing]
+    [hasItems, leaveTail, scrollTracker, setAtTail, setFollowing]
   )
 
   // Before paint, so the next chat never shows where the reader left the last one.
@@ -305,6 +320,7 @@ export function useMobileNativeChatTailFollow<TItem>(args: {
     readerIsScrolling,
     recordScrollMetrics,
     onListLayout,
-    scrollBy
+    scrollBy,
+    leaveTail
   }
 }

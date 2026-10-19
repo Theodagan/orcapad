@@ -37,6 +37,29 @@ export type ControllerRuntime = {
   readonly requestNativeFocus: (node: View | null, within?: boolean) => void
   /** Hides or restores Android system bars (status and gesture/navigation bars). Inert without native module. */
   readonly setImmersive: (enabled: boolean) => void
+  /** Android's own focus, for screens no surface binds: one D-pad step, or a press on it. */
+  readonly nativeFocus: NativeFocusFallback
+}
+
+export type NativeFocusFallback = {
+  readonly move: (direction: 'up' | 'down' | 'left' | 'right') => void
+  readonly activate: () => void
+}
+
+const INERT_NATIVE_FOCUS: NativeFocusFallback = { move: () => {}, activate: () => {} }
+
+function nativeFocusFallback(module: NonNullable<typeof orcaGamepad>): NativeFocusFallback {
+  if (Platform.OS !== 'android') {
+    return INERT_NATIVE_FOCUS
+  }
+  return {
+    move: (direction) => {
+      module.moveNativeFocus?.(direction).catch(() => {})
+    },
+    activate: () => {
+      module.activateNativeFocus?.().catch(() => {})
+    }
+  }
 }
 
 /**
@@ -98,7 +121,8 @@ export function createControllerRuntime(): ControllerRuntime {
       resolve: createControllerIntentResolver(),
       setCaptured: () => {},
       requestNativeFocus: () => {},
-      setImmersive: () => {}
+      setImmersive: () => {},
+      nativeFocus: INERT_NATIVE_FOCUS
     }
   }
   const module = orcaGamepad
@@ -133,6 +157,7 @@ export function createControllerRuntime(): ControllerRuntime {
       module.setInputCaptured(captured)
     },
     requestNativeFocus: nativeFocusRequester(module),
+    nativeFocus: nativeFocusFallback(module),
     setImmersive: (enabled) => {
       if (Platform.OS === 'android' && module.setImmersive !== undefined) {
         module.setImmersive(enabled).catch(() => {})

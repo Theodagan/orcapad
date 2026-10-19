@@ -6,6 +6,7 @@
  */
 
 export const GO_ACTION_IDS = {
+  back: 'go.back',
   up: 'go.up',
   new: 'go.new',
   files: 'go.files',

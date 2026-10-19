@@ -5,6 +5,7 @@ import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.view.ViewTreeObserver
 import android.widget.EditText
+import java.lang.ref.WeakReference
 import java.util.WeakHashMap
 
 /**
@@ -27,6 +28,31 @@ object NativeFocusRing {
   private val watched = WeakHashMap<View, ViewTreeObserver.OnGlobalFocusChangeListener>()
   private val displaced = WeakHashMap<View, Drawable?>()
   private val detachWatchers = WeakHashMap<View, View.OnAttachStateChangeListener>()
+  /** Windows where only the pad's own fallback focus is ringed, not every focus change. */
+  private val padRoots = WeakHashMap<View, ViewTreeObserver.OnGlobalFocusChangeListener>()
+  private var padFocused: WeakReference<View>? = null
+
+  /**
+   * Rings one view the pad focused in the app window, where JavaScript draws every other cursor.
+   * The ring leaves as soon as anything else takes focus.
+   */
+  fun ringPadFocus(view: View) {
+    val root = view.rootView ?: return
+    if (!padRoots.containsKey(root) && !watched.containsKey(root)) {
+      val listener = ViewTreeObserver.OnGlobalFocusChangeListener { _, gained ->
+        val current = padFocused?.get()
+        if (current != null && current !== gained) {
+          release(current)
+          padFocused = null
+        }
+      }
+      root.viewTreeObserver.addOnGlobalFocusChangeListener(listener)
+      padRoots[root] = listener
+    }
+    padFocused?.get()?.let { if (it !== view) release(it) }
+    ring(view)
+    padFocused = WeakReference(view)
+  }
 
   /** Starts ringing focus changes in the window this view is in. Safe to call for every request. */
   fun watch(view: View) {

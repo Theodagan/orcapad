@@ -1,10 +1,9 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNativeChatControllerBinding } from './use-native-chat-controller-binding'
+import { useMobileNativeChatUserMessageJump } from './use-mobile-native-chat-user-message-jump'
 import {
   ActivityIndicator,
   FlatList,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
   Text,
   View
 } from 'react-native'
@@ -268,10 +267,9 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
     readerIsScrolling,
     recordScrollMetrics,
     onListLayout,
-    scrollBy
+    scrollBy,
+    leaveTail
   } = useMobileNativeChatTailFollow<NativeChatMessage>({ items: data, scopeKey: sendSurfaceId })
-
-  useNativeChatControllerBinding({ ...props, sessionId: sendSurfaceId, scrollBy })
 
   const handleSend = useMobileNativeChatSendHandler({ onSend, onClearSendError, jumpToTail })
 
@@ -313,6 +311,18 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
   })
 
   const history = useMobileNativeChatPageHistory(turns.listMessages, renderItem, sendSurfaceId)
+  const userJump = useMobileNativeChatUserMessageJump({
+    listRef,
+    rows: history.listRows,
+    leaveTail,
+    jumpToTail
+  })
+  useNativeChatControllerBinding({
+    ...props,
+    sessionId: sendSurfaceId,
+    scrollBy,
+    jumpToUserMessage: userJump.jump
+  })
 
   const liveStatus = turns.liveLine ? (
     <MobileNativeChatLiveLine
@@ -384,6 +394,7 @@ export function MobileNativeChatView(props: Props): React.JSX.Element {
                 renderItem
               )}
               ListEmptyComponent={emptyStateView}
+              {...userJump.listProps}
             />
           </GestureDetector>
           <MobileNativeChatFloatingControls
