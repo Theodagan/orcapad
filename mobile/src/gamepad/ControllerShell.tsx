@@ -1,6 +1,6 @@
 import { useEffect, useMemo, type ReactNode } from 'react'
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native'
-import { useGlobalSearchParams, usePathname, useRouter } from 'expo-router'
+import { useGlobalSearchParams, usePathname, useRouter, useSegments } from 'expo-router'
 import { colors } from '../theme/mobile-theme'
 import { MobileDictationStatusPill } from '../session/MobileDictationStatusPill'
 import { hostStackHostRoute } from '../navigation/host-stack-navigation'
@@ -105,7 +105,7 @@ export function ControllerShell({
   readonly onLayout?: (event: LayoutChangeEvent) => void
 }): ReactNode {
   const pathname = usePathname()
-  const screen = wheelScreenFor(pathname)
+  const screen = wheelScreenFor(useSegments())
   // GO on the left stick and, in a session, DO on the right (`012`).
   const wheel = useWheelController({
     presets: wheelLayoutsFor(screen),

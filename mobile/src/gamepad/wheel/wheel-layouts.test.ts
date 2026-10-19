@@ -7,15 +7,16 @@ const SCREENS: readonly WheelScreen[] = ['home', 'host', 'session', 'other']
 const SIXTH = Math.PI / 3
 
 describe('wheel screens', () => {
-  it('reads the screen from the pathname', () => {
-    expect(wheelScreenFor('/')).toBe('home')
-    expect(wheelScreenFor('')).toBe('home')
-    expect(wheelScreenFor('/h/abc')).toBe('host')
-    expect(wheelScreenFor('/h/abc/')).toBe('host')
-    expect(wheelScreenFor('/h/abc/session/repo%3A%3Atree')).toBe('session')
-    expect(wheelScreenFor('/h/abc/files/tree')).toBe('other')
-    expect(wheelScreenFor('/h/abc/agent-history/tree')).toBe('other')
-    expect(wheelScreenFor('/settings')).toBe('other')
+  // Segments, not the pathname: a real workspace id is `repo::/abs/path`, so its pathname has
+  // extra `/`s and a session once read as `other`, with no DO wheel and a three-slot GO.
+  it('reads the screen from the route segments', () => {
+    expect(wheelScreenFor([])).toBe('home')
+    expect(wheelScreenFor(['h', '[hostId]'])).toBe('host')
+    expect(wheelScreenFor(['h', '[hostId]', 'session', '[worktreeId]'])).toBe('session')
+    expect(wheelScreenFor(['h', '[hostId]', 'files', '[worktreeId]'])).toBe('other')
+    expect(wheelScreenFor(['h', '[hostId]', 'agent-history', '[worktreeId]'])).toBe('other')
+    expect(wheelScreenFor(['h', '[hostId]', 'files', 'preview', '[worktreeId]'])).toBe('other')
+    expect(wheelScreenFor(['settings'])).toBe('other')
   })
 })
 

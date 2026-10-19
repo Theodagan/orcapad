@@ -26,19 +26,22 @@ export function slotHalfWidth(count: number): number {
 
 export type WheelScreen = 'home' | 'host' | 'session' | 'other'
 
-/** The screen a pathname is, for choosing its wheels. Pure, so routing rules are testable. */
-export function wheelScreenFor(pathname: string): WheelScreen {
-  const path = pathname.replace(/\/+$/, '')
-  if (path === '') {
+/**
+ * The screen a route is, for choosing its wheels. Read from the route's file segments, not its
+ * pathname: the pathname carries the raw workspace id, and Orca's ids hold `/` (`repo::/abs/path`).
+ */
+export function wheelScreenFor(segments: readonly string[]): WheelScreen {
+  const route = segments.filter((segment) => !(segment.startsWith('(') && segment.endsWith(')')))
+  if (route.length === 0) {
     return 'home'
   }
-  if (/^\/h\/[^/]+$/.test(path)) {
+  if (route[0] !== 'h' || route[1] !== '[hostId]') {
+    return 'other'
+  }
+  if (route.length === 2) {
     return 'host'
   }
-  if (/^\/h\/[^/]+\/session\/[^/]+$/.test(path)) {
-    return 'session'
-  }
-  return 'other'
+  return route.length === 4 && route[2] === 'session' ? 'session' : 'other'
 }
 
 type Slot = {
