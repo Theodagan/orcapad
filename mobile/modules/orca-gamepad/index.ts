@@ -50,13 +50,13 @@ export type OrcaGamepadModule = {
   readonly requestNativeFocusWithin?: (viewTag: number) => Promise<boolean>
   /**
    * Moves Android's own focus one step, for a screen no JavaScript surface answers the D-pad on.
-   * Resolves false when Android already moved it for this press, or nothing lies that way.
+   * Resolves to what happened (`moved:Type`) or why nothing did, for the pad debug line.
    */
-  readonly moveNativeFocus?: (direction: 'up' | 'down' | 'left' | 'right') => Promise<boolean>
+  readonly moveNativeFocus?: (direction: 'up' | 'down' | 'left' | 'right') => Promise<string>
   /** Scrolls the area around Android's focus, or the largest on screen, by this many dp. */
-  readonly scrollNativeBy?: (deltaDp: number) => Promise<boolean>
+  readonly scrollNativeBy?: (deltaDp: number) => Promise<string>
   /** Presses the control Android has focused, as a keyboard's centre key would. */
-  readonly activateNativeFocus?: () => Promise<boolean>
+  readonly activateNativeFocus?: () => Promise<string>
   /**
    * Hides or reveals Android status and navigation/gesture bars (immersive mode).
    * Optional in older native builds.

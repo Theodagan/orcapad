@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { DO_ACTION_IDS, GO_ACTION_IDS } from '../bindings/wheel-action-ids'
+import { DO_ACTION_IDS, GO_ACTION_IDS, VIEW_ACTION_IDS } from '../bindings/wheel-action-ids'
 import { validatePreset } from './wheel-preset'
 import { slotAngle, wheelLayoutsFor, wheelScreenFor, type WheelScreen } from './wheel-layouts'
 
 const SCREENS: readonly WheelScreen[] = ['home', 'host', 'session', 'other']
 const SIXTH = Math.PI / 3
-const EIGHTH = Math.PI / 4
 
 describe('wheel screens', () => {
   // Segments, not the pathname: a real workspace id is `repo::/abs/path`, so its pathname has
@@ -33,22 +32,24 @@ describe('wheel layouts', () => {
         angles.set(segment.bindingId, segment.centerAngle)
       }
     }
-    expect(angles.get(GO_ACTION_IDS.new)).toBeCloseTo(EIGHTH)
-    expect(angles.get(GO_ACTION_IDS.files)).toBeCloseTo(2 * EIGHTH)
-    expect(angles.get(GO_ACTION_IDS.changes)).toBeCloseTo(3 * EIGHTH)
-    expect(angles.get(GO_ACTION_IDS.settings)).toBeCloseTo(4 * EIGHTH)
-    expect(angles.get(GO_ACTION_IDS.history)).toBeCloseTo(5 * EIGHTH)
-    expect(angles.get(GO_ACTION_IDS.back)).toBeCloseTo(6 * EIGHTH)
+    const QUARTER = Math.PI / 2
+    expect(angles.get(VIEW_ACTION_IDS.chatTerminal)).toBe(0)
+    expect(angles.get(GO_ACTION_IDS.pages)).toBeCloseTo(QUARTER)
+    expect(angles.get(GO_ACTION_IDS.new)).toBeCloseTo(2 * QUARTER)
+    expect(angles.get(GO_ACTION_IDS.back)).toBeCloseTo(3 * QUARTER)
   })
 
-  it('gives every screen the whole GO wheel, Back to the left', () => {
+  it('gives every screen the same four GO slots, the pages gathered under Pages', () => {
     const goIds = (screen: WheelScreen) =>
-      wheelLayoutsFor(screen)[1]
-        ?.segments.map((segment) => segment.bindingId)
-        .sort()
+      wheelLayoutsFor(screen)[1]?.segments.map((segment) => segment.bindingId)
 
     for (const screen of SCREENS) {
-      expect(goIds(screen), screen).toEqual(Object.values(GO_ACTION_IDS).sort())
+      expect(goIds(screen), screen).toEqual([
+        VIEW_ACTION_IDS.chatTerminal,
+        GO_ACTION_IDS.pages,
+        GO_ACTION_IDS.new,
+        GO_ACTION_IDS.back
+      ])
     }
   })
 

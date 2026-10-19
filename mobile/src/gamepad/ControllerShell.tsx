@@ -12,10 +12,15 @@ import { createControllerRuntime } from './controller-input/controller-runtime'
 import { useCancelWheelOnDisconnect } from './wheel/use-cancel-wheel-on-disconnect'
 import { WheelOverlay } from './wheel/WheelOverlay'
 import { useWheelController } from './wheel/use-wheel-controller'
-import { createWheelRegistry, type WheelRegistry } from './wheel/wheel-registry'
+import { createWheelRegistry, type WheelBinding, type WheelRegistry } from './wheel/wheel-registry'
 import { createActiveDictationRegistry } from './bindings/active-dictation'
 import { wheelLayoutsFor, wheelScreenFor, type WheelScreen } from './wheel/wheel-layouts'
-import { goWheelActions, workspaceOfRoute, type WorkspacePage } from './bindings/go-wheel-actions'
+import {
+  goWheelActions,
+  pagesWheelMenu,
+  workspaceOfRoute,
+  type WorkspacePage
+} from './bindings/go-wheel-actions'
 import { useNativeFocusFallbackBinding } from './bindings/use-native-focus-fallback-binding'
 import { ActionRefusalNotice } from './action-refusal/ActionRefusalNotice'
 import { createActionRefusalStore, refusalMessageFor } from './action-refusal/action-refusal-store'
@@ -91,7 +96,7 @@ function useGoWheelActions(
   const inWorkspace = workspace !== null
   useEffect(() => {
     const host = typeof hostId === 'string' ? hostId : null
-    const unregister = goWheelActions({
+    const bindings: readonly WheelBinding[] = goWheelActions({
       screen,
       hostId: host,
       atSettings: pathname === '/settings',
@@ -118,7 +123,10 @@ function useGoWheelActions(
         })
       },
       onSettings: () => router.push('/settings')
-    }).map((action) => registry.register(action))
+    })
+    const unregister = [...bindings, pagesWheelMenu(registry.lookup)].map((binding) =>
+      registry.register(binding)
+    )
     return () => {
       for (const retract of unregister) {
         retract()

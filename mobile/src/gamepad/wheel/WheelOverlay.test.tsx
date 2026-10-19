@@ -11,6 +11,13 @@ import { loadPreset, type WheelPresetDefinition } from './wheel-preset'
 import { createWheelRegistry, type WheelRegistry } from './wheel-registry'
 
 vi.mock('react-native', () => ({
+  Animated: {
+    Value: class {
+      constructor(readonly value: number) {}
+    },
+    timing: () => ({ start: () => {} }),
+    View: 'View'
+  },
   StyleSheet: { create: <T,>(styles: T) => styles, absoluteFill: {} },
   Text: 'Text',
   View: 'View'
@@ -178,7 +185,7 @@ describe('WheelOverlay', () => {
     )
   })
 
-  it('widens the dial for seven or more entries, and caps each label so neighbours never touch', () => {
+  it('in a menu, makes room for the parent ring and the half circle outside it, and caps labels', () => {
     const registry = createWheelRegistry()
     registry.register({
       id: 'noop.one',
@@ -209,7 +216,8 @@ describe('WheelOverlay', () => {
           (entry: unknown) => entry !== null && typeof entry === 'object' && 'height' in entry
         )
     )[0]
-    expect(dial?.props.style[1]).toEqual({ height: 280, width: 280 })
+    // A one-slot parent keeps the small ring (96); the half circle sits 120 outside it.
+    expect(dial?.props.style[1]).toMatchObject({ height: 432, width: 432 })
     const label = renderer?.root.findAll(
       (node) => node.type === 'Text' && node.props.numberOfLines === 1
     )[0]
@@ -266,6 +274,12 @@ describe('WheelOverlay', () => {
     })
 
     expect(cueText('left')).toBe('L2 | Back')
+    // The wheel it came from stays as the inner ring, the slot that opened it marked.
+    const testIds = (
+      renderer?.root.findAll((node) => typeof node.props.testID === 'string') ?? []
+    ).map((node) => String(node.props.testID))
+    expect(testIds).toContain('wheel-segment:parent:north')
+    expect(testIds).toContain('wheel-segment:child')
   })
 
   it('closes when the stick returns to centre', () => {

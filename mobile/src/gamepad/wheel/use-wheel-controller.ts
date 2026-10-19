@@ -5,6 +5,7 @@ import {
   LOADING_MENU,
   menuEntryBindingId,
   menuSegments,
+  type MenuSide,
   parseMenuKey,
   type MenuView
 } from './wheel-menu'
@@ -61,6 +62,11 @@ export type WheelControllerOptions = {
 
 type SegmentsFor = WheelPreset['segmentsFor']
 
+/** The left stick's menus open toward the right of the screen, the right stick's toward the left. */
+export function menuSideOf(wheel: WheelId): MenuSide {
+  return wheel === 1 ? 'right' : 'left'
+}
+
 /** One resolve per wheel and path for the length of one `apply`. */
 function onceEach(segmentsFor: SegmentsFor): SegmentsFor {
   const resolved = new Map<string, readonly WheelSegment[]>()
@@ -97,7 +103,11 @@ export function useWheelController(options: WheelControllerOptions): WheelContro
         const preset = presetsRef.current[wheel]
         return preset === undefined ? [] : resolveSegments(preset, registry)
       }
-      return menuSegments(key, menusRef.current.get(parseMenuKey(key).base) ?? LOADING_MENU)
+      return menuSegments(
+        key,
+        menusRef.current.get(parseMenuKey(key).base) ?? LOADING_MENU,
+        menuSideOf(wheel)
+      )
     },
     [registry]
   )
@@ -158,7 +168,15 @@ export function useWheelController(options: WheelControllerOptions): WheelContro
         return
       }
       const segments = resolve(current.wheel, current.path)
-      viewStore.publish({ state: current, segments, ...describe(current, segments) })
+      const opened = current.path.at(-1)
+      const parent =
+        opened === undefined
+          ? null
+          : {
+              segments: resolve(current.wheel, current.path.slice(0, -1)),
+              openedBindingId: opened
+            }
+      viewStore.publish({ state: current, segments, parent, ...describe(current, segments) })
     },
     [viewStore, describe]
   )

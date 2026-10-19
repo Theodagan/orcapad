@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { useEffect, useRef, type ReactNode } from 'react'
+import { Animated, StyleSheet, Text, View } from 'react-native'
 import { WHEEL_TRIGGER_NAMES } from '../controller-input/wheel-trigger-steering'
 import { colors, radii, spacing, typography } from '../../theme/mobile-theme'
-import type { WheelController } from './use-wheel-controller'
+import { menuSideOf, type WheelController } from './use-wheel-controller'
+import type { WheelSegment } from './wheel-segment'
 import { useWheelView } from './wheel-view-store'
 
 /**
@@ -26,6 +27,26 @@ const MANY_SEGMENTS = 6
 const RADIUS_MANY = 140
 /** Past this a label ellipsizes, so neighbours on a full dial never overlap. */
 const LABEL_MAX_WIDTH = 96
+/** How far past the parent ring a menu's half circle sits. */
+const MENU_RING_GAP = 120
+/** A half circle is as tall as it is wide twice over; squashed, it fits a landscape screen. */
+const MENU_RING_SQUASH = 0.72
+/** How far the whole wheel slides away from the side its menu opens on, as a share of that ring. */
+const MENU_SHIFT = 0.45
+const SHIFT_MS = 180
+
+function ringRadius(count: number): number {
+  return count > MANY_SEGMENTS ? RADIUS_MANY : RADIUS_FEW
+}
+
+/** Inside a menu the wheel moves sideways, so the half circle has the room its side needs. */
+function useMenuShift(offset: number): Animated.Value {
+  const shift = useRef(new Animated.Value(offset)).current
+  useEffect(() => {
+    Animated.timing(shift, { toValue: offset, duration: SHIFT_MS, useNativeDriver: true }).start()
+  }, [shift, offset])
+  return shift
+}
 
 // A pad lost mid-gesture is cancelled by `useCancelWheelOnDisconnect`, not here.
 export function WheelOverlay({
@@ -34,6 +55,14 @@ export function WheelOverlay({
   readonly controller: Pick<WheelController, 'view'>
 }): ReactNode {
   const view = useWheelView(controller.view)
+  const parent = view.state.kind === 'open' ? (view.parent ?? null) : null
+  // In a menu the parent keeps its own ring and the menu takes a half circle outside it.
+  const innerRadius = ringRadius((parent?.segments ?? view.segments).length)
+  const outerRadius = innerRadius + MENU_RING_GAP
+  const side = menuSideOf(view.state.kind === 'open' ? view.state.wheel : 1)
+  const shift = useMenuShift(
+    parent === null ? 0 : (side === 'right' ? -1 : 1) * outerRadius * MENU_SHIFT
+  )
 
   if (view.state.kind === 'closed') {
     return null
@@ -41,9 +70,9 @@ export function WheelOverlay({
 
   const locked = view.state.locked
   const lockedSegment = view.segments.find((segment) => segment.id === locked) ?? null
-  const radius = view.segments.length > MANY_SEGMENTS ? RADIUS_MANY : RADIUS_FEW
   const canSelect = lockedSegment !== null && lockedSegment.availability !== 'unavailable'
   const selectWord = lockedSegment?.opens === true ? 'Open' : 'Select'
+  const size = (parent === null ? innerRadius : outerRadius) * 2
 
   return (
     <View
@@ -54,35 +83,42 @@ export function WheelOverlay({
       style={styles.backdrop}
     >
       {view.title === null ? null : <Text style={styles.title}>{view.title}</Text>}
-      <View style={[styles.dial, { height: radius * 2, width: radius * 2 }]}>
-        {view.segments.map((segment) => {
-          const isLocked = segment.id === locked
-          return (
-            <View
-              key={segment.id}
-              testID={`wheel-segment:${segment.id}`}
-              style={[
-                styles.segment,
-                {
-                  transform: [
-                    { translateX: Math.sin(segment.centerAngle) * radius },
-                    { translateY: -Math.cos(segment.centerAngle) * radius }
-                  ]
-                },
-                isLocked ? styles.segmentLocked : null,
-                segment.availability === 'unavailable' ? styles.segmentDisabled : null
-              ]}
-            >
-              <Text numberOfLines={1} style={isLocked ? styles.labelLocked : styles.label}>
-                {segment.label}
-                {segment.opens === true ? ' ›' : ''}
-              </Text>
-            </View>
-          )
-        })}
+      <Animated.View
+        style={[styles.dial, { height: size, width: size, transform: [{ translateX: shift }] }]}
+      >
+        {parent === null
+          ? view.segments.map((segment) => (
+              <SegmentChip
+                key={segment.id}
+                segment={segment}
+                x={Math.sin(segment.centerAngle) * innerRadius}
+                y={-Math.cos(segment.centerAngle) * innerRadius}
+                tone={segment.id === locked ? 'locked' : 'idle'}
+              />
+            ))
+          : [
+              ...parent.segments.map((segment) => (
+                <SegmentChip
+                  key={`parent:${segment.id}`}
+                  segment={segment}
+                  x={Math.sin(segment.centerAngle) * innerRadius}
+                  y={-Math.cos(segment.centerAngle) * innerRadius}
+                  tone={segment.bindingId === parent.openedBindingId ? 'opened' : 'behind'}
+                />
+              )),
+              ...view.segments.map((segment) => (
+                <SegmentChip
+                  key={segment.id}
+                  segment={segment}
+                  x={Math.sin(segment.centerAngle) * outerRadius}
+                  y={-Math.cos(segment.centerAngle) * outerRadius * MENU_RING_SQUASH}
+                  tone={segment.id === locked ? 'locked' : 'idle'}
+                />
+              ))
+            ]}
         {/* Loading, empty or failed with no segments; with segments, why the lit one is refused. */}
         {view.message !== null ? <Text style={styles.message}>{view.message}</Text> : null}
-      </View>
+      </Animated.View>
       <TriggerCue
         control={WHEEL_TRIGGER_NAMES.back}
         label={view.state.path.length > 0 ? 'Back' : 'Cancel'}
@@ -96,6 +132,40 @@ export function WheelOverlay({
         side="right"
         tone={colors.statusGreen}
       />
+    </View>
+  )
+}
+
+/** `behind` is the parent ring under an open menu; `opened` is the slot that opened it. */
+type ChipTone = 'idle' | 'locked' | 'behind' | 'opened'
+
+function SegmentChip({
+  segment,
+  x,
+  y,
+  tone
+}: {
+  readonly segment: WheelSegment
+  readonly x: number
+  readonly y: number
+  readonly tone: ChipTone
+}): ReactNode {
+  return (
+    <View
+      testID={`wheel-segment:${tone === 'behind' || tone === 'opened' ? 'parent:' : ''}${segment.id}`}
+      style={[
+        styles.segment,
+        { transform: [{ translateX: x }, { translateY: y }] },
+        tone === 'locked' ? styles.segmentLocked : null,
+        tone === 'opened' ? styles.segmentOpened : null,
+        tone === 'behind' ? styles.segmentBehind : null,
+        segment.availability === 'unavailable' && tone !== 'behind' ? styles.segmentDisabled : null
+      ]}
+    >
+      <Text numberOfLines={1} style={tone === 'locked' ? styles.labelLocked : styles.label}>
+        {segment.label}
+        {segment.opens === true ? ' ›' : ''}
+      </Text>
     </View>
   )
 }
@@ -161,6 +231,8 @@ const styles = StyleSheet.create({
   },
   // Disabled, never hidden: removing it would move every other segment under the thumb.
   segmentDisabled: { opacity: 0.4 },
+  segmentOpened: { borderColor: colors.accentBlue, borderWidth: 2 },
+  segmentBehind: { opacity: 0.35 },
   label: { color: colors.textSecondary, fontSize: typography.bodySize, maxWidth: LABEL_MAX_WIDTH },
   labelLocked: {
     color: colors.textPrimary,

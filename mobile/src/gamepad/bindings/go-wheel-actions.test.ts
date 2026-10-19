@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { WheelBinding } from '../wheel/wheel-registry'
 import {
   goWheelActions,
+  pagesWheelMenu,
   pairDesktopWheelAction,
   workspaceOfRoute,
   type GoWheelOptions
 } from './go-wheel-actions'
-import { GO_ACTION_IDS } from './wheel-action-ids'
+import { GO_ACTION_IDS, VIEW_ACTION_IDS } from './wheel-action-ids'
 
 function options(overrides: Partial<GoWheelOptions> = {}): GoWheelOptions {
   return {
@@ -88,6 +90,38 @@ describe('GO wheel actions', () => {
 
     const there = goWheelActions(options({ screen: 'other', atSettings: true }))
     expect(byId(there, GO_ACTION_IDS.settings)?.availability).toBe('unavailable')
+  })
+
+  it('gathers the pages under Pages from whoever registered them, in a fixed order', () => {
+    const open = vi.fn()
+    const registered: Record<string, WheelBinding> = {
+      [GO_ACTION_IDS.settings]: {
+        id: GO_ACTION_IDS.settings,
+        label: 'Settings',
+        availability: 'available',
+        run: open
+      },
+      [GO_ACTION_IDS.files]: {
+        id: GO_ACTION_IDS.files,
+        label: 'Files',
+        availability: 'unavailable',
+        run: open
+      }
+    }
+    const pages = pagesWheelMenu((id) => registered[id] ?? null)
+    const entries = pages.menu()
+
+    expect(Array.isArray(entries) ? entries.map((entry) => entry.label) : []).toEqual([
+      'Files',
+      'Settings'
+    ])
+    expect(Array.isArray(entries) ? entries[0]?.availability : null).toBe('unavailable')
+  })
+
+  it('keeps the Chat/Terminal slot off the session, dark and saying why', () => {
+    const toggle = byId(goWheelActions(options({ screen: 'other' })), VIEW_ACTION_IDS.chatTerminal)
+    expect([toggle?.availability, toggle?.reason]).toEqual(['unavailable', 'Open a session first'])
+    expect(byId(goWheelActions(options()), VIEW_ACTION_IDS.chatTerminal)).toBeUndefined()
   })
 
   it('names Pair desktop in the New slot', () => {

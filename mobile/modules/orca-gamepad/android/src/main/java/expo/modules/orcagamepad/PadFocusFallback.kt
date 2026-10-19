@@ -33,64 +33,81 @@ object PadFocusFallback {
     return keyCodes.any { code -> consumedAt[code]?.let { now - it < SAME_PRESS_MS } == true }
   }
 
-  fun move(activity: Activity, direction: String): Boolean {
+  /** What happened, in a word or two, for the pad debug line: `moved:Type` or why not. */
+  fun move(activity: Activity, direction: String): String {
     val (focusDirection, keyCode) = when (direction) {
       "up" -> View.FOCUS_UP to KeyEvent.KEYCODE_DPAD_UP
       "down" -> View.FOCUS_DOWN to KeyEvent.KEYCODE_DPAD_DOWN
       "left" -> View.FOCUS_LEFT to KeyEvent.KEYCODE_DPAD_LEFT
       "right" -> View.FOCUS_RIGHT to KeyEvent.KEYCODE_DPAD_RIGHT
-      else -> return false
+      else -> return "bad-direction"
     }
     if (handledAlready(keyCode)) {
-      return false
+      return "android-moved-it"
     }
-    val root = activity.window?.decorView ?: return false
+    val root = activity.window?.decorView ?: return "no-window"
     // A sheet is a window of its own above this one, and moves its own focus.
     if (!root.hasWindowFocus()) {
-      return false
+      return "sheet-has-focus"
     }
     val focused = root.findFocus()
     // From touch mode the first press only shows where focus is, as a keyboard's first arrow does.
     if (focused == null || root.isInTouchMode) {
-      val content = activity.findViewById<View>(android.R.id.content) ?: return false
-      val start = focused ?: NativeFocusRing.firstControlWithin(content) ?: return false
-      return start.requestFocusFromTouch().also { if (it) NativeFocusRing.ringPadFocus(start) }
+      val content = activity.findViewById<View>(android.R.id.content) ?: return "no-content"
+      val start = focused ?: NativeFocusRing.firstControlWithin(content) ?: return "nothing-focusable"
+      if (!start.requestFocusFromTouch()) {
+        return "refused:${start.javaClass.simpleName}"
+      }
+      NativeFocusRing.ringPadFocus(start)
+      return "entered:${start.javaClass.simpleName}"
     }
-    val next = focused.focusSearch(focusDirection) ?: return false
-    return next.requestFocus(focusDirection).also { if (it) NativeFocusRing.ringPadFocus(next) }
+    val next = focused.focusSearch(focusDirection) ?: return "nothing-that-way"
+    if (!next.requestFocus(focusDirection)) {
+      return "refused:${next.javaClass.simpleName}"
+    }
+    NativeFocusRing.ringPadFocus(next)
+    return "moved:${next.javaClass.simpleName}"
   }
 
   /** Presses the focused control the way a keyboard's centre key would. */
-  fun activate(activity: Activity): Boolean {
+  fun activate(activity: Activity): String {
     if (handledAlready(KeyEvent.KEYCODE_BUTTON_A, KeyEvent.KEYCODE_DPAD_CENTER)) {
-      return false
+      return "android-pressed-it"
     }
-    val root = activity.window?.decorView ?: return false
-    val focused = if (root.hasWindowFocus()) root.findFocus() else null
-    if (focused == null || focused is EditText) {
-      return false
+    val root = activity.window?.decorView ?: return "no-window"
+    if (!root.hasWindowFocus()) {
+      return "sheet-has-focus"
+    }
+    val focused = root.findFocus() ?: return "nothing-focused"
+    if (focused is EditText) {
+      return "text-field"
     }
     val now = SystemClock.uptimeMillis()
     val down = KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_CENTER, 0)
     focused.dispatchKeyEvent(down)
-    return focused.dispatchKeyEvent(KeyEvent.changeAction(down, KeyEvent.ACTION_UP))
+    val pressed = focused.dispatchKeyEvent(KeyEvent.changeAction(down, KeyEvent.ACTION_UP))
+    return "${if (pressed) "pressed" else "ignored"}:${focused.javaClass.simpleName}"
   }
 
   /**
    * L2/R2 on a screen nothing else scrolls: the nearest area around the focused control that can
    * still move that way, or with nothing focused the largest such area on screen.
    */
-  fun scroll(activity: Activity, deltaDp: Double): Boolean {
-    val root = activity.window?.decorView ?: return false
-    if (!root.hasWindowFocus() || deltaDp == 0.0) {
-      return false
+  fun scroll(activity: Activity, deltaDp: Double): String {
+    val root = activity.window?.decorView ?: return "no-window"
+    if (!root.hasWindowFocus()) {
+      return "sheet-has-focus"
+    }
+    if (deltaDp == 0.0) {
+      return "zero"
     }
     val direction = if (deltaDp > 0) 1 else -1
     val target = scrollableAround(root.findFocus(), direction)
       ?: activity.findViewById<View>(android.R.id.content)?.let { largestScrollable(it, direction) }
-      ?: return false
+      ?: return "no-scrollable"
+    val before = target.scrollY
     target.scrollBy(0, (deltaDp * target.resources.displayMetrics.density).toInt())
-    return true
+    return "${target.javaClass.simpleName}:${before}->${target.scrollY}"
   }
 
   private fun scrollableAround(view: View?, direction: Int): View? {

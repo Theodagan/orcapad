@@ -1,6 +1,6 @@
 import type { WheelMenuEntry } from './wheel-registry'
 import type { WheelSegment } from './wheel-segment'
-import { slotAngle, slotHalfWidth } from './wheel-layouts'
+import { slotHalfWidth } from './wheel-layouts'
 
 /**
  * Turning a list into a second wheel. The list is data the surface supplies when the wheel opens
@@ -11,7 +11,8 @@ import { slotAngle, slotHalfWidth } from './wheel-layouts'
  * the next page as one more level, so `L2` steps back a page the way it steps back a menu.
  */
 
-const MAX_SEGMENTS = 8
+// A half circle holds fewer than a whole one before neighbours crowd.
+const MAX_SEGMENTS = 6
 const MORE_ID = '__more'
 
 export type MenuStatus = 'loading' | 'ready' | 'error'
@@ -55,8 +56,27 @@ function hasMore(entries: readonly WheelMenuEntry[], page: number): boolean {
   return entries.length > MAX_SEGMENTS && page * (MAX_SEGMENTS - 1) < entries.length
 }
 
-/** The segments of one page, evenly spread so each gets the same slice of the dial. */
-export function menuSegments(key: string, view: MenuView): readonly WheelSegment[] {
+/** The half of the dial a menu opens on: toward the middle of the screen from its stick. */
+export type MenuSide = 'left' | 'right'
+
+const HALF_TURN = Math.PI
+
+/**
+ * Where entry `index` of `count` sits on a half circle, top to bottom: clockwise from twelve on
+ * the right, anticlockwise from twelve on the left. Never straight up or down, so a menu never
+ * opens above or below its wheel.
+ */
+export function halfCircleAngle(index: number, count: number, side: MenuSide): number {
+  const along = (HALF_TURN * (index + 0.5)) / count
+  return side === 'right' ? along : 2 * Math.PI - along
+}
+
+/** The segments of one page, evenly spread over the half circle on `side`. */
+export function menuSegments(
+  key: string,
+  view: MenuView,
+  side: MenuSide = 'right'
+): readonly WheelSegment[] {
   if (view.status !== 'ready') {
     return []
   }
@@ -67,8 +87,9 @@ export function menuSegments(key: string, view: MenuView): readonly WheelSegment
   if (count === 0) {
     return []
   }
-  const halfWidth = slotHalfWidth(count)
-  const place = (index: number) => ({ centerAngle: slotAngle(index, count), halfWidth })
+  // Half a whole dial's slice: the same count shares half the turn.
+  const halfWidth = slotHalfWidth(count * 2)
+  const place = (index: number) => ({ centerAngle: halfCircleAngle(index, count, side), halfWidth })
   const segments: WheelSegment[] = entries.map((entry, index) => ({
     id: entry.id,
     label: entry.label,

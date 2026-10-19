@@ -1,3 +1,4 @@
+import { halfCircleAngle } from './wheel-menu'
 import { createElement, type ReactNode } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -382,8 +383,9 @@ describe('wheel controller', () => {
 
       expect(pad.wheel.view.read().message).toBeNull()
       expect(pad.wheel.view.read().segments.map((segment) => segment.id)).toEqual(['claude'])
-      // Swinging well away from where the menu was chosen locks without recentring.
-      pad.send({ kind: 'wheel-motion', wheel: 1, x: -1, y: -0.2 })
+      // Swinging well away from where the menu was chosen locks without recentring. The left
+      // stick's menus open on the right half.
+      pad.send({ kind: 'wheel-motion', wheel: 1, x: 1, y: -0.2 })
       expect(pad.wheel.view.read().state).toMatchObject({ locked: 'claude' })
     })
 
@@ -476,10 +478,10 @@ describe('wheel controller', () => {
       const { pad } = withMenu(() => many)
       pad.send(UP)
       pad.send(CONFIRM)
-      expect(pad.wheel.view.read().segments).toHaveLength(8)
+      expect(pad.wheel.view.read().segments).toHaveLength(6)
 
-      // The stick points at More, the eighth of eight, which sits seven eighths round the dial.
-      const angle = (7 / 8) * Math.PI * 2
+      // The stick points at More, the last of six on the right half circle, near the bottom.
+      const angle = halfCircleAngle(5, 6, 'right')
       pad.send({
         kind: 'wheel-motion',
         wheel: 1,
@@ -489,15 +491,16 @@ describe('wheel controller', () => {
       expect(pad.wheel.view.read().state).toMatchObject({ locked: '__more' })
       pad.send(CONFIRM)
       expect(pad.wheel.view.read().segments.map((segment) => segment.id)).toEqual([
+        'e5',
+        'e6',
         'e7',
         'e8',
         'e9',
-        'e10',
-        'e11'
+        '__more'
       ])
 
       pad.send(BACK)
-      expect(pad.wheel.view.read().segments).toHaveLength(8)
+      expect(pad.wheel.view.read().segments).toHaveLength(6)
     })
 
     it('runs a committed entry only through the menu it came from', () => {

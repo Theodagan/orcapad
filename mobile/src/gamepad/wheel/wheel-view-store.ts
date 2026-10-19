@@ -11,6 +11,11 @@ export type WheelView = {
   /** As last published: `spent` and `held` may lag, since nothing draws them. */
   readonly state: WheelState
   readonly segments: readonly WheelSegment[]
+  /** Inside a menu: the wheel it opened from, drawn as the inner ring, and which slot opened it. */
+  readonly parent?: {
+    readonly segments: readonly WheelSegment[]
+    readonly openedBindingId: string
+  } | null
   /** What the open wheel is, and what to say when it has nothing to choose from yet. */
   readonly title: string | null
   readonly message: string | null

@@ -447,7 +447,8 @@ describe('session DO wheel actions', () => {
 
   it('retracts all of it when the session goes', () => {
     const registry = mount(fakeController().controller)
-    expect(registry.ids()).toHaveLength(6)
+    // DO's five slots it owns, focus mode for Select, and Chat/Terminal for GO's top slot.
+    expect(registry.ids()).toHaveLength(7)
 
     act(() => renderer?.unmount())
     renderer = null

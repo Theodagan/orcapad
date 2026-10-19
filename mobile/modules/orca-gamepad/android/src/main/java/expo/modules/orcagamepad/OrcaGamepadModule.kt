@@ -122,15 +122,15 @@ class OrcaGamepadModule : Module() {
 
     // D-pad and `A` for a screen no JavaScript surface answers for (see PadFocusFallback).
     AsyncFunction("moveNativeFocus") { direction: String ->
-      appContext.currentActivity?.let { PadFocusFallback.move(it, direction) } ?: false
+      appContext.currentActivity?.let { PadFocusFallback.move(it, direction) } ?: "no-activity"
     }.runOnQueue(Queues.MAIN)
 
     AsyncFunction("scrollNativeBy") { deltaDp: Double ->
-      appContext.currentActivity?.let { PadFocusFallback.scroll(it, deltaDp) } ?: false
+      appContext.currentActivity?.let { PadFocusFallback.scroll(it, deltaDp) } ?: "no-activity"
     }.runOnQueue(Queues.MAIN)
 
     AsyncFunction("activateNativeFocus") {
-      appContext.currentActivity?.let { PadFocusFallback.activate(it) } ?: false
+      appContext.currentActivity?.let { PadFocusFallback.activate(it) } ?: "no-activity"
     }.runOnQueue(Queues.MAIN)
 
     // Hides or reveals Android status and navigation/gesture bars. Transient bars appear

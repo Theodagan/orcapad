@@ -4,6 +4,7 @@ import type {
   IntentLabels
 } from '../controller-input/controller-intent'
 import { DECLINED, type FocusTarget } from './focus-target'
+import { padDebug } from '../pad-debug'
 import { FOCUS_ZONES, ZONE_AGNOSTIC_INTENTS, type FocusZone } from './focus-zones'
 
 /**
@@ -252,9 +253,11 @@ export function createFocusRegistry(): FocusRegistry {
         if (target.handle(intent) === DECLINED) {
           continue
         }
+        padDebug(`${intent.kind} → ${target.id}`)
         return true
       }
     }
+    padDebug(`${intent.kind} → nobody (zone ${zone ?? 'none'})`)
     return false
   }
 

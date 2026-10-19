@@ -1,18 +1,18 @@
-import { DO_ACTION_IDS, GO_ACTION_IDS } from '../bindings/wheel-action-ids'
+import { DO_ACTION_IDS, GO_ACTION_IDS, VIEW_ACTION_IDS } from '../bindings/wheel-action-ids'
 import { loadPreset, type WheelPresetDefinition, type WheelPresetSegment } from './wheel-preset'
 import type { WheelId } from './wheel-segment'
 
 /**
  * The wheels each screen runs (`012`). The left stick is GO and the right stick is DO.
  *
- * GO is a dial of eight fixed 45° slots and DO of six 60° ones. GO is the same on every screen, so
+ * GO is a dial of four fixed 90° slots and DO of six 60° ones. GO is the same on every screen, so
  * navigation is always there and an action keeps its angle everywhere; a slot that cannot act on a
  * screen says why. DO exists only in a session.
  */
 
 const FULL_TURN = Math.PI * 2
 const BOUNDARY_OVERLAP = 0.001
-const GO_SLOT_COUNT = 8
+const GO_SLOT_COUNT = 4
 const DO_SLOT_COUNT = 6
 
 /** Clockwise from twelve o'clock: slot `index` of `count` evenly spaced slots. */
@@ -65,14 +65,18 @@ function segmentOf(slot: Slot, count: number): WheelPresetSegment {
   }
 }
 
-// Back points left, the way back reads; Settings sits straight down. Twelve o'clock is left free.
+// Four big slots. Pages ▸ sits right, so its half circle opens toward the middle of the screen;
+// Files, Changes, History and Settings live in it, built from their own registered actions.
 const GO_SLOTS: readonly Slot[] = [
-  { index: 1, id: 'new', label: 'New worktree', bindingId: GO_ACTION_IDS.new },
-  { index: 2, id: 'files', label: 'Files', bindingId: GO_ACTION_IDS.files },
-  { index: 3, id: 'changes', label: 'Changes', bindingId: GO_ACTION_IDS.changes },
-  { index: 4, id: 'settings', label: 'Settings', bindingId: GO_ACTION_IDS.settings },
-  { index: 5, id: 'history', label: 'History', bindingId: GO_ACTION_IDS.history },
-  { index: 6, id: 'back', label: 'Back', bindingId: GO_ACTION_IDS.back }
+  {
+    index: 0,
+    id: 'chat-terminal',
+    label: 'Chat ⇄ Terminal',
+    bindingId: VIEW_ACTION_IDS.chatTerminal
+  },
+  { index: 1, id: 'pages', label: 'Pages', bindingId: GO_ACTION_IDS.pages },
+  { index: 2, id: 'new', label: 'New worktree', bindingId: GO_ACTION_IDS.new },
+  { index: 3, id: 'back', label: 'Back', bindingId: GO_ACTION_IDS.back }
 ]
 
 const DO_SLOTS: readonly Slot[] = [

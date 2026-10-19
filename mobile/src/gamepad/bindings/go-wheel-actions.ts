@@ -1,6 +1,11 @@
-import type { WheelActionBinding } from '../wheel/wheel-registry'
+import {
+  isMenuBinding,
+  type WheelActionBinding,
+  type WheelBinding,
+  type WheelMenuBinding
+} from '../wheel/wheel-registry'
 import type { WheelScreen } from '../wheel/wheel-layouts'
-import { GO_ACTION_IDS } from './wheel-action-ids'
+import { GO_ACTION_IDS, VIEW_ACTION_IDS } from './wheel-action-ids'
 
 /**
  * The GO wheel's shell-owned slots (`012`): Back, New and Settings, which need only the
@@ -52,6 +57,14 @@ export function goWheelActions(options: GoWheelOptions): readonly WheelActionBin
     })
   }
   if (screen !== 'session') {
+    // The session owns the real toggle; elsewhere the slot stays and says why it is dark.
+    actions.push({
+      id: VIEW_ACTION_IDS.chatTerminal,
+      label: 'Chat ⇄ Terminal',
+      availability: 'unavailable',
+      reason: 'Open a session first',
+      run: () => {}
+    })
     for (const [page, id, label] of WORKSPACE_PAGES) {
       const here = workspace?.page === page
       actions.push({
@@ -71,6 +84,39 @@ export function goWheelActions(options: GoWheelOptions): readonly WheelActionBin
     run: options.onSettings
   })
   return actions
+}
+
+const PAGE_ACTION_IDS = [
+  GO_ACTION_IDS.files,
+  GO_ACTION_IDS.changes,
+  GO_ACTION_IDS.history,
+  GO_ACTION_IDS.settings
+] as const
+
+/**
+ * GO's Pages ▸: every action that opens a page, gathered from whoever registered it (the session
+ * or the shell) when the menu opens, so a page and its menu entry can never disagree.
+ */
+export function pagesWheelMenu(lookup: (id: string) => WheelBinding | null): WheelMenuBinding {
+  return {
+    id: GO_ACTION_IDS.pages,
+    label: 'Pages',
+    availability: 'available',
+    menu: () =>
+      PAGE_ACTION_IDS.flatMap((id) => {
+        const binding = lookup(id)
+        return binding === null || isMenuBinding(binding)
+          ? []
+          : [
+              {
+                id: binding.id,
+                label: binding.label,
+                availability: binding.availability,
+                run: binding.run
+              }
+            ]
+      })
+  }
 }
 
 /** Home's New: pairing a desktop is how the first host arrives. */

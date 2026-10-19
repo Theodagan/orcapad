@@ -76,18 +76,19 @@ export function useSessionDoWheelActions(controller: MobileSessionController): v
       availability: 'available',
       run: chrome.toggleFocusMode
     }
-    const viewEntries: readonly WheelMenuEntry[] = [
-      {
-        id: VIEW_ACTION_IDS.chatTerminal,
-        // Says where it goes, not where you are.
-        label: showNativeChat ? 'Terminal view' : 'Chat view',
-        availability: hasTwoViews ? 'available' : 'unavailable',
-        run: () => {
-          if (activeSessionTab !== null) {
-            live.current.toggleTabChatView(activeSessionTab.id)
-          }
+    const chatTerminal: WheelMenuEntry = {
+      id: VIEW_ACTION_IDS.chatTerminal,
+      // Says where it goes, not where you are.
+      label: showNativeChat ? 'Terminal view' : 'Chat view',
+      availability: hasTwoViews ? 'available' : 'unavailable',
+      run: () => {
+        if (activeSessionTab !== null) {
+          live.current.toggleTabChatView(activeSessionTab.id)
         }
-      },
+      }
+    }
+    const viewEntries: readonly WheelMenuEntry[] = [
+      chatTerminal,
       focusMode,
       {
         id: VIEW_ACTION_IDS.shortcuts,
@@ -154,7 +155,9 @@ export function useSessionDoWheelActions(controller: MobileSessionController): v
         menu: () => viewEntries
       },
       // Top level too, so Select runs the same toggle the View ▸ entry does.
-      focusMode
+      focusMode,
+      // And on GO's top slot, the same toggle as View ▸ Chat/Terminal.
+      { ...chatTerminal, reason: 'This tab has only one view' }
     ]
   }, [
     client,

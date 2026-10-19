@@ -7,6 +7,7 @@
 
 export const GO_ACTION_IDS = {
   back: 'go.back',
+  pages: 'go.pages',
   new: 'go.new',
   files: 'go.files',
   changes: 'go.changes',
