@@ -15,6 +15,8 @@ export type WheelView = {
   readonly parent?: {
     readonly segments: readonly WheelSegment[]
     readonly openedBindingId: string
+    /** The half the menu opens on, from where its entry sits on the base wheel. */
+    readonly side: 'left' | 'right'
   } | null
   /** What the open wheel is, and what to say when it has nothing to choose from yet. */
   readonly title: string | null

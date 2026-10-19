@@ -3,7 +3,7 @@ import { createElement, type ReactNode } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ControllerIntent, ControllerIntentKind } from '../controller-input/controller-intent'
-import { useWheelController, type WheelController } from './use-wheel-controller'
+import { useWheelController, type WheelController, menuSideOfAngle } from './use-wheel-controller'
 import { loadPreset, type WheelPresetDefinition } from './wheel-preset'
 import { createWheelRegistry, type WheelMenuEntry, type WheelRegistry } from './wheel-registry'
 
@@ -518,5 +518,16 @@ describe('wheel controller', () => {
       expect(run).toHaveBeenCalledTimes(1)
       expect(decoy).not.toHaveBeenCalled()
     })
+  })
+})
+
+describe('the side a menu opens on', () => {
+  it('follows its entry on the base wheel: twelve to six right, six to twelve left', () => {
+    expect(menuSideOfAngle(0)).toBe('right')
+    expect(menuSideOfAngle(Math.PI / 2)).toBe('right')
+    expect(menuSideOfAngle(Math.PI - 0.01)).toBe('right')
+    expect(menuSideOfAngle(Math.PI)).toBe('left')
+    expect(menuSideOfAngle((3 * Math.PI) / 2)).toBe('left')
+    expect(menuSideOfAngle(-Math.PI / 2)).toBe('left')
   })
 })

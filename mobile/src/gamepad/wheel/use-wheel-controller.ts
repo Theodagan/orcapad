@@ -62,9 +62,11 @@ export type WheelControllerOptions = {
 
 type SegmentsFor = WheelPreset['segmentsFor']
 
-/** The left stick's menus open toward the right of the screen, the right stick's toward the left. */
-export function menuSideOf(wheel: WheelId): MenuSide {
-  return wheel === 1 ? 'right' : 'left'
+/** A menu opens on the side its entry sits on the base wheel: twelve to six right, six to twelve left. */
+export function menuSideOfAngle(angle: number): MenuSide {
+  const turn = Math.PI * 2
+  const normal = ((angle % turn) + turn) % turn
+  return normal < Math.PI ? 'right' : 'left'
 }
 
 /** One resolve per wheel and path for the length of one `apply`. */
@@ -96,6 +98,19 @@ export function useWheelController(options: WheelControllerOptions): WheelContro
   onOpenChangeRef.current = options.onOpenChange
   const [viewStore] = useState(createWheelViewStore)
 
+  // Every page of a menu, and anything opened inside it, keeps the side of the base wheel's entry.
+  const sideFor = useCallback(
+    (wheel: WheelId, path: readonly string[]): MenuSide => {
+      const preset = presetsRef.current[wheel]
+      const entry =
+        preset === undefined
+          ? undefined
+          : resolveSegments(preset, registry).find((segment) => segment.bindingId === path[0])
+      return entry === undefined ? 'right' : menuSideOfAngle(entry.centerAngle)
+    },
+    [registry]
+  )
+
   const segmentsFor = useCallback<SegmentsFor>(
     (wheel, path) => {
       const key = path.at(-1)
@@ -106,10 +121,10 @@ export function useWheelController(options: WheelControllerOptions): WheelContro
       return menuSegments(
         key,
         menusRef.current.get(parseMenuKey(key).base) ?? LOADING_MENU,
-        menuSideOf(wheel)
+        sideFor(wheel, path)
       )
     },
-    [registry]
+    [registry, sideFor]
   )
 
   const isLoading = useCallback((_wheel: WheelId, path: readonly string[]): boolean => {
@@ -174,11 +189,12 @@ export function useWheelController(options: WheelControllerOptions): WheelContro
           ? null
           : {
               segments: resolve(current.wheel, current.path.slice(0, -1)),
-              openedBindingId: opened
+              openedBindingId: opened,
+              side: sideFor(current.wheel, current.path)
             }
       viewStore.publish({ state: current, segments, parent, ...describe(current, segments) })
     },
-    [viewStore, describe]
+    [viewStore, describe, sideFor]
   )
 
   // Declared before `apply` uses it, assigned after: opening a menu is async, and its result has

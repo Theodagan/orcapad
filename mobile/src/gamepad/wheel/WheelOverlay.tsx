@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { Animated, StyleSheet, Text, View } from 'react-native'
 import { WHEEL_TRIGGER_NAMES } from '../controller-input/wheel-trigger-steering'
 import { colors, radii, spacing, typography } from '../../theme/mobile-theme'
-import { menuSideOf, type WheelController } from './use-wheel-controller'
+import type { WheelController } from './use-wheel-controller'
 import type { WheelSegment } from './wheel-segment'
 import { useWheelView } from './wheel-view-store'
 
@@ -59,7 +59,7 @@ export function WheelOverlay({
   // In a menu the parent keeps its own ring and the menu takes a half circle outside it.
   const innerRadius = ringRadius((parent?.segments ?? view.segments).length)
   const outerRadius = innerRadius + MENU_RING_GAP
-  const side = menuSideOf(view.state.kind === 'open' ? view.state.wheel : 1)
+  const side = parent?.side ?? 'right'
   const shift = useMenuShift(
     parent === null ? 0 : (side === 'right' ? -1 : 1) * outerRadius * MENU_SHIFT
   )
