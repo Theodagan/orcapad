@@ -38,14 +38,27 @@ export type WheelActionSource = Pick<WheelRegistry, 'lookup' | 'subscribe'>
 const noSubscribe = (): (() => void) => () => {}
 const absentReader = createAbsentControllerReader()
 
-/** The button-run actions that can run now; re-renders only when that set changes. */
-function useRunnableActions(actions: WheelActionSource | undefined): ReadonlySet<string> {
+type ActionSets = {
+  readonly runnable: ReadonlySet<string>
+  readonly registered: ReadonlySet<string>
+}
+
+const idsOf = (key: string): ReadonlySet<string> => new Set(key === '' ? [] : key.split(','))
+
+/** The button-run actions registered here and those that can run now; re-renders only on change. */
+function useButtonActions(actions: WheelActionSource | undefined): ActionSets {
   const key = useSyncExternalStore(actions?.subscribe ?? noSubscribe, () =>
     actions === undefined
-      ? ''
-      : RUN_ACTION_IDS.filter((id) => isRunnableAction(actions.lookup(id))).join('\n')
+      ? '|'
+      : [
+          RUN_ACTION_IDS.filter((id) => isRunnableAction(actions.lookup(id))).join(','),
+          RUN_ACTION_IDS.filter((id) => actions.lookup(id) !== null).join(',')
+        ].join('|')
   )
-  return useMemo(() => new Set(key === '' ? [] : key.split('\n')), [key])
+  return useMemo(() => {
+    const [runnable = '', registered = ''] = key.split('|')
+    return { runnable: idsOf(runnable), registered: idsOf(registered) }
+  }, [key])
 }
 
 export function ActionHintBar({
@@ -59,7 +72,7 @@ export function ActionHintBar({
   readonly reader?: ControllerReader
 }): ReactNode {
   const wheelOpen = useWheelOpen(wheel)
-  const runnable = useRunnableActions(actions)
+  const { runnable, registered } = useButtonActions(actions)
   const modifierHeld = useModifierHeld(reader)
   const { connected } = useControllerBinding()
   const { focusMode } = useSessionChrome()
@@ -83,7 +96,9 @@ export function ActionHintBar({
       : {})
   }
   // An open wheel names its own triggers in its corners; saying it twice here would drift.
-  const hints = wheelOpen ? [] : actionHintsFor(offered, wording, runnable, modifierHeld)
+  const hints = wheelOpen
+    ? []
+    : actionHintsFor(offered, wording, runnable, modifierHeld, registered)
   if (!connected || focusMode || (hints.length === 0 && !wheelOpen)) {
     return null
   }

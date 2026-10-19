@@ -71,6 +71,9 @@ const RUN_ACTION_ROWS: readonly RunActionRow[] = PRD_CONTROLLER_BINDINGS.filter(
     binding.kind === 'button' && binding.intent === 'run-action' && binding.actionId !== undefined
 )
 
+/** Named whenever the screen has them, running or not, and with or without X held. */
+const PINNED_ACTION_IDS: ReadonlySet<string> = new Set([DO_ACTION_IDS.stop])
+
 /** The action ids a button runs, so the hint bar knows which registrations to watch. */
 export const RUN_ACTION_IDS: readonly string[] = RUN_ACTION_ROWS.map((row) => row.actionId)
 
@@ -120,19 +123,22 @@ function dpadControl(horizontal: boolean, vertical: boolean): string {
   return vertical ? 'D-pad ↑↓' : 'D-pad ←→'
 }
 
-type ChordedHint = ActionHint & { readonly chorded: boolean }
+type ChordedHint = ActionHint & { readonly chorded: boolean; readonly pinned?: boolean }
 
 /**
  * One hint per control the focused surface actually answers for. Both D-pad axes with the same
  * wording read as one hint, because "arrows" is one thing to a user and four buttons to a table.
- * At rest the modifier's combos fold into one `X` hint; held, they are all the bar shows.
+ * At rest the modifier's combos fold into one `X` hint; held, they are all the bar shows. A pinned
+ * action (Stop) shows in both, whenever the screen has it.
  */
 export function actionHintsFor(
   accepts: ReadonlySet<ControllerIntentKind>,
   labels: IntentLabels = {},
   /** Action ids the registry can run now; a button's hint shows only while its action can. */
   runnable: ReadonlySet<string> = new Set(),
-  modifierHeld = false
+  modifierHeld = false,
+  /** Action ids registered here at all, runnable or not; what a pinned hint needs. */
+  registered: ReadonlySet<string> = runnable
 ): readonly ActionHint[] {
   const hints: ChordedHint[] = []
   const wording = (intent: ControllerIntentKind): string => labels[intent] ?? DEFAULT_WORDS[intent]
@@ -177,17 +183,19 @@ export function actionHintsFor(
     }
   }
   for (const row of RUN_ACTION_ROWS) {
-    if (runnable.has(row.actionId)) {
+    const pinned = PINNED_ACTION_IDS.has(row.actionId)
+    if (pinned ? registered.has(row.actionId) : runnable.has(row.actionId)) {
       const { chord } = row
       hints.push({
         control: chord === null ? printed(row.button) : `${printed(chord)}+${printed(row.button)}`,
         label: RUN_ACTION_WORDS[row.actionId] ?? DEFAULT_WORDS['run-action'],
-        chorded: chord !== null
+        chorded: chord !== null,
+        pinned
       })
     }
   }
-  const shown = hints.filter((hint) => hint.chorded === modifierHeld)
-  if (!modifierHeld && shown.length < hints.length) {
+  const shown = hints.filter((hint) => hint.pinned === true || hint.chorded === modifierHeld)
+  if (!modifierHeld && hints.some((hint) => hint.pinned !== true && hint.chorded)) {
     shown.push({
       control: printed(CHORD_BUTTON),
       label: 'More',

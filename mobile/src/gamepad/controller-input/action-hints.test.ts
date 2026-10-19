@@ -133,6 +133,7 @@ describe('action hints', () => {
     ])
     expect(actionHintsFor(accepting('confirm'), {}, runnable)).toEqual([
       { control: 'A', label: 'Select' },
+      { control: 'X+Select', label: 'Stop' },
       { control: 'Select', label: 'Focus' },
       { control: 'X', label: 'More' }
     ])
@@ -142,6 +143,22 @@ describe('action hints', () => {
     ])
     expect(actionHintsFor(accepting(), {}, new Set([VIEW_ACTION_IDS.focusMode]))).toEqual([
       { control: 'Select', label: 'Focus' }
+    ])
+  })
+
+  it('always names Stop where the screen has it, even with nothing running', () => {
+    const registered = new Set([DO_ACTION_IDS.stop])
+    const idle = new Set<string>()
+
+    expect(actionHintsFor(accepting('confirm'), {}, idle, false, registered)).toEqual([
+      { control: 'A', label: 'Select' },
+      { control: 'X+Select', label: 'Stop' }
+    ])
+    expect(actionHintsFor(accepting('confirm'), {}, idle, true, registered)).toEqual([
+      { control: 'X+Select', label: 'Stop' }
+    ])
+    expect(actionHintsFor(accepting('confirm'), {}, idle, false, idle)).toEqual([
+      { control: 'A', label: 'Select' }
     ])
   })
 
