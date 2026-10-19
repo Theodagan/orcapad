@@ -65,9 +65,8 @@ function segmentOf(slot: Slot, count: number): WheelPresetSegment {
   }
 }
 
-// Back points left, the way back reads; Settings sits straight down.
+// Back points left, the way back reads; Settings sits straight down. Twelve o'clock is left free.
 const GO_SLOTS: readonly Slot[] = [
-  { index: 0, id: 'up', label: 'Workspaces', bindingId: GO_ACTION_IDS.up },
   { index: 1, id: 'new', label: 'New worktree', bindingId: GO_ACTION_IDS.new },
   { index: 2, id: 'files', label: 'Files', bindingId: GO_ACTION_IDS.files },
   { index: 3, id: 'changes', label: 'Changes', bindingId: GO_ACTION_IDS.changes },

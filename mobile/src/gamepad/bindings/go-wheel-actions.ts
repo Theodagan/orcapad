@@ -3,7 +3,7 @@ import type { WheelScreen } from '../wheel/wheel-layouts'
 import { GO_ACTION_IDS } from './wheel-action-ids'
 
 /**
- * The GO wheel's shell-owned slots (`012`): Back, Workspaces, New and Settings, which need only the
+ * The GO wheel's shell-owned slots (`012`): Back, New and Settings, which need only the
  * router, and off the session Files, Changes and History of the workspace in the route. The
  * session registers its own three, and home's New is Pair desktop.
  */
@@ -19,7 +19,6 @@ export type GoWheelOptions = {
   /** Whether the route names a workspace, and which of its pages is showing, if any. */
   readonly workspace: { readonly page: WorkspacePage | null } | null
   readonly onBack: () => void
-  readonly onWorkspaces: () => void
   readonly onNewWorktree: () => void
   readonly onWorkspacePage: (page: WorkspacePage) => void
   readonly onSettings: () => void
@@ -42,15 +41,6 @@ export function goWheelActions(options: GoWheelOptions): readonly WheelActionBin
       run: options.onBack
     }
   ]
-  // Up only ever goes to a host's workspaces; leaving for every host is Back's job.
-  const inHost = hostId !== null && screen !== 'host' && screen !== 'home'
-  actions.push({
-    id: GO_ACTION_IDS.up,
-    label: 'Workspaces',
-    availability: inHost ? 'available' : 'unavailable',
-    reason: screen === 'host' ? 'Already here' : 'Open a host first',
-    run: options.onWorkspaces
-  })
   // Home registers its own New (Pair desktop); two owners of one id would retract each other.
   if (screen !== 'home') {
     actions.push({

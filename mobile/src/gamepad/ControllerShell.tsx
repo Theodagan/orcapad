@@ -3,7 +3,6 @@ import { StyleSheet, View, type LayoutChangeEvent } from 'react-native'
 import { useGlobalSearchParams, usePathname, useRouter, useSegments } from 'expo-router'
 import { colors } from '../theme/mobile-theme'
 import { MobileDictationStatusPill } from '../session/MobileDictationStatusPill'
-import { hostStackHostRoute } from '../navigation/host-stack-navigation'
 import { hostNewWorktreeRoute } from '../host-route-action-state'
 import { ControllerProvider } from './controller-provider'
 import { ControllerConnectionNotice } from './controller-connection/ControllerConnectionNotice'
@@ -99,11 +98,6 @@ function useGoWheelActions(
       canGoBack: router.canGoBack(),
       workspace: inWorkspace ? { page } : null,
       onBack: () => router.back(),
-      onWorkspaces: () => {
-        if (host !== null) {
-          router.dismissTo(hostStackHostRoute(host))
-        }
-      },
       onNewWorktree: () => {
         if (host !== null) {
           router.dismissTo(hostNewWorktreeRoute(host))

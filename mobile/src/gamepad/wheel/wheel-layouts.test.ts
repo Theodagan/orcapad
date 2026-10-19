@@ -33,7 +33,6 @@ describe('wheel layouts', () => {
         angles.set(segment.bindingId, segment.centerAngle)
       }
     }
-    expect(angles.get(GO_ACTION_IDS.up)).toBe(0)
     expect(angles.get(GO_ACTION_IDS.new)).toBeCloseTo(EIGHTH)
     expect(angles.get(GO_ACTION_IDS.files)).toBeCloseTo(2 * EIGHTH)
     expect(angles.get(GO_ACTION_IDS.changes)).toBeCloseTo(3 * EIGHTH)
