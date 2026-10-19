@@ -7,7 +7,8 @@ import { useHostProtocolGates } from './host-protocol-gates-context'
 
 const nativeTestState = vi.hoisted(() => ({
   openUrl: vi.fn(),
-  platform: { OS: 'ios' as 'ios' | 'android' }
+  platform: { OS: 'ios' as 'ios' | 'android' },
+  availableUpdate: null as { version: string; url: string } | null
 }))
 
 vi.mock('react-native', () => ({
@@ -38,8 +39,19 @@ const hostClient = vi.hoisted(() => ({
 vi.mock('../transport/client-context', () => ({
   useHostClient: () => hostClient.current
 }))
-// The wall's release offer: the native hook imports the update checker module.
-vi.mock('../app-update/use-wall-app-update', () => ({ useWallAppUpdate: () => null }))
+// The strip's release offer: the native hook imports the update checker module.
+vi.mock('../app-update/use-wall-app-update', () => ({
+  useWallAppUpdate: () => nativeTestState.availableUpdate
+}))
+vi.mock('../app-update/app-update-runtime', () => ({ installedAppVersion: '1.3.2' }))
+vi.mock('lucide-react-native', () => ({ X: 'X' }))
+vi.mock('react-native-safe-area-context', async () => {
+  const { createContext } = await import('react')
+  return {
+    SafeAreaInsetsContext: createContext(null),
+    useSafeAreaInsets: () => ({ top: 24, bottom: 0, left: 0, right: 0 })
+  }
+})
 // Descriptor bookkeeping only; the real recorder reaches the native keychain through host-store.
 vi.mock('../transport/host-descriptor-recorder', () => ({
   recordHostDescriptorFromStatus: vi.fn()
@@ -90,6 +102,7 @@ describe('HostProtocolGate', () => {
   beforeEach(() => {
     nativeTestState.openUrl.mockClear()
     nativeTestState.platform.OS = 'ios'
+    nativeTestState.availableUpdate = null
     probeMounts.count = 0
   })
 
@@ -99,41 +112,22 @@ describe('HostProtocolGate', () => {
     vi.restoreAllMocks()
   })
 
-  it('replaces the host UI with the block screen when mobile is too old', async () => {
+  it('keeps the host UI under a version strip when mobile is too old', async () => {
     // Why: blocked warns to console; keep test output clean without hiding other errors.
     vi.spyOn(console, 'warn').mockImplementation(() => {})
+    nativeTestState.availableUpdate = { version: '1.4.0', url: 'https://example.test' }
     hostClient.current = {
       client: clientWithStatus({ protocolVersion: 5, minCompatibleMobileVersion: 999 }),
       state: 'connected'
     }
     renderer = await renderGate()
     const output = renderedText(renderer)
-    expect(output).toContain('Update Orca Mobile')
-    expect(output).toContain('Open App Store')
-    expect(output).not.toContain('HostContent')
+    expect(output).toContain('There is a new version of Orca v1.4.0, last sync was v1.3.2')
+    expect(output).toContain('HostContent')
+    expect(output).not.toContain('Update Orca Mobile')
   })
 
-  it('routes Android mobile updates to GitHub Releases', async () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {})
-    nativeTestState.platform.OS = 'android'
-    hostClient.current = {
-      client: clientWithStatus({ protocolVersion: 5, minCompatibleMobileVersion: 999 }),
-      state: 'connected'
-    }
-    renderer = await renderGate()
-    const output = renderedText(renderer)
-    expect(output).toContain('Update Orca Mobile')
-    expect(output).toContain('Update Orca Mobile from GitHub Releases')
-    expect(output).toContain('Open GitHub Releases')
-    expect(output).not.toContain('mobile app store')
-    expect(output).not.toContain('HostContent')
-    act(() => renderer?.root.findAllByType('Pressable')[0]?.props.onPress())
-    expect(nativeTestState.openUrl).toHaveBeenCalledWith(
-      'https://github.com/stablyai/orca/releases'
-    )
-  })
-
-  it('replaces the host UI with the block screen when desktop is too old', async () => {
+  it('keeps the host UI under a version strip when desktop is too old', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     hostClient.current = {
       client: clientWithStatus({ protocolVersion: 0, minCompatibleMobileVersion: 0 }),
@@ -141,9 +135,23 @@ describe('HostProtocolGate', () => {
     }
     renderer = await renderGate()
     const output = renderedText(renderer)
-    expect(output).toContain('Update Orca on your computer')
-    expect(output).toContain('Open GitHub Releases')
-    expect(output).not.toContain('HostContent')
+    expect(output).toContain('Orca on your computer is older than this app expects')
+    expect(output).toContain('HostContent')
+  })
+
+  it('drops the strip on dismiss without remounting the routes', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    hostClient.current = {
+      client: clientWithStatus({ protocolVersion: 5, minCompatibleMobileVersion: 999 }),
+      state: 'connected'
+    }
+    renderer = await renderGate()
+    const mounts = probeMounts.count
+    act(() => renderer?.root.findAllByType('Pressable')[0]?.props.onPress())
+    const output = renderedText(renderer)
+    expect(output).not.toContain('This desktop expects a newer Orca Mobile')
+    expect(output).toContain('HostContent')
+    expect(probeMounts.count).toBe(mounts)
   })
 
   it('renders the host UI when the verdict is ok', async () => {
@@ -209,7 +217,7 @@ describe('HostProtocolGate', () => {
     expect(overlay?.props.pointerEvents).toBe('auto')
   })
 
-  it('still replaces mounted routes when the verdict comes back blocked', async () => {
+  it('keeps mounted routes when the verdict comes back blocked', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     hostClient.current = { client: null, state: 'connecting' }
     renderer = await renderGate()
@@ -225,8 +233,9 @@ describe('HostProtocolGate', () => {
     })
 
     const output = renderedText(renderer)
-    expect(output).toContain('Update Orca Mobile')
-    expect(output).not.toContain('HostContent')
+    expect(output).toContain('This desktop expects a newer Orca Mobile than v1.3.2')
+    expect(output).toContain('HostContent')
+    expect(probeMounts.count).toBe(1)
   })
 
   it('keeps an already-validated host route mounted while reconnect status is pending', async () => {

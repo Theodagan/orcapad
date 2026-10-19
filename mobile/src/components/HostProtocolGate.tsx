@@ -1,18 +1,20 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
+import { SafeAreaInsetsContext, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useHostClient } from '../transport/client-context'
 import { useHostStatusGates } from '../transport/host-status-gates'
 import { colors } from '../theme/mobile-theme'
 import { HostStatusGatesContext } from './host-protocol-gates-context'
-import { ProtocolBlockScreen } from './ProtocolBlockScreen'
+import { HostVersionNoticeStrip } from './HostVersionNoticeStrip'
+import type { BlockedCompatVerdict } from './host-version-notice'
 
 type Props = {
   hostId: string | undefined
   children: ReactNode
 }
 
-// Why: single choke point above every /h/[hostId] route so a blocked verdict replaces the
-// whole host UI (sidebar + detail stack) while the host list and other hosts stay usable.
+// Why: single choke point above every /h/[hostId] route. A blocked verdict no longer replaces the
+// host UI (the pad fork runs behind the official desktop): it shows a version strip above it.
 export function HostProtocolGate({ hostId, children }: Props) {
   const { client, state } = useHostClient(hostId)
   const gates = useHostStatusGates({ hostId, client, connState: state })
@@ -21,7 +23,9 @@ export function HostProtocolGate({ hostId, children }: Props) {
   const mountedHostIdRef = useRef<string | null>(null)
   const hostKey = hostId ?? null
   const resolvedNow = state === 'connected' && client !== null && !statusPending
-  const blocked = compatVerdict.kind === 'blocked'
+  const [stripDismissedFor, setStripDismissedFor] = useState<string | null>(null)
+  const stripVerdict =
+    compatVerdict.kind === 'blocked' && stripDismissedFor !== hostKey ? compatVerdict : null
   const pending = statusPending && resolvedHostIdRef.current !== hostKey
   const holdBack = pending && mountedHostIdRef.current !== hostKey
 
@@ -31,11 +35,7 @@ export function HostProtocolGate({ hostId, children }: Props) {
     if (resolvedNow) {
       resolvedHostIdRef.current = hostKey
     }
-    if (blocked) {
-      // Why: the block screen unmounts the routes, so a later pending window
-      // must not assume a live tree it can overlay.
-      mountedHostIdRef.current = null
-    } else if (!holdBack) {
+    if (!holdBack) {
       mountedHostIdRef.current = hostKey
     }
   })
@@ -52,20 +52,20 @@ export function HostProtocolGate({ hostId, children }: Props) {
       </View>
     )
   }
-  if (blocked) {
-    return <ProtocolBlockScreen verdict={compatVerdict} />
-  }
   // Why: the host sidebar needs the same status fields; sharing the result avoids a second status.get per route.
   return (
     <HostStatusGatesContext.Provider value={gates}>
       <View style={styles.host}>
+        {stripVerdict === null ? null : (
+          <TopVersionStrip verdict={stripVerdict} onDismiss={() => setStripDismissedFor(hostKey)} />
+        )}
         <View
           style={styles.host}
           // Why: the overlay blocks in-tree touches but TalkBack can still walk the covered
           // stack; hide it while pending (Android counterpart of the overlay's iOS modal flag).
           importantForAccessibility={pending ? 'no-hide-descendants' : 'auto'}
         >
-          {children}
+          <BelowStrip stripShown={stripVerdict !== null}>{children}</BelowStrip>
         </View>
         {pending ? (
           // Why: once the stack is mounted, unmounting it for a pending status.get destroys
@@ -88,6 +88,29 @@ export function HostProtocolGate({ hostId, children }: Props) {
       </View>
     </HostStatusGatesContext.Provider>
   )
+}
+
+/** The strip takes the status-bar inset, so the screens below it must not pad for it again. */
+function TopVersionStrip({
+  verdict,
+  onDismiss
+}: {
+  verdict: BlockedCompatVerdict
+  onDismiss: () => void
+}) {
+  const { top } = useSafeAreaInsets()
+  return (
+    <View style={{ paddingTop: top }}>
+      <HostVersionNoticeStrip verdict={verdict} onDismiss={onDismiss} />
+    </View>
+  )
+}
+
+// Always mounted, so the strip coming or going never remounts the routes below it.
+function BelowStrip({ stripShown, children }: { stripShown: boolean; children: ReactNode }) {
+  const insets = useSafeAreaInsets()
+  const below = useMemo(() => (stripShown ? { ...insets, top: 0 } : insets), [insets, stripShown])
+  return <SafeAreaInsetsContext.Provider value={below}>{children}</SafeAreaInsetsContext.Provider>
 }
 
 const styles = StyleSheet.create({
