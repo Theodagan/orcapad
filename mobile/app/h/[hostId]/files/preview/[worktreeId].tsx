@@ -4,6 +4,7 @@ import {
   workspaceRouteParams
 } from '../../../../../src/navigation/workspace-execution-host'
 import { useLocalSearchParams } from 'expo-router'
+import { MobileFilePreviewScreen } from '../../../../../src/files/MobileFilePreviewScreen'
 import {
   mobileFilePreviewShellParams,
   normalizeMobileFilePreviewRouteParams
@@ -13,14 +14,14 @@ import {
   shellScreenRouteKey
 } from '../../../../../src/mobile-web-shell/shell-screen-route'
 import { MobileWebShellScreen } from '../../../../../src/mobile-web-shell/MobileWebShellScreen'
-import { PageRouteUnavailableScreen } from '../../../../../src/mobile-web-shell/PageRouteUnavailableScreen'
-import { firstParam } from '../../../../../src/navigation/route-param-reader'
+import { shellSwitchDecision } from '../../../../../src/mobile-web-shell/shell-switch-decision'
 
 /**
- * The file preview, from the desktop's bundle.
+ * The file preview, from the desktop's bundle or from this app.
  *
- * Normalized before the shell route is built, not after: a route the preview would refuse is one the shell has no
- * pathname to build from, and a refusal here beats a page opened on params it will refuse again.
+ * Normalized before the switch, not after: a route the native screen would refuse is one the shell
+ * has no pathname to build from, and its own refusal message is a better screen than a page opened
+ * on params it will refuse again.
  *
  * Only the two path segments are spelled into the pathname; everything else — the file path among
  * them — is a param, which is what keeps a `/`, a space or a `..` out of the segment vocabulary the
@@ -45,6 +46,7 @@ export default withWorkspaceRoute(function MobileFilePreviewRoute() {
     worktreeName?: string | string[]
   }>()
   const route = normalizeMobileFilePreviewRouteParams(params)
+  const native = <MobileFilePreviewScreen route={route} />
   const executionHost = useWorkspaceExecutionHost()
 
   const shellRoute = route.ok
@@ -59,9 +61,12 @@ export default withWorkspaceRoute(function MobileFilePreviewRoute() {
       })
     : null
 
-  // `route.ok` again for the compiler: `shellRoute` is built only on the ok branch.
-  if (shellRoute === null || !route.ok) {
-    return <PageRouteUnavailableScreen hostId={firstParam(params.hostId)} />
+  const decision = shellSwitchDecision(shellRoute)
+
+  // `route.ok` again for the compiler: `shellRoute` is built only on the ok branch, so a `shell`
+  // decision already implies it.
+  if (decision.kind === 'native' || !route.ok) {
+    return native
   }
   // Keyed on the whole route, params included, for two reasons. A host captures the grants its
   // session was opened with, so only a remount drops the bridge the previous route opened. And the
@@ -70,9 +75,9 @@ export default withWorkspaceRoute(function MobileFilePreviewRoute() {
   // was opened on, with nothing to tell it otherwise.
   return (
     <MobileWebShellScreen
-      key={shellScreenRouteKey(shellRoute)}
+      key={shellScreenRouteKey(decision.route)}
       hostId={route.params.hostId}
-      route={shellRoute}
+      route={decision.route}
     />
   )
 })
