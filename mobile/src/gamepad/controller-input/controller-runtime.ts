@@ -13,7 +13,6 @@ import { multicastControllerReader } from './multicast-controller-reader'
 import { createNativeControllerReader } from './native-controller-reader'
 import { declaredFlat, triggersAreAnalog } from './native-controller-sample'
 import type { NativeControllerDevice } from '../../../modules/orca-gamepad'
-import { padDebug } from '../pad-debug'
 
 /**
  * Assembles what the shell mounts: a reader, and a resolver whose dead zones come from the
@@ -55,15 +54,8 @@ const INERT_NATIVE_FOCUS: NativeFocusFallback = {
   scroll: () => {}
 }
 
-function report(what: string, result: Promise<string> | undefined): void {
-  if (result === undefined) {
-    padDebug(`${what}: native call missing`)
-    return
-  }
-  result.then(
-    (outcome) => padDebug(`${what}: ${outcome}`),
-    (error: unknown) => padDebug(`${what}: failed ${String(error)}`)
-  )
+function ignore(result: Promise<string> | undefined): void {
+  result?.catch(() => {})
 }
 
 function nativeFocusFallback(module: NonNullable<typeof orcaGamepad>): NativeFocusFallback {
@@ -72,13 +64,13 @@ function nativeFocusFallback(module: NonNullable<typeof orcaGamepad>): NativeFoc
   }
   return {
     move: (direction) => {
-      report(`native move ${direction}`, module.moveNativeFocus?.(direction))
+      ignore(module.moveNativeFocus?.(direction))
     },
     activate: () => {
-      report('native press', module.activateNativeFocus?.())
+      ignore(module.activateNativeFocus?.())
     },
     scroll: (delta) => {
-      report(`native scroll ${Math.sign(delta)}`, module.scrollNativeBy?.(delta))
+      ignore(module.scrollNativeBy?.(delta))
     }
   }
 }

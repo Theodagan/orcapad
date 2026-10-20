@@ -14,7 +14,6 @@ import { useSessionChrome } from './session-chrome/use-session-chrome'
 import type { FocusZone } from './focus/focus-zones'
 import { useWheelOpen, type WheelViewSource } from './wheel/wheel-view-store'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
-import { PAD_DEBUG, usePadDebugLines } from './pad-debug'
 
 /**
  * What the buttons do on whatever has focus. The pad has no labels on it, and a controller-first
@@ -96,17 +95,11 @@ export function ActionHintBar({
         }
       : {})
   }
-  const debugLines = usePadDebugLines()
   // An open wheel names its own triggers in its corners; saying it twice here would drift.
   const hints = wheelOpen
     ? []
     : actionHintsFor(offered, wording, runnable, modifierHeld, registered)
-  const debugShown = PAD_DEBUG && debugLines.length > 0
-  if (
-    !connected ||
-    (focusMode && !debugShown) ||
-    (hints.length === 0 && !wheelOpen && !debugShown)
-  ) {
+  if (!connected || focusMode || (hints.length === 0 && !wheelOpen)) {
     return null
   }
   const chip = wheelOpen
@@ -126,11 +119,6 @@ export function ActionHintBar({
           <Text style={styles.zoneText}>{chip}</Text>
         </View>
       )}
-      {debugShown ? (
-        <Text style={styles.debug} numberOfLines={3}>
-          {debugLines.join('\n')}
-        </Text>
-      ) : null}
       {hints.map((hint) => (
         <View key={hint.control} style={styles.hint}>
           <Text style={styles.control}>{hint.control}</Text>
@@ -167,7 +155,6 @@ const styles = StyleSheet.create({
     paddingVertical: 2
   },
   label: { color: colors.textSecondary, fontSize: typography.metaSize },
-  debug: { color: colors.textMuted, fontSize: typography.metaSize, width: '100%' },
   zoneChip: {
     backgroundColor: colors.accentBlue,
     borderRadius: radii.card,
