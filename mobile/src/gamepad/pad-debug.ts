@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react'
  * A line under the hint strip saying what the last presses did: which intent, who took it, and
  * what Android's own focus did. For diagnosing a device build; off in a normal one.
  */
-export const PAD_DEBUG = true
+export const PAD_DEBUG = false
 
 const MAX_LINES = 3
 let lines: readonly string[] = []
