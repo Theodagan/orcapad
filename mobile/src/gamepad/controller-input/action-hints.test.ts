@@ -1,0 +1,172 @@
+import { describe, expect, it } from 'vitest'
+import { actionHintsFor, RUN_ACTION_IDS } from './action-hints'
+import { DO_ACTION_IDS, VIEW_ACTION_IDS } from '../bindings/wheel-action-ids'
+import type { ControllerIntentKind } from './controller-intent'
+
+const accepting = (...kinds: ControllerIntentKind[]): ReadonlySet<ControllerIntentKind> =>
+  new Set(kinds)
+
+describe('action hints', () => {
+  it('shows nothing for a surface that answers for nothing', () => {
+    expect(actionHintsFor(accepting())).toEqual([])
+  })
+
+  it('names the control for each intent the surface accepts', () => {
+    const hints = actionHintsFor(accepting('confirm', 'back'))
+
+    expect(hints.map((hint) => hint.control)).toEqual(['A', 'B'])
+  })
+
+  // The whole point of deriving: a hint can only exist where the binding does.
+  it('never invents a hint for an intent nothing accepts', () => {
+    const hints = actionHintsFor(accepting('confirm'))
+
+    expect(hints.map((hint) => hint.control)).toEqual(['A'])
+  })
+
+  it('lets a surface say what the action means there', () => {
+    const hints = actionHintsFor(accepting('confirm'), { confirm: 'Open workspace' })
+
+    expect(hints[0]).toEqual({ control: 'A', label: 'Open workspace' })
+  })
+
+  // The bar once read "A A  B B": the fallback was the control's own name.
+  it('falls back to a word for what the button does, never to the control name', () => {
+    const hints = actionHintsFor(
+      accepting('confirm', 'back', 'switch-zone', 'toggle-dictation', 'scroll', 'cycle-tab')
+    )
+
+    expect(hints.map((hint) => hint.label)).toEqual([
+      'Select',
+      'Back',
+      'Dictate',
+      'Scroll',
+      'Tabs',
+      'More'
+    ])
+    for (const hint of hints) {
+      expect(hint.label).not.toBe(hint.control)
+    }
+  })
+
+  it('prints the shoulders and triggers as they are printed on the pad', () => {
+    const accepts = accepting('cycle-tab', 'scroll', 'cycle-workspace')
+
+    expect(actionHintsFor(accepts).map((hint) => hint.control)).toEqual(['L2/R2', 'L1/R1', 'X'])
+    expect(actionHintsFor(accepts, {}, new Set(), true).map((hint) => hint.control)).toEqual([
+      'X+L1/R1'
+    ])
+  })
+
+  it('shows Y as the dictation tap, and X as the only modifier until it is held', () => {
+    const accepts = accepting('toggle-dictation', 'switch-zone')
+
+    expect(actionHintsFor(accepts)).toEqual([
+      { control: 'Y', label: 'Dictate' },
+      { control: 'X', label: 'More' }
+    ])
+    expect(actionHintsFor(accepts, {}, new Set(), true)).toEqual([
+      { control: 'X+D-pad', label: 'Zone' }
+    ])
+  })
+
+  it('reads the D-pad as one hint when both axes mean the same, and as two when they differ', () => {
+    expect(actionHintsFor(accepting('move-selection', 'move-horizontal'))).toEqual([
+      { control: 'D-pad', label: 'Move' }
+    ])
+    expect(
+      actionHintsFor(accepting('move-selection', 'move-horizontal'), {
+        'move-selection': 'Up / down',
+        'move-horizontal': 'Left / right'
+      }).map((hint) => hint.control)
+    ).toEqual(['D-pad ↑↓', 'D-pad ←→'])
+    expect(actionHintsFor(accepting('move-horizontal')).map((hint) => hint.control)).toEqual([
+      'D-pad ←→'
+    ])
+  })
+
+  it('names the agent zone by what the buttons really do there', () => {
+    const hints = actionHintsFor(
+      accepting('confirm', 'back', 'move-selection', 'move-horizontal'),
+      {
+        confirm: 'Enter',
+        back: 'Esc',
+        'move-selection': 'Arrows',
+        'move-horizontal': 'Arrows'
+      }
+    )
+
+    expect(hints).toEqual([
+      { control: 'A', label: 'Enter' },
+      { control: 'B', label: 'Esc' },
+      { control: 'D-pad', label: 'Arrows' }
+    ])
+  })
+
+  /**
+   * A bar that reshuffles while you read it is worse than one that is missing. Growing the
+   * capability set may insert hints — the PRD table lists triggers before face buttons — but it
+   * must never reorder the ones already there relative to each other.
+   */
+  it('keeps hints in the same relative order as capabilities grow', () => {
+    const fewer = actionHintsFor(accepting('confirm', 'back')).map((hint) => hint.control)
+    const more = actionHintsFor(accepting('confirm', 'back', 'switch-zone', 'scroll')).map(
+      (hint) => hint.control
+    )
+
+    expect(more.filter((control) => fewer.includes(control))).toEqual(fewer)
+  })
+
+  it('shows a chorded control as the chord while X is held', () => {
+    const hints = actionHintsFor(accepting('cycle-workspace'), {}, new Set(), true)
+
+    expect(hints).toEqual([{ control: 'X+L1/R1', label: 'Worktrees' }])
+  })
+
+  it('names a button action only while it can run, its X combos only while X is held', () => {
+    expect(actionHintsFor(accepting('confirm'))).toEqual([{ control: 'A', label: 'Select' }])
+
+    const runnable = new Set([
+      DO_ACTION_IDS.stop,
+      VIEW_ACTION_IDS.focusMode,
+      VIEW_ACTION_IDS.question
+    ])
+    expect(actionHintsFor(accepting('confirm'), {}, runnable)).toEqual([
+      { control: 'A', label: 'Select' },
+      { control: 'X+Select', label: 'Stop' },
+      { control: 'Select', label: 'Focus' },
+      { control: 'X', label: 'More' }
+    ])
+    expect(actionHintsFor(accepting('confirm'), {}, runnable, true)).toEqual([
+      { control: 'X+Y', label: 'Prompt' },
+      { control: 'X+Select', label: 'Stop' }
+    ])
+    expect(actionHintsFor(accepting(), {}, new Set([VIEW_ACTION_IDS.focusMode]))).toEqual([
+      { control: 'Select', label: 'Focus' }
+    ])
+  })
+
+  it('always names Stop where the screen has it, even with nothing running', () => {
+    const registered = new Set([DO_ACTION_IDS.stop])
+    const idle = new Set<string>()
+
+    expect(actionHintsFor(accepting('confirm'), {}, idle, false, registered)).toEqual([
+      { control: 'A', label: 'Select' },
+      { control: 'X+Select', label: 'Stop' }
+    ])
+    expect(actionHintsFor(accepting('confirm'), {}, idle, true, registered)).toEqual([
+      { control: 'X+Select', label: 'Stop' }
+    ])
+    expect(actionHintsFor(accepting('confirm'), {}, idle, false, idle)).toEqual([
+      { control: 'A', label: 'Select' }
+    ])
+  })
+
+  it('watches exactly the actions the buttons run', () => {
+    expect(RUN_ACTION_IDS).toEqual([
+      VIEW_ACTION_IDS.question,
+      DO_ACTION_IDS.stop,
+      VIEW_ACTION_IDS.focusMode
+    ])
+  })
+})

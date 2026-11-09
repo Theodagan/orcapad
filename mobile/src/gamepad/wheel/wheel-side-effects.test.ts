@@ -1,0 +1,225 @@
+import { describe, expect, it, vi } from 'vitest'
+import { dispatchWheelOutcome } from './wheel-dispatcher'
+import {
+  CLOSED_WHEEL,
+  reduceWheel,
+  stateAfter,
+  type WheelEvent,
+  type WheelPreset,
+  type WheelState
+} from './wheel-state'
+import type { SegmentAvailability, WheelId, WheelSegment } from './wheel-segment'
+
+/**
+ * WHEEL-T3. The state machine cannot invoke anything by construction, so the risk is the seam:
+ * the dispatcher runs on every outcome and has to act on exactly one kind. This drives the whole
+ * vocabulary of paths against recording actions and asserts nothing fired but a commit.
+ *
+ * The recorder is the point. Asserting "no action ran" against a stub that could never run one
+ * proves nothing, so every segment here has a real recorded binding that a bug would reach.
+ */
+
+const QUARTER = Math.PI / 2
+
+function segment(
+  id: string,
+  centerAngle: number,
+  availability: SegmentAvailability = 'available'
+): WheelSegment {
+  return {
+    id,
+    label: id,
+    centerAngle,
+    halfWidth: Math.PI / 6,
+    availability,
+    bindingId: `binding.${id}`
+  }
+}
+
+const wheelOne = [segment('north', 0), segment('east', QUARTER)]
+const wheelTwo = [segment('far-south', Math.PI)]
+
+function preset(overrides: Partial<WheelPreset> = {}): WheelPreset {
+  return {
+    segmentsFor: (wheel: WheelId) => (wheel === 1 ? wheelOne : wheelTwo),
+    deadZone: 0.2,
+    ...overrides
+  }
+}
+
+/** Drives a sequence and records every binding the dispatcher chose to run. */
+function drive(
+  events: readonly WheelEvent[],
+  p: WheelPreset = preset(),
+  from: WheelState = CLOSED_WHEEL
+): { invoked: string[]; state: WheelState } {
+  const invoked: string[] = []
+  let state = from
+  for (const event of events) {
+    const outcome = reduceWheel(state, event, p)
+    state = stateAfter(outcome)
+    dispatchWheelOutcome(
+      outcome,
+      p.segmentsFor(event.kind === 'motion' ? event.wheel : 1),
+      (id) => {
+        invoked.push(id)
+      }
+    )
+  }
+  return { invoked, state }
+}
+
+const up: WheelEvent = { kind: 'motion', wheel: 1, x: 0, y: -1 }
+const right: WheelEvent = { kind: 'motion', wheel: 1, x: 1, y: 0 }
+const deadArc: WheelEvent = { kind: 'motion', wheel: 1, x: 0.7, y: -0.7 }
+const centred: WheelEvent = { kind: 'motion', wheel: 1, x: 0, y: 0 }
+const confirm: WheelEvent = { kind: 'confirm' }
+
+describe('only a commit can produce an invocation', () => {
+  it('opening runs nothing', () => {
+    expect(drive([up]).invoked).toEqual([])
+  })
+
+  it('moving between segments runs nothing, however far it travels', () => {
+    expect(drive([up, right, up, right, up]).invoked).toEqual([])
+  })
+
+  it('an invalid direction runs nothing and holds the wheel open with nothing lit', () => {
+    const { invoked, state } = drive([up, deadArc])
+
+    expect(invoked).toEqual([])
+    expect(state).toMatchObject({ kind: 'open', locked: null })
+  })
+
+  it('returning to centre runs nothing and closes', () => {
+    const { invoked, state } = drive([up, centred])
+
+    expect(invoked).toEqual([])
+    expect(state.kind).toBe('closed')
+  })
+
+  it('L2 runs nothing and closes', () => {
+    const { invoked, state } = drive([up, { kind: 'back' }])
+
+    expect(invoked).toEqual([])
+    expect(state.kind).toBe('closed')
+  })
+
+  it('a controller disconnect runs nothing and closes', () => {
+    const { invoked, state } = drive([up, { kind: 'disconnect' }])
+
+    expect(invoked).toEqual([])
+    expect(state.kind).toBe('closed')
+  })
+
+  it('R2 on an unavailable lock runs nothing', () => {
+    const disabled = preset({ segmentsFor: () => [segment('north', 0, 'unavailable')] })
+
+    expect(drive([up, confirm], disabled).invoked).toEqual([])
+  })
+
+  it('R2 on a segment that unmounted while locked runs nothing', () => {
+    // Opens on north, then the preset no longer offers it — the lock has no owner left.
+    let segments: readonly WheelSegment[] = wheelOne
+    const unmounting = preset({ segmentsFor: () => segments })
+    const invoked: string[] = []
+    let state: WheelState = CLOSED_WHEEL
+
+    for (const event of [up, confirm]) {
+      if (event === confirm) {
+        segments = [segment('east', QUARTER)]
+      }
+      const outcome = reduceWheel(state, event, unmounting)
+      state = stateAfter(outcome)
+      dispatchWheelOutcome(outcome, segments, (id) => invoked.push(id))
+    }
+
+    expect(invoked).toEqual([])
+    expect(state.kind).toBe('closed')
+  })
+
+  it('R2 on an empty preset runs nothing', () => {
+    expect(drive([up, confirm], preset({ segmentsFor: () => [] })).invoked).toEqual([])
+  })
+
+  it('the inactive stick runs nothing', () => {
+    expect(drive([up, { kind: 'motion', wheel: 2, x: 0, y: 1 }]).invoked).toEqual([])
+  })
+
+  it('R2 and L2 with no wheel open run nothing', () => {
+    expect(drive([confirm, { kind: 'back' }, { kind: 'disconnect' }]).invoked).toEqual([])
+  })
+
+  it('a committed segment runs its binding exactly once', () => {
+    const { invoked, state } = drive([up, confirm])
+
+    expect(invoked).toEqual(['binding.north'])
+    expect(state.kind).toBe('closed')
+  })
+
+  it('commits an unknown availability, which is offered rather than refused', () => {
+    const unproven = preset({ segmentsFor: () => [segment('north', 0, 'unknown')] })
+
+    expect(drive([up, confirm], unproven).invoked).toEqual(['binding.north'])
+  })
+
+  it('invokes once per commit, and each gesture commits its own segment', () => {
+    // north committed and closed; the stick must come back to centre before a fresh gesture that
+    // ends on east, or a held stick would reopen the wheel the instant it closed.
+    expect(drive([up, confirm, centred, up, right, confirm]).invoked).toEqual([
+      'binding.north',
+      'binding.east'
+    ])
+  })
+
+  it('does not invoke again for samples that arrive after a commit closed the wheel', () => {
+    expect(drive([up, confirm, right, up, centred]).invoked).toEqual(['binding.north'])
+  })
+
+  it('does not reopen from a stick that is still held out after a commit or a B', () => {
+    for (const leave of [confirm, { kind: 'back' } as const]) {
+      const { state } = drive([up, leave, right, up, deadArc])
+
+      expect(state.kind).toBe('closed')
+    }
+  })
+
+  it('opening a second wheel runs nothing, and neither does stepping back out of it', () => {
+    const opener: WheelSegment = { ...segment('launch', 0), opens: true, bindingId: 'agent.launch' }
+    const menu = preset({
+      segmentsFor: (wheel: WheelId, path?: readonly string[]) =>
+        wheel === 1 ? ((path ?? []).length === 0 ? [opener] : wheelOne) : wheelTwo
+    })
+
+    const descended = drive([up, confirm], menu)
+    expect(descended.invoked).toEqual([])
+    expect(descended.state).toMatchObject({ kind: 'open', path: ['agent.launch'] })
+
+    // L2 inside the menu goes back to the parent wheel, running nothing; the next L2 closes.
+    const outcomes = drive([up, confirm, { kind: 'back' }], menu)
+    expect(outcomes.invoked).toEqual([])
+    expect(outcomes.state).toMatchObject({ kind: 'open', path: [] })
+    expect(drive([up, confirm, { kind: 'back' }, { kind: 'back' }], menu).state.kind).toBe('closed')
+  })
+})
+
+describe('an action that throws', () => {
+  it('leaves the wheel closed, because it was closed before the action ran', () => {
+    const outcome = reduceWheel(
+      { kind: 'open', wheel: 1, path: [], locked: 'north', spent: new Set() },
+      confirm,
+      preset()
+    )
+    const state = stateAfter(outcome)
+    const exploding = vi.fn(() => {
+      throw new Error('the surface will report this')
+    })
+
+    expect(() => dispatchWheelOutcome(outcome, wheelOne, exploding)).toThrow(
+      'the surface will report this'
+    )
+    // §6: error reporting belongs to the surface that owns the action; the wheel is already shut.
+    expect(state.kind).toBe('closed')
+    expect(exploding).toHaveBeenCalledTimes(1)
+  })
+})

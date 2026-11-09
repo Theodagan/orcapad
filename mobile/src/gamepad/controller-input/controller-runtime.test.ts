@@ -1,0 +1,126 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ControllerSample } from './controller-sample'
+
+const platform = { OS: 'android' }
+const findNodeHandle = vi.fn<(node: unknown) => number | null>()
+const requestNativeFocus = vi.fn<(tag: number) => Promise<boolean>>()
+const requestNativeFocusWithin = vi.fn<(tag: number) => Promise<boolean>>()
+const nativeModule: { current: Record<string, unknown> | null } = { current: null }
+
+vi.mock('react-native', () => ({
+  AppState: { currentState: 'active' },
+  Platform: platform,
+  findNodeHandle: (node: unknown) => findNodeHandle(node)
+}))
+vi.mock('../../../modules/orca-gamepad', () => ({
+  get orcaGamepad() {
+    return nativeModule.current
+  }
+}))
+
+const { createControllerRuntime, policyForControllers } = await import('./controller-runtime')
+
+// oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: a stand-in host node; the mocked findNodeHandle only reads its identity.
+const view = { name: 'a pressable' } as never
+
+function nativeWith(extra: Record<string, unknown>) {
+  return {
+    listControllers: () => [],
+    addListener: () => ({ remove: () => {} }),
+    currentSample: () => ({}),
+    start: () => true,
+    stop: () => true,
+    setInputCaptured: () => true,
+    ...extra
+  }
+}
+
+describe('the controller runtime’s native focus request', () => {
+  beforeEach(() => {
+    platform.OS = 'android'
+    findNodeHandle.mockReset().mockReturnValue(41)
+    requestNativeFocus.mockReset().mockResolvedValue(true)
+    requestNativeFocusWithin.mockReset().mockResolvedValue(true)
+    nativeModule.current = nativeWith({ requestNativeFocus, requestNativeFocusWithin })
+  })
+
+  it('asks the native layer to focus the view behind the node', () => {
+    createControllerRuntime().requestNativeFocus(view)
+
+    expect(requestNativeFocus).toHaveBeenCalledExactlyOnceWith(41)
+  })
+
+  it('asks for the first control inside a sheet, not the sheet itself, when told to go within', () => {
+    createControllerRuntime().requestNativeFocus(view, true)
+
+    expect(requestNativeFocusWithin).toHaveBeenCalledExactlyOnceWith(41)
+    expect(requestNativeFocus).not.toHaveBeenCalled()
+  })
+
+  it('leaves focus alone off Android, without a node, or for a node with no tag yet', () => {
+    const runtime = createControllerRuntime()
+    platform.OS = 'ios'
+    runtime.requestNativeFocus(view)
+    platform.OS = 'android'
+    runtime.requestNativeFocus(null)
+    findNodeHandle.mockReturnValue(null)
+    runtime.requestNativeFocus(view)
+
+    expect(requestNativeFocus).not.toHaveBeenCalled()
+  })
+
+  it('tolerates a build older than the call', () => {
+    nativeModule.current = nativeWith({})
+
+    expect(() => createControllerRuntime().requestNativeFocus(view)).not.toThrow()
+    expect(requestNativeFocus).not.toHaveBeenCalled()
+  })
+
+  it('is inert without the native module at all', () => {
+    nativeModule.current = null
+
+    expect(() => createControllerRuntime().requestNativeFocus(view)).not.toThrow()
+  })
+
+  it('swallows a refusal, because a view that cannot take focus is not an error', async () => {
+    requestNativeFocus.mockRejectedValue(new Error('view gone'))
+
+    expect(() => createControllerRuntime().requestNativeFocus(view)).not.toThrow()
+    await Promise.resolve()
+  })
+})
+
+function device(flat: Record<string, number>) {
+  return { id: 1, name: 'pad', vendorId: 0, productId: 0, hasAnalogTriggers: true, flat }
+}
+
+function pressed(button: 'a'): ControllerSample {
+  return { connected: true, buttons: new Map([[button, 1]]), axes: new Map(), sampledAt: 0 }
+}
+
+describe('the controller runtime’s policy', () => {
+  it('takes the stick dead zone from the vertical flats too', () => {
+    expect(policyForControllers([device({ 'left-x': 0.05, 'right-y': 0.2 })]).stickDeadZone).toBe(
+      0.2
+    )
+  })
+
+  it('does not replay a held button as a press when a device event arrives', () => {
+    let onDevices: ((payload: { controllers: unknown[] }) => void) | null = null
+    nativeModule.current = nativeWith({
+      addListener: (_event: string, listener: (payload: { controllers: unknown[] }) => void) => {
+        onDevices = listener
+        return { remove: () => {} }
+      }
+    })
+    const runtime = createControllerRuntime()
+    expect(runtime.resolve(pressed('a'))).toEqual([{ kind: 'confirm' }])
+
+    onDevices?.({ controllers: [] })
+    expect(runtime.resolve(pressed('a'))).toEqual([])
+
+    // A real policy change still rebuilds, seeded with the held button.
+    onDevices?.({ controllers: [device({ 'left-x': 0.3 })] })
+    expect(runtime.resolve(pressed('a'))).toEqual([])
+  })
+})

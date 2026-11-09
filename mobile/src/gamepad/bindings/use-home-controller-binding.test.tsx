@@ -1,0 +1,201 @@
+import { createElement, type ReactNode } from 'react'
+import { act, create, type ReactTestRenderer } from 'react-test-renderer'
+import { describe, expect, it, vi } from 'vitest'
+import { ControllerProvider, useController } from '../controller-provider'
+import type { ControllerIntent } from '../controller-input/controller-intent'
+import type { ControllerReader } from '../controller-input/controller-reader'
+import { neutralSample, type ControllerSample } from '../controller-input/controller-sample'
+import { createWheelRegistry } from '../wheel/wheel-registry'
+import { GO_ACTION_IDS } from './wheel-action-ids'
+import { useHomeControllerBinding } from './use-home-controller-binding'
+
+vi.mock('react-native', () => ({
+  StyleSheet: { create: <T,>(styles: T) => styles, absoluteFill: {} },
+  View: 'View'
+}))
+
+const hosts = [{ id: 'alpha' }, { id: 'beta' }]
+
+/** A reader whose connected state the test drives by hand. */
+function fakeReader(): {
+  reader: ControllerReader
+  publish: (sample: ControllerSample) => void
+} {
+  const listeners = new Set<(sample: ControllerSample) => void>()
+  return {
+    reader: {
+      support: () => 'available',
+      current: () => neutralSample(0),
+      subscribe: (listener) => {
+        listeners.add(listener)
+        return () => listeners.delete(listener)
+      }
+    },
+    publish: (sample) => {
+      for (const listener of listeners) {
+        listener(sample)
+      }
+    }
+  }
+}
+
+type Harness = {
+  renderer: ReactTestRenderer
+  dispatch: (intent: ControllerIntent) => void
+  connect: (connected: boolean) => void
+  selected: () => string | null
+  registry: ReturnType<typeof createWheelRegistry>
+  registerWheelAction: ReturnType<typeof vi.fn>
+  dispatchTogether: (intents: readonly ControllerIntent[]) => void
+  onOpen: ReturnType<typeof vi.fn>
+  onPairDesktop: ReturnType<typeof vi.fn>
+  scrollBy: ReturnType<typeof vi.fn>
+}
+
+function mount(): Harness {
+  const { reader, publish } = fakeReader()
+  const registry = createWheelRegistry()
+  const registerWheelAction = vi.fn(registry.register)
+  const onOpen = vi.fn()
+  const onPairDesktop = vi.fn()
+  const scrollBy = vi.fn()
+  let dispatch: (intent: ControllerIntent) => boolean = () => false
+  let selected: string | null = null
+
+  function Home(): ReactNode {
+    selected = useHomeControllerBinding({ hosts, onOpen, onPairDesktop, scrollBy })
+    dispatch = useController().dispatchIntent
+    return null
+  }
+
+  let renderer: ReactTestRenderer | null = null
+  act(() => {
+    renderer = create(
+      createElement(ControllerProvider, { reader, registerWheelAction }, createElement(Home))
+    )
+  })
+  if (renderer === null) {
+    throw new Error('renderer did not mount')
+  }
+
+  return {
+    renderer,
+    dispatch: (intent) => act(() => void dispatch(intent)),
+    connect: (connected) => act(() => publish({ ...neutralSample(0), connected })),
+    selected: () => selected,
+    registry,
+    registerWheelAction,
+    dispatchTogether: (intents) =>
+      act(() => {
+        for (const intent of intents) {
+          dispatch(intent)
+        }
+      }),
+    onOpen,
+    onPairDesktop,
+    scrollBy
+  }
+}
+
+describe('home controller binding', () => {
+  // BIND-AC10: a thumb never sees a selection it has no way to move.
+  it('selects nothing until a controller is attached', () => {
+    const home = mount()
+    expect(home.selected()).toBeNull()
+
+    home.connect(true)
+    expect(home.selected()).toBe('alpha')
+
+    home.connect(false)
+    expect(home.selected()).toBeNull()
+  })
+
+  it('opens the selected host through the list’s own action, once', () => {
+    const home = mount()
+    home.connect(true)
+
+    home.dispatch({ kind: 'confirm' })
+
+    expect(home.onOpen).toHaveBeenCalledTimes(1)
+    expect(home.onOpen).toHaveBeenCalledWith({ id: 'alpha' })
+  })
+
+  it('opens the host a move in the same sample landed on', () => {
+    const home = mount()
+    home.connect(true)
+
+    home.dispatchTogether([{ kind: 'move-selection', direction: 'down' }, { kind: 'confirm' }])
+
+    expect(home.onOpen).toHaveBeenCalledExactlyOnceWith({ id: 'beta' })
+  })
+
+  it('keeps its wheel action registered while the selection moves', () => {
+    const home = mount()
+    home.connect(true)
+    const registrations = home.registerWheelAction.mock.calls.length
+
+    home.dispatch({ kind: 'move-selection', direction: 'down' })
+    home.dispatch({ kind: 'move-selection', direction: 'up' })
+
+    expect(home.registerWheelAction).toHaveBeenCalledTimes(registrations)
+  })
+
+  it('opens nothing when nothing is selected', () => {
+    const home = mount()
+
+    home.dispatch({ kind: 'confirm' })
+
+    expect(home.onOpen).not.toHaveBeenCalled()
+  })
+
+  it('moves selection through the order the list renders', () => {
+    const home = mount()
+    home.connect(true)
+
+    home.dispatch({ kind: 'move-selection', direction: 'down' })
+    expect(home.selected()).toBe('beta')
+
+    home.dispatch({ kind: 'confirm' })
+    expect(home.onOpen).toHaveBeenCalledWith({ id: 'beta' })
+  })
+
+  it('scrolls the list it was given, by a distance that comes from pressure and time', () => {
+    const home = mount()
+
+    for (let at = 0; at < 1000; at += 16) {
+      home.dispatch({
+        kind: 'scroll',
+        direction: 'down',
+        velocity: 1,
+        elapsedMs: 16,
+        begins: at === 0
+      })
+    }
+
+    const total = home.scrollBy.mock.calls.reduce((sum, [delta]) => sum + delta, 0)
+    expect(total).toBeGreaterThan(850)
+    expect(total).toBeLessThan(950)
+  })
+
+  // BIND-R10 plus `003` §10: the action exists exactly as long as the surface does.
+  it("registers Pair desktop in GO's New slot while mounted and retracts it on unmount", () => {
+    const home = mount()
+    expect(home.registry.lookup(GO_ACTION_IDS.new)?.label).toBe('Pair desktop')
+
+    home.registry.lookup(GO_ACTION_IDS.new)?.run()
+    expect(home.onPairDesktop).toHaveBeenCalledTimes(1)
+
+    act(() => home.renderer.unmount())
+    expect(home.registry.lookup(GO_ACTION_IDS.new)).toBeNull()
+  })
+
+  it('stops receiving intents once unmounted', () => {
+    const home = mount()
+    home.connect(true)
+    act(() => home.renderer.unmount())
+
+    home.dispatch({ kind: 'confirm' })
+
+    expect(home.onOpen).not.toHaveBeenCalled()
+  })
+})

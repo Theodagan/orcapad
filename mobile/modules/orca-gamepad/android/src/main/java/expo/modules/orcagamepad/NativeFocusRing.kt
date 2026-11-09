@@ -1,0 +1,135 @@
+package expo.modules.orcagamepad
+
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
+import android.view.View
+import android.view.ViewTreeObserver
+import android.widget.EditText
+import java.lang.ref.WeakReference
+import java.util.WeakHashMap
+
+/**
+ * A visible focus ring for views in a window the controller layer does not draw for.
+ *
+ * The app window's cursor is drawn by JavaScript. A React Native `Modal` is a separate Dialog
+ * window, where nothing is drawn and Android's own highlight is a faint wash, so a pad moving
+ * through a sheet would not be able to see where it is. The ring is the same accent as the
+ * JavaScript one: a stroke around the focused view and a light tint inside it.
+ *
+ * It is a foreground drawable, put on the view that takes focus and handed back when focus leaves,
+ * so whatever the view already drew over itself (a ripple) comes back untouched.
+ */
+object NativeFocusRing {
+  private const val ACCENT = 0xFF3B82F6.toInt()
+  private const val TINT = 0x2E3B82F6
+  private const val STROKE_DP = 3
+  private const val RADIUS_DP = 8
+
+  private val watched = WeakHashMap<View, ViewTreeObserver.OnGlobalFocusChangeListener>()
+  private val displaced = WeakHashMap<View, Drawable?>()
+  private val detachWatchers = WeakHashMap<View, View.OnAttachStateChangeListener>()
+  /** Windows where only the pad's own fallback focus is ringed, not every focus change. */
+  private val padRoots = WeakHashMap<View, ViewTreeObserver.OnGlobalFocusChangeListener>()
+  private var padFocused: WeakReference<View>? = null
+
+  /**
+   * Rings one view the pad focused in the app window, where JavaScript draws every other cursor.
+   * The ring leaves as soon as anything else takes focus.
+   */
+  fun ringPadFocus(view: View) {
+    val root = view.rootView ?: return
+    if (!padRoots.containsKey(root) && !watched.containsKey(root)) {
+      val listener = ViewTreeObserver.OnGlobalFocusChangeListener { _, gained ->
+        val current = padFocused?.get()
+        if (current != null && current !== gained) {
+          release(current)
+          padFocused = null
+        }
+      }
+      root.viewTreeObserver.addOnGlobalFocusChangeListener(listener)
+      padRoots[root] = listener
+    }
+    padFocused?.get()?.let { if (it !== view) release(it) }
+    ring(view)
+    padFocused = WeakReference(view)
+  }
+
+  /** Starts ringing focus changes in the window this view is in. Safe to call for every request. */
+  fun watch(view: View) {
+    val root = view.rootView ?: return
+    if (watched.containsKey(root)) {
+      return
+    }
+    val listener = ViewTreeObserver.OnGlobalFocusChangeListener { lost, gained ->
+      lost?.let { release(it) }
+      gained?.let { ring(it) }
+    }
+    root.viewTreeObserver.addOnGlobalFocusChangeListener(listener)
+    watched[root] = listener
+    // A field that took focus before the watch began (autoFocus) gets the same treatment.
+    root.findFocus()?.let { ring(it) }
+  }
+
+  /**
+   * The first focusable view inside `container` that has no focusable view inside it. A scroll
+   * view or a card is focusable too, but focus on one of those has nowhere to go from there.
+   */
+  fun firstControlWithin(container: View): View? {
+    val focusables = ArrayList<View>()
+    container.addFocusables(focusables, View.FOCUS_DOWN, View.FOCUSABLES_ALL)
+    return focusables.firstOrNull { candidate ->
+      candidate !== container && focusables.none { other -> other !== candidate && isInside(other, candidate) }
+    }
+  }
+
+  private fun isInside(view: View, ancestor: View): Boolean {
+    var parent = view.parent
+    while (parent != null) {
+      if (parent === ancestor) {
+        return true
+      }
+      parent = parent.parent
+    }
+    return false
+  }
+
+  private fun ring(view: View) {
+    // A text field in a sheet takes `B` as delete-a-word; a sheet's window has no controller tap.
+    if (view is EditText) {
+      view.setOnKeyListener(TextInputWordDelete.keyListener)
+    }
+    if (!displaced.containsKey(view)) {
+      displaced[view] = view.foreground
+    }
+    // React Native recycles the native views of what it unmounts. A view that leaves the window
+    // still ringed would come back as some other element carrying the ring, so the ring goes with it.
+    if (!detachWatchers.containsKey(view)) {
+      val watcher = object : View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(attached: View) {}
+
+        override fun onViewDetachedFromWindow(detached: View) {
+          release(detached)
+          detached.removeOnAttachStateChangeListener(this)
+          detachWatchers.remove(detached)
+        }
+      }
+      view.addOnAttachStateChangeListener(watcher)
+      detachWatchers[view] = watcher
+    }
+    val density = view.resources.displayMetrics.density
+    view.foreground = GradientDrawable().apply {
+      setColor(TINT)
+      setStroke((STROKE_DP * density).toInt(), ACCENT)
+      cornerRadius = RADIUS_DP * density
+    }
+  }
+
+  private fun release(view: View) {
+    if (view is EditText) {
+      view.setOnKeyListener(null)
+    }
+    if (displaced.containsKey(view)) {
+      view.foreground = displaced.remove(view)
+    }
+  }
+}

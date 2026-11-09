@@ -1,0 +1,77 @@
+import { requireOptionalNativeModule, type EventSubscription } from 'expo-modules-core'
+
+/**
+ * Android controller input. Absent on every other platform and in any build without the native
+ * module, so the handle is optional and the controller layer falls back to its absent reader.
+ */
+
+export type NativeControllerDevice = {
+  readonly id: number
+  readonly name: string
+  readonly vendorId: number
+  readonly productId: number
+  /** False when the pad reports L2/R2 only as buttons, which makes their value 0 or 1. */
+  readonly hasAnalogTriggers: boolean
+  /** The device's own declared flat zone per axis — the only dead zone it can vouch for. */
+  readonly flat: Readonly<Record<string, number>>
+}
+
+export type NativeControllerSample = {
+  readonly connected: boolean
+  readonly buttons: Readonly<Record<string, number>>
+  readonly axes: Readonly<Record<string, number>>
+  readonly sampledAt: number
+}
+
+export type NativeControllerDevices = {
+  readonly controllers: readonly NativeControllerDevice[]
+}
+
+export type OrcaGamepadModule = {
+  readonly listControllers: () => readonly NativeControllerDevice[]
+  readonly currentSample: () => NativeControllerSample
+  /** `intervalMs` paces analog samples; a button edge is always delivered immediately. */
+  readonly start: (intervalMs: number) => boolean
+  readonly stop: () => boolean
+  /**
+   * While true, controller keys and motion are reported but not forwarded to the view tree, so an
+   * open wheel owns the pad. Synchronous on purpose: it must land before the next event.
+   */
+  readonly setInputCaptured: (captured: boolean) => boolean
+  /**
+   * Moves Android's input focus to the view with this React tag; resolves false when it cannot
+   * take focus. Absent in a build older than the JavaScript, so callers treat it as optional.
+   */
+  readonly requestNativeFocus?: (viewTag: number) => Promise<boolean>
+  /**
+   * Focuses the first control inside the view with this tag, not the view itself: for a sheet, which
+   * is a window of its own with nothing focused in it yet. Optional for the same reason.
+   */
+  readonly requestNativeFocusWithin?: (viewTag: number) => Promise<boolean>
+  /**
+   * Moves Android's own focus one step, for a screen no JavaScript surface answers the D-pad on.
+   * Resolves to what happened (`moved:Type`) or why nothing did, for the pad debug line.
+   */
+  readonly moveNativeFocus?: (direction: 'up' | 'down' | 'left' | 'right') => Promise<string>
+  /** Scrolls the area around Android's focus, or the largest on screen, by this many dp. */
+  readonly scrollNativeBy?: (deltaDp: number) => Promise<string>
+  /** Presses the control Android has focused, as a keyboard's centre key would. */
+  readonly activateNativeFocus?: () => Promise<string>
+  /**
+   * Hides or reveals Android status and navigation/gesture bars (immersive mode).
+   * Optional in older native builds.
+   */
+  readonly setImmersive?: (enabled: boolean) => Promise<boolean>
+  readonly addListener: {
+    (
+      event: 'onControllerSample',
+      listener: (payload: NativeControllerSample) => void
+    ): EventSubscription
+    (
+      event: 'onControllerDevices',
+      listener: (payload: NativeControllerDevices) => void
+    ): EventSubscription
+  }
+}
+
+export const orcaGamepad = requireOptionalNativeModule<OrcaGamepadModule>('OrcaGamepad')

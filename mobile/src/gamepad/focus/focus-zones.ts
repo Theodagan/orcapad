@@ -1,0 +1,24 @@
+import type { ControllerIntentKind } from '../controller-input/controller-intent'
+
+/**
+ * The parts of a screen the controller can be pointed at (`005` USE-R4); `X`+direction moves
+ * between them by layout, and this order only breaks ties. A zone only exists while something mounted has declared it, so a screen with one
+ * zone has nothing to switch to. `list` is the main content of a list screen (the workspaces of a
+ * host) and `agent` the main content of a session; no screen has both.
+ */
+export const FOCUS_ZONES = ['list', 'agent', 'shortcuts', 'header', 'panels'] as const
+
+export type FocusZone = (typeof FOCUS_ZONES)[number]
+
+/**
+ * Who answers first, declared rather than inferred from mount order: React runs child effects
+ * before parents', so "newest wins" handed focus to exactly the wrong surface.
+ */
+export const FOCUS_PRIORITY = { screen: 0, surface: 1, card: 2 } as const
+
+/** Mean the same wherever the controller is pointed, so the focused zone does not gate them. */
+export const ZONE_AGNOSTIC_INTENTS: ReadonlySet<ControllerIntentKind> = new Set([
+  'scroll',
+  'cycle-tab',
+  'cycle-workspace'
+])

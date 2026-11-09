@@ -1,0 +1,153 @@
+package expo.modules.orcagamepad
+
+import android.view.InputDevice
+import android.view.InputEvent
+import android.view.KeyEvent
+import android.view.MotionEvent
+
+/**
+ * The translation from Android's input contract to the controller layer's vocabulary.
+ *
+ * Deliberately not a per-device table. Android's own guidance is to key off `KEYCODE_*` and
+ * `AXIS_*` rather than a device name or vendor id, because those stay constant across physical
+ * layouts — which is what makes any conforming pad work, not just the one on the desk.
+ *
+ * What does vary is documented and small, and all of it is handled here: a trigger may arrive as
+ * `AXIS_LTRIGGER`, as the racing-wheel alias `AXIS_BRAKE`, or as nothing but a digital
+ * `KEYCODE_BUTTON_L2`; a D-pad may arrive as a hat axis or as key codes; and a right stick may
+ * sit on `AXIS_Z`/`AXIS_RZ` or on `AXIS_RX`/`AXIS_RY`.
+ */
+
+/** Button names the controller layer knows. Anything unmapped is dropped, never guessed at. */
+val BUTTON_BY_KEY_CODE: Map<Int, String> = mapOf(
+  KeyEvent.KEYCODE_BUTTON_A to "a",
+  KeyEvent.KEYCODE_BUTTON_B to "b",
+  KeyEvent.KEYCODE_BUTTON_X to "x",
+  KeyEvent.KEYCODE_BUTTON_Y to "y",
+  KeyEvent.KEYCODE_BUTTON_L1 to "lb",
+  KeyEvent.KEYCODE_BUTTON_R1 to "rb",
+  KeyEvent.KEYCODE_BUTTON_THUMBL to "l3",
+  KeyEvent.KEYCODE_BUTTON_THUMBR to "r3",
+  KeyEvent.KEYCODE_BUTTON_START to "start",
+  KeyEvent.KEYCODE_BUTTON_SELECT to "select",
+  KeyEvent.KEYCODE_DPAD_UP to "dpad-up",
+  KeyEvent.KEYCODE_DPAD_DOWN to "dpad-down",
+  KeyEvent.KEYCODE_DPAD_LEFT to "dpad-left",
+  KeyEvent.KEYCODE_DPAD_RIGHT to "dpad-right"
+)
+
+/**
+ * Buttons Android re-sends as something else when nobody consumes them. Measured on an Android 16
+ * emulator, not assumed: `BUTTON_A` and `BUTTON_X`, the thumb clicks and `BUTTON_START` arrive again
+ * as `KEYCODE_DPAD_CENTER` (a click on whatever holds native focus), `BUTTON_B` and `BUTTON_Y` as
+ * `KEYCODE_BACK`, and `BUTTON_SELECT` as `KEYCODE_MENU`. The tap consumes them so one press is one
+ * action: a bound `B` would otherwise navigate twice, and `X` pressed to switch zone would also
+ * click the focused button.
+ *
+ * Only buttons with a fallback. The shoulder buttons and triggers have none, and consuming them
+ * would take them away from a view that might want them.
+ */
+val FALLBACK_KEY_CODES: Set<Int> = setOf(
+  KeyEvent.KEYCODE_BUTTON_A,
+  KeyEvent.KEYCODE_BUTTON_B,
+  KeyEvent.KEYCODE_BUTTON_X,
+  KeyEvent.KEYCODE_BUTTON_Y,
+  KeyEvent.KEYCODE_BUTTON_THUMBL,
+  KeyEvent.KEYCODE_BUTTON_THUMBR,
+  KeyEvent.KEYCODE_BUTTON_START,
+  KeyEvent.KEYCODE_BUTTON_SELECT
+)
+
+/** A pad with no trigger axis reports L2/R2 here instead; the axis is then digital. */
+val TRIGGER_AXIS_BY_KEY_CODE: Map<Int, String> = mapOf(
+  KeyEvent.KEYCODE_BUTTON_L2 to "l2",
+  KeyEvent.KEYCODE_BUTTON_R2 to "r2"
+)
+
+val ALL_BUTTONS: List<String> = listOf(
+  "a", "b", "x", "y", "lb", "rb", "l3", "r3", "start", "select",
+  "dpad-up", "dpad-down", "dpad-left", "dpad-right"
+)
+
+val ALL_AXES: List<String> = listOf("left-x", "left-y", "right-x", "right-y", "l2", "r2")
+
+/** Candidate Android axes per controller axis, in preference order. */
+private val AXIS_CANDIDATES: Map<String, List<Int>> = mapOf(
+  "left-x" to listOf(MotionEvent.AXIS_X),
+  "left-y" to listOf(MotionEvent.AXIS_Y),
+  "right-x" to listOf(MotionEvent.AXIS_Z, MotionEvent.AXIS_RX),
+  "right-y" to listOf(MotionEvent.AXIS_RZ, MotionEvent.AXIS_RY),
+  "l2" to listOf(MotionEvent.AXIS_LTRIGGER, MotionEvent.AXIS_BRAKE),
+  "r2" to listOf(MotionEvent.AXIS_RTRIGGER, MotionEvent.AXIS_GAS)
+)
+
+/**
+ * Whether an event came from a pad at all. Source bits first, not a device list: the same reason
+ * the key table is keyed by `KEYCODE_*`. `SOURCE_DPAD` alone is not enough — a keyboard's arrow
+ * keys report it — so a D-pad-only event counts only when its device is a game controller.
+ */
+fun isControllerEvent(event: InputEvent): Boolean {
+  val source = event.source
+  if ((source and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD ||
+    (source and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK
+  ) {
+    return true
+  }
+  if ((source and InputDevice.SOURCE_DPAD) != InputDevice.SOURCE_DPAD) {
+    return false
+  }
+  val device = event.device ?: return false
+  return isGameController(device)
+}
+
+fun isGameController(device: InputDevice): Boolean =
+  device.supportsSource(InputDevice.SOURCE_GAMEPAD) ||
+    device.supportsSource(InputDevice.SOURCE_JOYSTICK)
+
+/**
+ * The first candidate axis the device actually declares. Reading an undeclared axis returns 0,
+ * which is indistinguishable from a centred stick — so the declaration, not the value, decides.
+ */
+fun resolveAxis(device: InputDevice?, name: String): Int? {
+  val candidates = AXIS_CANDIDATES[name] ?: return null
+  if (device == null) {
+    return candidates.first()
+  }
+  return candidates.firstOrNull { axis -> device.getMotionRange(axis) != null }
+}
+
+/** True when the pad declares a real trigger axis; otherwise L2/R2 can only ever be 0 or 1. */
+fun hasAnalogTriggers(device: InputDevice): Boolean =
+  resolveAxis(device, "l2") != null || resolveAxis(device, "r2") != null
+
+/** The device's own declared flat zone, which is the only dead zone it can vouch for. */
+fun flatOf(device: InputDevice?, name: String): Float {
+  val axis = resolveAxis(device, name) ?: return 0f
+  return device?.getMotionRange(axis)?.flat ?: 0f
+}
+
+const val NO_AXIS = -1
+
+/**
+ * A device's resolved axes, looked up once: `getMotionRange` walks the device's range list, and
+ * motion arrives at device sample rate. `ids` follows `ALL_AXES`, with `NO_AXIS` for an absent one.
+ */
+class DeviceAxes(val ids: IntArray, val hasHat: Boolean) {
+  fun idOf(name: String): Int {
+    val index = ALL_AXES.indexOf(name)
+    return if (index < 0) NO_AXIS else ids[index]
+  }
+}
+
+fun deviceAxesOf(device: InputDevice?): DeviceAxes = DeviceAxes(
+  ids = IntArray(ALL_AXES.size) { index -> resolveAxis(device, ALL_AXES[index]) ?: NO_AXIS },
+  // An unknown device is read as having a hat, as before: its value is then simply 0.
+  hasHat = device == null || device.getMotionRange(MotionEvent.AXIS_HAT_X) != null ||
+    device.getMotionRange(MotionEvent.AXIS_HAT_Y) != null
+)
+
+/** One hat direction as a button pressure; `negative` picks left/up over right/down. */
+fun hatPressure(value: Float, negative: Boolean): Float {
+  val pressed = if (negative) value < -0.5f else value > 0.5f
+  return if (pressed) 1f else 0f
+}

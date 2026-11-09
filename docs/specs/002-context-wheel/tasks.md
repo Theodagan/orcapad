@@ -1,0 +1,136 @@
+# 002 - Context Wheel - Tasks
+
+- [x] **WHEEL-T1 - Geometry**
+
+  Implement total vector-to-segment selection under
+  `mobile/src/gamepad/wheel/`, covering dead arcs, wraparound, empty presets,
+  and null vectors.
+
+  **Needs:** CTRL-T3
+
+  **Verify:** `pnpm --dir mobile test src/gamepad/wheel/wheel-geometry.test.ts`
+
+- [x] **WHEEL-T2 - Pure state machine**
+
+  Implement the transition table in `tech.md` section 2 with one named test per
+  PRD wheel rule.
+
+  **Needs:** WHEEL-T1
+
+  **Verify:** `pnpm --dir mobile test src/gamepad/wheel/wheel-state.test.ts`
+
+- [x] **WHEEL-T3 - Zero-side-effect proof**
+
+  Drive open, motion, invalid-direction, center, back, disconnect, unavailable,
+  and unmount paths against recording actions. Assert only a commit outcome can
+  produce an invocation.
+
+  **Needs:** WHEEL-T2
+
+  **Verify:** `pnpm --dir mobile test src/gamepad/wheel/wheel-side-effects.test.ts`
+
+- [x] **WHEEL-T4 - Binding registry and preset schema**
+
+  Implement action registration, lifecycle-based unregistration, immutable
+  preset loading, and required non-contract/trial metadata.
+
+  **Needs:** WHEEL-T2, FND-T5
+
+  **Verify:** `pnpm --dir mobile test src/gamepad/wheel/wheel-registry.test.ts`; `pnpm --dir mobile test src/gamepad/wheel/wheel-preset.test.ts`
+
+- [x] **WHEEL-T5 - Overlay and input wiring**
+
+  Render the overlay above the existing focused surface, drive it from
+  `wheel-motion` and `confirm` intents, and ensure rendering never blocks commit.
+
+  **Needs:** CTRL-T5, WHEEL-T2, WHEEL-T4
+
+  **Verify:** `pnpm --dir mobile test src/gamepad/wheel/WheelOverlay.test.tsx`; `pnpm --dir mobile typecheck`
+
+- [x] **WHEEL-T6 - Harmless smoke presets**
+
+  Add replaceable presets using local no-op/diagnostic bindings only. Include
+  different segment counts without naming a product default.
+
+  **Needs:** WHEEL-T4, WHEEL-T5
+
+  Five presets in `mobile/src/gamepad/wheel/experiments/`, at three segment
+  counts plus the empty case, bound only to local diagnostics that record a run
+  and relabel their own segment — a commit and a cancel both close the wheel, so
+  WHEEL-T8 needs something that tells them apart. `smoke-mixed` carries a
+  refused, an unproven, and a never-registered binding, which is the only way a
+  device trial sees those states. `active-smoke-trial.ts` is what the shell
+  runs; it is experiment data, not a default (WHEEL-AC7).
+
+  > Later: `active-smoke-trial.ts` and `active-wheel-trial.ts` were replaced by
+  > `wheel/wheel-layouts.ts` in 012, and the smoke presets were deleted in 006.
+
+  **Verify:** `pnpm --dir mobile test src/gamepad/wheel/experiments`
+
+- [x] **WHEEL-T7 - Existing-action experiment presets**
+
+  After `003` bindings exist, add non-destructive real-action presets that
+  reference binding ids. Do not include stop, close, forget, delete, or other
+  destructive actions.
+
+  **Needs:** WHEEL-T6, BIND-T7
+
+  Two presets in `real-action-presets.ts`, bound to ids BIND-T1 and BIND-T7
+  register. `explorer-actions` has three segments because that is how many
+  non-destructive actions the panel offers; padding it to four would mean
+  inventing one. `cross-surface` spans two surfaces on purpose, so a trial can
+  see what a mostly-disabled wheel feels like — off the home screen its explorer
+  segments are unavailable, and inside a session its pairing segment is.
+
+  A test asserts every segment names an id some surface actually registers, which
+  is what separates a real-action preset from a plausible-looking one, and a
+  second asserts no id matches stop/close/forget/delete/remove/archive (WHEEL-R7).
+  The active trial now runs one smoke preset and one real-action preset, one per
+  stick, which is what WHEEL-T8 needs from a single session.
+
+  > Later: `real-action-presets.ts` was replaced by `wheel/wheel-layouts.ts` in 012.
+
+  **Verify:** `pnpm --dir mobile test src/gamepad/wheel/experiments`
+
+- [~] **WHEEL-T8 - Device trials — SCHEMA DONE, RUN OUTSTANDING**
+
+  Run smoke and existing-action presets on a controller-capable Android device
+  with Bluetooth controller. Record the complete `WheelTrialRecord` fields under
+  `docs/evidence/context-wheel/` and add a schema test for required devices and
+  fields.
+
+  **Needs:** WHEEL-T6, WHEEL-T7
+
+  The schema, validator and gate are implemented and tested; only the run is
+  outstanding, because it needs a controller-capable device and a person to drive
+  the presets. This is the position CTRL-T8 already takes.
+
+  The validator refuses more than missing fields: a trial with no samples
+  measured nothing, a failure cannot outnumber the openings, and a trial that saw
+  a wrong commit or a failed cancel cannot be called a `candidate` — which is the
+  one judgement a record could otherwise smuggle past WHEEL-R7. Records go in
+  `docs/evidence/context-wheel/`; the coverage check for a smoke and a
+  real-action preset turns on with the first one.
+
+  **Verify:** `pnpm --dir mobile test src/gamepad/evidence/wheel-trial-records.test.ts`
+
+- [x] **WHEEL-T9 - Human assignment gate**
+
+  Present trial records and preset diffs for a product decision. A later change
+  may promote a preset only after explicit approval; this MVP specification does
+  not perform that promotion. Add a ratchet test requiring the linked decision
+  record for any product-default preset.
+
+  **Needs:** WHEEL-T8
+
+  The gate is live now and passes because nothing is contractual — which is the
+  state `002` says this specification ends in. It reads the experiment tree's
+  source for any preset that stopped carrying `contractual: false`, and fails
+  unless `docs/decisions/context-wheel/` holds a record naming that preset, the
+  trial behind it, and the person who accepted it. An incomplete decision does
+  not launder a preset through.
+
+  This is the lock, not the promotion. `candidate` is the best a trial can say on
+  its own; a machine reading good numbers is not a person deciding to ship them.
+
+  **Verify:** `pnpm --dir mobile test src/gamepad/evidence/wheel-product-default-gate.test.ts`
