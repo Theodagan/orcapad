@@ -92,6 +92,9 @@ docs/**
 !docs/
 !docs/site/
 !docs/site/**
+# PocketDeck cloud handoff features (dispatched to cloud workers); the local plan stays ignored.
+!docs/deck-handoff/
+!docs/deck-handoff/**
 !docs/assets/
 !docs/assets/**
 !docs/readme/
