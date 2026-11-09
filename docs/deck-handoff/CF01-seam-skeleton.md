@@ -1,14 +1,13 @@
 # CF01 — Seam and shell skeleton
 
-**Goal:** Mount an empty deck shell beside Orca's screens behind one setting, guard the seam, and add the host feature gate, lenient parsing and refusal screen every later feature builds on.
+**Goal:** Mount an empty deck shell beside Orca's screens behind one setting, guard the seam, and add the host feature gate and lenient parsing every later feature builds on.
 
-|                          |                                                                         |
-| ------------------------ | ----------------------------------------------------------------------- |
-| Dispatch when            | owner step L00 done                                                     |
-| Branch                   | `deck/cf01-seam-skeleton` from `main`                                   |
-| PR                       | `Theodagan/orcapad` `main`, title `deck(CF01): Seam and shell skeleton` |
-| Tasks                    | T3, T5, T6, T7, T8, T9, T11, T12 (in this order)                        |
-| Owner checks after merge | L-V01                                                                   |
+|               |                                                                         |
+| ------------- | ----------------------------------------------------------------------- |
+| Dispatch when | baseline on `main`                                                      |
+| Branch        | `deck/cf01-seam-skeleton` from `main`                                   |
+| PR            | `Theodagan/orcapad` `main`, title `deck(CF01): Seam and shell skeleton` |
+| Tasks         | T4, T3, T5, T6, T7, T8, T9, T11, T12 (in this order)                    |
 
 Read [`README.md`](./README.md) first: it holds the rules every cloud worker follows.
 
@@ -16,7 +15,7 @@ Read [`README.md`](./README.md) first: it holds the rules every cloud worker fol
 
 - Every task below meets its _Done when_ (cloud bar), with an entry in `mobile/src/deck/HANDOFF-LOG.md`.
 - `pnpm typecheck`, `pnpm test`, `pnpm lint` in `mobile/` add no failures to the recorded baseline; `deck-boundary.test.ts` passes once it exists.
-- The PR description lists: tasks done, tasks skipped and why, files touched outside `mobile/src/deck/` and `mobile/app/deck/` (also in `UPSTREAM-TOUCHES.md`), and the owner checks to run.
+- The PR description lists: tasks done, tasks skipped and why, files touched outside `mobile/src/deck/` and `mobile/app/deck/` (also in `UPSTREAM-TOUCHES.md`), and what the owner should try on the device.
 
 ## Requirements cited
 
@@ -44,6 +43,14 @@ From the PRD (not in the repo). Rule IDs such as `PAD-6` are in `Theodagan/Pocke
 
 ## Tasks
 
+### T4 — Start the touched-file ledger
+
+- **Scope:** cloud: code and tests.
+- **Files:** `mobile/src/deck/UPSTREAM-TOUCHES.md` (create)
+- **Change:** Header naming the baseline (upstream `c82839fb7b6` + pad plumbing, decided 2026-11-09) and the append-only line format `path — reason — task`.
+- **Depends on:** T1
+- **Done when:** the file exists with the baseline line and format.
+
 ### T3 — Add the upstream merge check script
 
 - **Scope:** cloud: code and tests.
@@ -63,7 +70,7 @@ From the PRD (not in the repo). Rule IDs such as `PAD-6` are in `Theodagan/Pocke
 ### T6 — Mount the deck route group
 
 - **Scope:** cloud: code and tests.
-- **Owner check (not yours):** the device part of _Done when_ is verified locally by the owner (L-V01). Your bar: the tests in _Done when_; where it names only a device check, a hook or render test proving the same behaviour on fixture data; plus the flow exercised against `pnpm mock-server` when it serves the data.
+- **Device part:** the owner tests it locally after delivery; it does not block you. Your bar: the tests in _Done when_; where it names only a device check, a hook or render test proving the same behaviour on fixture data; plus the flow exercised against `pnpm mock-server` when it serves the data.
 - **Files:** `mobile/app/deck/_layout.tsx` (create), `mobile/app/deck/index.tsx` (create), `mobile/src/deck/DeckShell.tsx` (create)
 - **Change:** Expo Router group for the deck; `DeckShell` renders an empty frame with the deck background. Inherits `RpcClientProvider` and `ControllerShell` from `app/_layout.tsx`.
 - **Depends on:** T5
@@ -72,7 +79,7 @@ From the PRD (not in the repo). Rule IDs such as `PAD-6` are in `Theodagan/Pocke
 ### T7 — Route the app entry by the interface preference
 
 - **Scope:** cloud: code and tests.
-- **Split:** Cloud part: the redirect, the Settings row and the render test. The relaunch check on the device is the owner's (L-V01).
+- **Split:** Your part: the redirect, the Settings row and the render test. The owner checks the relaunch on the device later.
 - **Files:** `mobile/app/index.tsx` (edit), `mobile/src/settings/mobile-settings-menu-items.ts` (edit)
 - **Change:** `app/index.tsx` redirects to `/deck` when the preference is `deck`; Orca Settings gets an "Interface" row to switch. Log both touches.
 - **Depends on:** T6

@@ -1,14 +1,13 @@
 # CF11 — Wheels
 
-**Goal:** Reanimated wheel engine, hold gesture, left and right wheels, sub-wheel rim, summoned wheels, TUI key wheels, edit with Undo.
+**Goal:** Latency readout, Reanimated wheel engine, hold gesture, left and right wheels, sub-wheel rim, summoned wheels, TUI key wheels, edit with Undo.
 
-|                          |                                                                  |
-| ------------------------ | ---------------------------------------------------------------- |
-| Dispatch when            | CF07 merged, owner step L06 done                                 |
-| Branch                   | `deck/cf11-wheels` from `main`                                   |
-| PR                       | `Theodagan/orcapad` `main`, title `deck(CF11): Wheels`           |
-| Tasks                    | T74, T75, T76, T77, T78, T79, T80, T81, T82, T83 (in this order) |
-| Owner checks after merge | L-V11                                                            |
+|               |                                                                       |
+| ------------- | --------------------------------------------------------------------- |
+| Dispatch when | CF07 merged                                                           |
+| Branch        | `deck/cf11-wheels` from `main`                                        |
+| PR            | `Theodagan/orcapad` `main`, title `deck(CF11): Wheels`                |
+| Tasks         | T72, T74, T75, T76, T77, T78, T79, T80, T81, T82, T83 (in this order) |
 
 Read [`README.md`](./README.md) first: it holds the rules every cloud worker follows.
 
@@ -16,7 +15,7 @@ Read [`README.md`](./README.md) first: it holds the rules every cloud worker fol
 
 - Every task below meets its _Done when_ (cloud bar), with an entry in `mobile/src/deck/HANDOFF-LOG.md`.
 - `pnpm typecheck`, `pnpm test`, `pnpm lint` in `mobile/` add no failures to the recorded baseline; `deck-boundary.test.ts` passes once it exists.
-- The PR description lists: tasks done, tasks skipped and why, files touched outside `mobile/src/deck/` and `mobile/app/deck/` (also in `UPSTREAM-TOUCHES.md`), and the owner checks to run.
+- The PR description lists: tasks done, tasks skipped and why, files touched outside `mobile/src/deck/` and `mobile/app/deck/` (also in `UPSTREAM-TOUCHES.md`), and what the owner should try on the device.
 
 ## Requirements cited
 
@@ -40,12 +39,20 @@ From the PRD (not in the repo). Rule IDs such as `PAD-6` are in `Theodagan/Pocke
 
 ## Tasks
 
+### T72 — Dev-only wheel latency readout
+
+- **Scope:** cloud: code and tests.
+- **Files:** `mobile/src/deck/wheels/latency-readout.tsx` (create, + test)
+- **Change:** No device spike. A dev-setting overlay that shows stick-sample-to-frame latency (p50/p95) while wheels turn, so the owner can judge it during local testing. Samples arrive as JS events from `OrcaGamepadModule.kt`.
+- **Depends on:** T6
+- **Done when:** test feeds timestamped samples and frames and gets the right percentiles; the overlay is off by default.
+
 ### T74 — Wheel engine on Reanimated
 
 - **Scope:** cloud: code and tests.
 - **Files:** `mobile/src/deck/wheels/wheel-engine.ts` (create, + test)
 - **Change:** DECK-R18: click-wheel ring under a fixed selector, rate curve and S-curve gain, 1/8-turn distance guard, no snap, loop above six entries. Reuse `gamepad/wheel/wheel-geometry.ts` math.
-- **Depends on:** T72 (and T73 if required)
+- **Depends on:** T72
 - **Done when:** unit tests for gain curve, distance guard and looping rule; no JS-thread `setState` per frame.
 
 ### T75 — Hold gesture model
@@ -75,7 +82,7 @@ From the PRD (not in the repo). Rule IDs such as `PAD-6` are in `Theodagan/Pocke
 ### T78 — Right wheel and Launch agent rim
 
 - **Scope:** cloud: code and tests.
-- **Owner check (not yours):** the device part of _Done when_ is verified locally by the owner (L-V11). Your bar: the tests in _Done when_; where it names only a device check, a hook or render test proving the same behaviour on fixture data; plus the flow exercised against `pnpm mock-server` when it serves the data.
+- **Device part:** the owner tests it locally after delivery; it does not block you. Your bar: the tests in _Done when_; where it names only a device check, a hook or render test proving the same behaviour on fixture data; plus the flow exercised against `pnpm mock-server` when it serves the data.
 - **Files:** `mobile/src/deck/wheels/right-wheel.ts`, `SubWheelRim.tsx` (create, + tests)
 - **Change:** IH-12 session actions; DIAL-17/28 Launch agent as sub-wheel rim using `session/mobile-agent-launch-availability.ts`.
 - **Depends on:** T76, T40
@@ -100,7 +107,7 @@ From the PRD (not in the repo). Rule IDs such as `PAD-6` are in `Theodagan/Pocke
 ### T81 — TUI key wheels
 
 - **Scope:** cloud: code and tests.
-- **Owner check (not yours):** the device part of _Done when_ is verified locally by the owner (L-V11). Your bar: the tests in _Done when_; where it names only a device check, a hook or render test proving the same behaviour on fixture data; plus the flow exercised against `pnpm mock-server` when it serves the data.
+- **Device part:** the owner tests it locally after delivery; it does not block you. Your bar: the tests in _Done when_; where it names only a device check, a hook or render test proving the same behaviour on fixture data; plus the flow exercised against `pnpm mock-server` when it serves the data.
 - **Files:** `mobile/src/deck/wheels/tui-key-wheels.ts` (create, + test)
 - **Change:** DIAL-6: literal key bytes through Orca's terminal input; opened by L3+R3 (T32).
 - **Depends on:** T76, T57

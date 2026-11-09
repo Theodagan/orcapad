@@ -1,14 +1,13 @@
 # CF08 — Update install flow and UI
 
-**Goal:** Update state machine, unknown-sources guidance and the deck update panel, on the installer proven by the owner's T18 spike.
+**Goal:** APK installer, update state machine, unknown-sources guidance and the deck update panel.
 
-|                          |                                                                            |
-| ------------------------ | -------------------------------------------------------------------------- |
-| Dispatch when            | CF03 merged, CF02 merged, owner step L03 done                              |
-| Branch                   | `deck/cf08-updates-install` from `main`                                    |
-| PR                       | `Theodagan/orcapad` `main`, title `deck(CF08): Update install flow and UI` |
-| Tasks                    | T20, T21, T23 (in this order)                                              |
-| Owner checks after merge | none                                                                       |
+|               |                                                                            |
+| ------------- | -------------------------------------------------------------------------- |
+| Dispatch when | CF03 merged, CF02 merged                                                   |
+| Branch        | `deck/cf08-updates-install` from `main`                                    |
+| PR            | `Theodagan/orcapad` `main`, title `deck(CF08): Update install flow and UI` |
+| Tasks         | T18, T20, T21, T23 (in this order)                                         |
 
 Read [`README.md`](./README.md) first: it holds the rules every cloud worker follows.
 
@@ -16,7 +15,7 @@ Read [`README.md`](./README.md) first: it holds the rules every cloud worker fol
 
 - Every task below meets its _Done when_ (cloud bar), with an entry in `mobile/src/deck/HANDOFF-LOG.md`.
 - `pnpm typecheck`, `pnpm test`, `pnpm lint` in `mobile/` add no failures to the recorded baseline; `deck-boundary.test.ts` passes once it exists.
-- The PR description lists: tasks done, tasks skipped and why, files touched outside `mobile/src/deck/` and `mobile/app/deck/` (also in `UPSTREAM-TOUCHES.md`), and the owner checks to run.
+- The PR description lists: tasks done, tasks skipped and why, files touched outside `mobile/src/deck/` and `mobile/app/deck/` (also in `UPSTREAM-TOUCHES.md`), and what the owner should try on the device.
 
 ## Requirements cited
 
@@ -32,6 +31,14 @@ From the PRD (not in the repo). Rule IDs such as `PAD-6` are in `Theodagan/Pocke
   modules. Not in this PRD's milestones.
 
 ## Tasks
+
+### T18 — APK installer
+
+- **Scope:** cloud: code and tests.
+- **Files:** `mobile/package.json` (edit: add `expo-intent-launcher`), `mobile/app.json` (edit: `android.permissions` += `REQUEST_INSTALL_PACKAGES`), `mobile/src/deck/updates/apk-installer.ts` (create)
+- **Change:** Implement D6 directly (no device spike): `FileSystem.getContentUriAsync` + `IntentLauncher.startActivityAsync` with `INSTALL_PACKAGE`/`VIEW`, `GRANT_READ_URI_PERMISSION`, APK MIME type; add `expo-intent-launcher` and the `REQUEST_INSTALL_PACKAGES` permission. If a FileProvider turns out to be required, add it in a deck-owned config plugin.
+- **Depends on:** T6
+- **Done when:** unit tests (mocked `expo-file-system` / `expo-intent-launcher`) cover success, missing file, intent refused; `app.json` declares the permission. Installing on a device is part of the owner's local test.
 
 ### T20 — Update state store
 

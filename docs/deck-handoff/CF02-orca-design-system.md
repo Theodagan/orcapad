@@ -1,14 +1,13 @@
 # CF02 — Orca design system for the deck
 
-**Goal:** Make the deck read every visual value from Orca's mobile design system, inventory the Orca components to reuse, and add the test that keeps hard-coded styles out; then the host refusal screen, which needs the theme.
+**Goal:** Make the deck read every visual value from Orca's mobile design system, inventory the Orca components to reuse, add the test that keeps hard-coded styles out, then the host refusal screen.
 
-|                          |                                                                                 |
-| ------------------------ | ------------------------------------------------------------------------------- |
-| Dispatch when            | CF01 merged                                                                     |
-| Branch                   | `deck/cf02-orca-design-system` from `main`                                      |
-| PR                       | `Theodagan/orcapad` `main`, title `deck(CF02): Orca design system for the deck` |
-| Tasks                    | T10, T104, T106, T13 (in this order)                                            |
-| Owner checks after merge | none                                                                            |
+|               |                                                                                 |
+| ------------- | ------------------------------------------------------------------------------- |
+| Dispatch when | CF01 merged                                                                     |
+| Branch        | `deck/cf02-orca-design-system` from `main`                                      |
+| PR            | `Theodagan/orcapad` `main`, title `deck(CF02): Orca design system for the deck` |
+| Tasks         | T10, T104, T106, T13 (in this order)                                            |
 
 Read [`README.md`](./README.md) first: it holds the rules every cloud worker follows.
 
@@ -16,7 +15,7 @@ Read [`README.md`](./README.md) first: it holds the rules every cloud worker fol
 
 - Every task below meets its _Done when_ (cloud bar), with an entry in `mobile/src/deck/HANDOFF-LOG.md`.
 - `pnpm typecheck`, `pnpm test`, `pnpm lint` in `mobile/` add no failures to the recorded baseline; `deck-boundary.test.ts` passes once it exists.
-- The PR description lists: tasks done, tasks skipped and why, files touched outside `mobile/src/deck/` and `mobile/app/deck/` (also in `UPSTREAM-TOUCHES.md`), and the owner checks to run.
+- The PR description lists: tasks done, tasks skipped and why, files touched outside `mobile/src/deck/` and `mobile/app/deck/` (also in `UPSTREAM-TOUCHES.md`), and what the owner should try on the device.
 
 ## Requirements cited
 

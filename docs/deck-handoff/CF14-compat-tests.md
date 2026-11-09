@@ -2,13 +2,12 @@
 
 **Goal:** Tests that mount the deck against hosts missing features and hosts sending unknown data.
 
-|                          |                                                                                   |
-| ------------------------ | --------------------------------------------------------------------------------- |
-| Dispatch when            | CF10 merged, CF12 merged                                                          |
-| Branch                   | `deck/cf14-compat-tests` from `main`                                              |
-| PR                       | `Theodagan/orcapad` `main`, title `deck(CF14): Newer-desktop compatibility tests` |
-| Tasks                    | T98, T99 (in this order)                                                          |
-| Owner checks after merge | none                                                                              |
+|               |                                                                                   |
+| ------------- | --------------------------------------------------------------------------------- |
+| Dispatch when | CF10 merged, CF12 merged                                                          |
+| Branch        | `deck/cf14-compat-tests` from `main`                                              |
+| PR            | `Theodagan/orcapad` `main`, title `deck(CF14): Newer-desktop compatibility tests` |
+| Tasks         | T98, T99 (in this order)                                                          |
 
 Read [`README.md`](./README.md) first: it holds the rules every cloud worker follows.
 
@@ -16,7 +15,7 @@ Read [`README.md`](./README.md) first: it holds the rules every cloud worker fol
 
 - Every task below meets its _Done when_ (cloud bar), with an entry in `mobile/src/deck/HANDOFF-LOG.md`.
 - `pnpm typecheck`, `pnpm test`, `pnpm lint` in `mobile/` add no failures to the recorded baseline; `deck-boundary.test.ts` passes once it exists.
-- The PR description lists: tasks done, tasks skipped and why, files touched outside `mobile/src/deck/` and `mobile/app/deck/` (also in `UPSTREAM-TOUCHES.md`), and the owner checks to run.
+- The PR description lists: tasks done, tasks skipped and why, files touched outside `mobile/src/deck/` and `mobile/app/deck/` (also in `UPSTREAM-TOUCHES.md`), and what the owner should try on the device.
 
 ## Requirements cited
 

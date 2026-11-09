@@ -2,13 +2,12 @@
 
 **Goal:** Settings complete, wheel forms, every host gap disabled with reason, ported maquette checks, reachability gate, upstream candidates.
 
-|                          |                                                                           |
-| ------------------------ | ------------------------------------------------------------------------- |
-| Dispatch when            | CF08 merged, CF10 merged, CF11 merged, CF12 merged, owner step L-V11 done |
-| Branch                   | `deck/cf13-polish` from `main`                                            |
-| PR                       | `Theodagan/orcapad` `main`, title `deck(CF13): Polish and gaps`           |
-| Tasks                    | T92, T93, T94, T95, T96, T97 (in this order)                              |
-| Owner checks after merge | L-V13                                                                     |
+|               |                                                                 |
+| ------------- | --------------------------------------------------------------- |
+| Dispatch when | CF08 merged, CF10 merged, CF11 merged, CF12 merged              |
+| Branch        | `deck/cf13-polish` from `main`                                  |
+| PR            | `Theodagan/orcapad` `main`, title `deck(CF13): Polish and gaps` |
+| Tasks         | T92, T93, T94, T95, T96, T97 (in this order)                    |
 
 Read [`README.md`](./README.md) first: it holds the rules every cloud worker follows.
 
@@ -16,14 +15,14 @@ Read [`README.md`](./README.md) first: it holds the rules every cloud worker fol
 
 - Every task below meets its _Done when_ (cloud bar), with an entry in `mobile/src/deck/HANDOFF-LOG.md`.
 - `pnpm typecheck`, `pnpm test`, `pnpm lint` in `mobile/` add no failures to the recorded baseline; `deck-boundary.test.ts` passes once it exists.
-- The PR description lists: tasks done, tasks skipped and why, files touched outside `mobile/src/deck/` and `mobile/app/deck/` (also in `UPSTREAM-TOUCHES.md`), and the owner checks to run.
+- The PR description lists: tasks done, tasks skipped and why, files touched outside `mobile/src/deck/` and `mobile/app/deck/` (also in `UPSTREAM-TOUCHES.md`), and what the owner should try on the device.
 
 ## Tasks
 
 ### T92 — Settings destination complete
 
 - **Scope:** cloud: code and tests.
-- **Owner check (not yours):** the device part of _Done when_ is verified locally by the owner (L-V13). Your bar: the tests in _Done when_; where it names only a device check, a hook or render test proving the same behaviour on fixture data; plus the flow exercised against `pnpm mock-server` when it serves the data.
+- **Device part:** the owner tests it locally after delivery; it does not block you. Your bar: the tests in _Done when_; where it names only a device check, a hook or render test proving the same behaviour on fixture data; plus the flow exercised against `pnpm mock-server` when it serves the data.
 - **Files:** `mobile/app/deck/(dest)/settings.tsx` (edit), `mobile/src/deck/settings/*.tsx` (create, + tests)
 - **Change:** SET-1…3 General, Controls, Themes (Orca's `mobile-appearance.ts` preference); rows with `MobileSwitch`; embed `voice-settings-screen` and `notification-settings-screen`; Hosts reusing pair-scan / confirm flows (SET-6/7); Updates panel from T23; Interface switch.
 - **Depends on:** T66, T23
@@ -34,7 +33,7 @@ Read [`README.md`](./README.md) first: it holds the rules every cloud worker fol
 - **Scope:** cloud: code and tests.
 - **Files:** `mobile/src/deck/wheels/forms/*.tsx` (create, + tests)
 - **Change:** DIAL-29/32/34/35 per maquette `wheel-forms.js`.
-- **Depends on:** T84
+- **Depends on:** T82
 - **Done when:** render and gesture tests per form.
 
 ### T94 — Every H row shown disabled with reason

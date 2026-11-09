@@ -2,13 +2,12 @@
 
 **Goal:** One chord table drives deck bindings, hints and Help; every controller invariant has a test; Orca components get pad-focus wrappers.
 
-|                          |                                                                                            |
-| ------------------------ | ------------------------------------------------------------------------------------------ |
-| Dispatch when            | CF02 merged, decision D2 recorded (owner)                                                  |
-| Branch                   | `deck/cf04-controller-contract` from `main`                                                |
-| PR                       | `Theodagan/orcapad` `main`, title `deck(CF04): Deck controller contract`                   |
-| Tasks                    | T66, T25, T26, T27, T28, T29, T30, T31, T32, T33, T34, T35, T36, T37, T105 (in this order) |
-| Owner checks after merge | none                                                                                       |
+|               |                                                                                            |
+| ------------- | ------------------------------------------------------------------------------------------ |
+| Dispatch when | CF02 merged                                                                                |
+| Branch        | `deck/cf04-controller-contract` from `main`                                                |
+| PR            | `Theodagan/orcapad` `main`, title `deck(CF04): Deck controller contract`                   |
+| Tasks         | T66, T25, T26, T27, T28, T29, T30, T31, T32, T33, T34, T35, T36, T37, T105 (in this order) |
 
 Read [`README.md`](./README.md) first: it holds the rules every cloud worker follows.
 
@@ -16,7 +15,7 @@ Read [`README.md`](./README.md) first: it holds the rules every cloud worker fol
 
 - Every task below meets its _Done when_ (cloud bar), with an entry in `mobile/src/deck/HANDOFF-LOG.md`.
 - `pnpm typecheck`, `pnpm test`, `pnpm lint` in `mobile/` add no failures to the recorded baseline; `deck-boundary.test.ts` passes once it exists.
-- The PR description lists: tasks done, tasks skipped and why, files touched outside `mobile/src/deck/` and `mobile/app/deck/` (also in `UPSTREAM-TOUCHES.md`), and the owner checks to run.
+- The PR description lists: tasks done, tasks skipped and why, files touched outside `mobile/src/deck/` and `mobile/app/deck/` (also in `UPSTREAM-TOUCHES.md`), and what the owner should try on the device.
 
 ## Requirements cited
 
@@ -77,7 +76,7 @@ From the PRD (not in the repo). Rule IDs such as `PAD-6` are in `Theodagan/Pocke
 ### T30 — Contract: Y is a modifier only
 
 - **Scope:** cloud: code and tests.
-- **Decision:** use the value given in this feature's dispatch prompt; if none is given, skip this task and report it.
+- **Decision:** already made; see _Decisions_ in `README.md`.
 - **Files:** `mobile/src/deck/controller/contract-modifier.test.tsx` (create), `use-deck-bindings.ts` (edit)
 - **Change:** PAD-9 per D2; reuse `controller-input/use-modifier-held.ts`.
 - **Depends on:** T26
