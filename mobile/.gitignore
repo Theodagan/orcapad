@@ -15,3 +15,5 @@ dist/
 *.mobileprovision
 *.orig.*
 web-build/
+/modules/*/android/build/
+/modules/*/android/.gradle/

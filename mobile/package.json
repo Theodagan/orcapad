@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node scripts/start-expo.mjs",
     "android": "expo run:android",
+    "apk:android": "node scripts/build-android-apk.mjs",
+    "start:android-emulator": "node scripts/start-android-emulator.mjs",
     "ios": "expo run:ios",
     "native": "node scripts/native-client.mjs",
     "postinstall": "node scripts/build-terminal-webview-engine.mjs && node scripts/build-mermaid-page-engine.mjs && node scripts/build-katex-page-style.mjs && node scripts/build-terminal-document-script.mjs",
