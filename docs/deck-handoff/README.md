@@ -4,32 +4,43 @@ Work packages for cloud agents building **PocketDeck**: a controller-first inter
 on Android handhelds, in `mobile/src/deck/` and `mobile/app/deck/`. Each `CFnn-*.md` file is one
 feature: dispatch it as one worker, one branch and one PR.
 
-The owner runs the rest on their own machine: the upstream merge, decisions, spikes on the device,
-release secrets and every check on the Retroid handheld. Those steps are not in this repository. A
-feature is only dispatched once its _Dispatch when_ conditions hold; the owner tracks that.
+**Policy: implement first, test later.** Every feature is implementation the cloud can finish on
+its own: there are no device spikes and no owner gates between features. The owner tests on the
+Retroid handheld after delivery; failures come back as new dispatches. Anything a card says happens
+"on device" is therefore _not_ your bar: prove the same behaviour with tests (and `pnpm mock-server`).
 
 ## Features
 
-| Feature                               | What                                                 | Dispatch when                                |
-| ------------------------------------- | ---------------------------------------------------- | -------------------------------------------- |
-| [CF01](./CF01-seam-skeleton.md)       | Seam and shell skeleton                              | baseline (upstream + pad plumbing) on `main` |
-| [CF02](./CF02-orca-design-system.md)  | Orca design system for the deck, host refusal screen | CF01                                         |
-| [CF03](./CF03-updates-core.md)        | Fork update source and download                      | CF01                                         |
-| [CF04](./CF04-controller-contract.md) | Deck controller contract                             | CF02, decision D2                            |
-| [CF05](./CF05-navigation-shell.md)    | Navigation shell                                     | CF04                                         |
-| [CF06](./CF06-destinations-live.md)   | Destinations on live data                            | CF05                                         |
-| [CF07](./CF07-session-loop.md)        | Session loop                                         | CF06                                         |
-| [CF08](./CF08-updates-install.md)     | Update install flow and UI                           | CF02, CF03, owner's installer spike          |
-| [CF09](./CF09-release-pipeline.md)    | Fork release pipeline (config only)                  | CF01, decision D3                            |
-| [CF10](./CF10-approvals-inbox.md)     | Approvals inbox                                      | CF07, owner's data-source spike              |
-| [CF11](./CF11-wheels.md)              | Wheels                                               | CF07, owner's latency spike                  |
-| [CF12](./CF12-review.md)              | Files, source control, browser, message actions      | CF07                                         |
-| [CF13](./CF13-polish.md)              | Polish and gaps                                      | CF08, CF10, CF11, CF12, owner's wheel trial  |
-| [CF14](./CF14-compat-tests.md)        | Newer-desktop compatibility tests                    | CF10, CF12                                   |
-| [CF15](./CF15-post-m3.md)             | Deck by default, retire forked screens               | owner's M3 acceptance                        |
+| Feature                               | What                                            | Dispatch when merged   |
+| ------------------------------------- | ----------------------------------------------- | ---------------------- |
+| [CF01](./CF01-seam-skeleton.md)       | Seam and shell skeleton                         | baseline on `main`     |
+| [CF02](./CF02-orca-design-system.md)  | Orca design system, host refusal screen         | CF01                   |
+| [CF03](./CF03-updates-core.md)        | Fork update source and download                 | CF01                   |
+| [CF09](./CF09-release-pipeline.md)    | Fork release pipeline (workflow edits)          | CF01                   |
+| [CF04](./CF04-controller-contract.md) | Deck controller contract                        | CF02                   |
+| [CF08](./CF08-updates-install.md)     | APK installer, update flow and UI               | CF02, CF03             |
+| [CF05](./CF05-navigation-shell.md)    | Navigation shell                                | CF04                   |
+| [CF06](./CF06-destinations-live.md)   | Destinations on live data                       | CF05                   |
+| [CF07](./CF07-session-loop.md)        | Session loop                                    | CF06                   |
+| [CF10](./CF10-approvals-inbox.md)     | Approvals inbox (source chosen from code)       | CF07                   |
+| [CF11](./CF11-wheels.md)              | Wheels (with a dev latency readout)             | CF07                   |
+| [CF12](./CF12-review.md)              | Files, source control, browser, message actions | CF07                   |
+| [CF13](./CF13-polish.md)              | Polish and gaps                                 | CF08, CF10, CF11, CF12 |
+| [CF14](./CF14-compat-tests.md)        | Newer-desktop compatibility tests               | CF10, CF12             |
+| [CF15](./CF15-deck-default.md)        | Deck by default and cleanup                     | CF13, CF14             |
 
-Features in the same row of the owner's schedule can run in parallel: CF02 ∥ CF03; CF08 ∥ CF09 with
-CF04–CF05; CF10 ∥ CF11 ∥ CF12; CF13 ∥ CF14.
+Parallel waves: CF01 → CF02 ∥ CF03 ∥ CF09 → CF04 ∥ CF08 → CF05 → CF06 → CF07 → CF10 ∥ CF11 ∥ CF12
+→ CF13 ∥ CF14 → CF15.
+
+## Decisions
+
+- **D2:** the deck's modifier is **Y** (PAD-9).
+- **D3:** app id `com.theodagan.orcapad`, name **Orcapad**, release tag prefix `orcapad-android-v`
+  (already applied in `mobile/app.json`).
+- **D6:** in-app updates use `expo-file-system` content URIs + `expo-intent-launcher` +
+  `REQUEST_INSTALL_PACKAGES`.
+- **D5** (approvals source) is made by T63 inside CF10. **D4** (acceptance agents) concerns only the
+  owner's test pass.
 
 ## Rules for every worker
 
@@ -90,11 +101,10 @@ In `mobile/`:
 
 ### What you never do
 
-- Device or desktop checks: cards marked **Owner check** are verified by the owner after merge.
-  List them in your PR description; do not claim them.
+- Device or desktop checks: a card's **Device part** is tested by the owner later. Say in your PR
+  what the owner should try; do not claim it.
 - Create, read or commit signing keys or secrets; run `workflow_dispatch`; change CI secrets.
-- Guess an open decision. A task marked **Decision** uses the value in your dispatch prompt; without
-  one, skip it.
+- Reopen a decision listed above.
 
 ### Logging and reporting
 
