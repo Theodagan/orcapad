@@ -21,6 +21,7 @@
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "mock-server": "npx tsx scripts/mock-server.ts",
+    "deck:upstream-check": "node scripts/deck-upstream-check.mjs",
     "repro:workspace-picker-lag": "npx tsx scripts/repro-workspace-picker-lag.ts",
     "start:emulator": "node scripts/start-emulator.mjs"
   },
