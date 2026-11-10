@@ -39,4 +39,17 @@ re-checks the imports on each merge.
 
 ## Strict parsers
 
-Audited in T12; the deck reads every host reply through `host/lenient-host-data.ts`.
+Audited in T12. The deck reads every host reply through `host/lenient-host-data.ts`; the schemas
+below are the ones behind the R rows, with what each one does to a field this build does not know.
+
+| Schema                                                     | Shape                    | What an unknown field or value gets           |
+| ---------------------------------------------------------- | ------------------------ | --------------------------------------------- |
+| `transport/hosts/host-status-reply-schema.ts`               | `looseObject` + salvage  | kept; capabilities read as declared           |
+| `worktree/worktree-catalog-reply-schema.ts`                 | `looseObject` + salvage  | kept                                          |
+| `agent-history/agent-history-reply-schema.ts`               | `looseObject` + salvage  | kept                                          |
+| `source-control/git-status-reply-schema.ts`                 | `looseObject` + `openEnum` | kept; unknown entry kind maps to a neutral value |
+| `source-control/worktree-metadata-reply-schema.ts`          | `z.object`               | **stripped** — the deck re-reads it leniently |
+| `automations/automation-reply-schema.ts`                    | `z.object`               | **stripped** — not on a deck R row today      |
+
+The two `z.object` rows never fail a parse, so they cannot blank a screen; they do drop fields, so a
+deck screen that needs one of them reads the raw reply through the helpers above.
