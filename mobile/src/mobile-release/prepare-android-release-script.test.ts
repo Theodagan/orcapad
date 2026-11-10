@@ -58,9 +58,9 @@ describe('prepare Android release script', () => {
     })
 
     expect(output).toContain('Prepared Orca Mobile Android 0.0.22 (4)')
-    expect(output).toContain('Release tag: mobile-android-v0.0.22')
+    expect(output).toContain('Release tag: orcapad-android-v0.0.22')
     expect(readFileSync(outputPath, 'utf8')).toBe(
-      'version=0.0.22\nandroid_version_code=4\ntag=mobile-android-v0.0.22\npublish_release=true\n'
+      'version=0.0.22\nandroid_version_code=4\ntag=orcapad-android-v0.0.22\npublish_release=true\n'
     )
     expect(readFileSync(configPath, 'utf8')).toBe(contents)
   })
