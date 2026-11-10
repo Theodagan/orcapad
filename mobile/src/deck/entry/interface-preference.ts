@@ -48,6 +48,11 @@ export async function setInterfacePreference(next: MobileInterfacePreference): P
   await saveInterfacePreference(next)
 }
 
+/** The Settings row's switch: the deck when Orca is showing, and the other way round. */
+export function toggleInterfacePreference(): Promise<void> {
+  return setInterfacePreference(current === 'deck' ? 'orca' : 'deck')
+}
+
 export function useInterfacePreference(): MobileInterfacePreference {
   return useSyncExternalStore(subscribeInterfacePreference, getInterfacePreference)
 }

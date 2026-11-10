@@ -1,5 +1,6 @@
 import {
   Bell,
+  Gamepad2,
   Globe,
   Info,
   MessageSquare,
@@ -10,6 +11,10 @@ import {
 } from 'lucide-react-native'
 import type { MobileSettingsMenuItem } from './mobile-settings-menu'
 import { translate } from '../i18n/mobile-i18n'
+import {
+  getInterfacePreference,
+  toggleInterfacePreference
+} from '../deck/entry/interface-preference'
 
 export function mobileSettingsMenuItems(push: (route: string) => void): MobileSettingsMenuItem[] {
   return [
@@ -48,6 +53,16 @@ export function mobileSettingsMenuItems(push: (route: string) => void): MobileSe
       label: translate('settings.menuItems.notifications', 'Notifications'),
       icon: Bell,
       onPress: () => push('/notifications')
+    },
+    {
+      id: 'interface',
+      label: `${translate('settings.menuItems.interface', 'Interface')} · ${
+        getInterfacePreference() === 'deck'
+          ? translate('deck.interface.deck', 'Deck')
+          : translate('deck.interface.orca', 'Orca')
+      }`,
+      icon: Gamepad2,
+      onPress: () => void toggleInterfacePreference()
     },
     {
       id: 'troubleshoot',

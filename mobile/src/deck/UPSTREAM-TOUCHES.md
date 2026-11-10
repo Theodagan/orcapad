@@ -14,3 +14,6 @@ file in the same commit as their touch, and appended lines merge without conflic
 
 mobile/package.json — `deck:upstream-check` script entry for the PRD §5.3 merge checklist — T3
 mobile/src/storage/preferences.ts — stored `interface` preference for the deck entry switch — T5
+mobile/app/index.tsx — entry redirects to the deck when the interface preference says so — T7
+mobile/src/settings/mobile-settings-menu-items.ts — the Interface row that switches shells — T7
+mobile/src/settings/settings-menu-screen.tsx — re-renders the menu when the Interface row switches — T7

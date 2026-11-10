@@ -5,6 +5,7 @@ import { MobileSettingsSection } from './mobile-settings-menu'
 import { mobileSettingsMenuItems } from './mobile-settings-menu-items'
 import { SettingsScreen } from './settings-screen-frame'
 import { useMobileTranslation } from '../i18n/use-mobile-translation'
+import { useInterfacePreference } from '../deck/entry/interface-preference'
 
 export default function SettingsMenuScreen({
   push,
@@ -42,6 +43,8 @@ export function SettingsMenuSections({
   children?: ReactNode
 }) {
   const t = useMobileTranslation()
+  // The Interface row shows the shell in use, so its own switch has to re-render the list.
+  useInterfacePreference()
   return (
     <>
       <MobileSettingsSection first items={mobileSettingsMenuItems(push)} />
