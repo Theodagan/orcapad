@@ -56,6 +56,8 @@ export type DictationReader = Pick<ActiveDictationRegistry, 'subscribe' | 'curre
 export type ControllerContextValue = {
   readonly support: ControllerSupport
   readonly connected: boolean
+  /** The live samples, for a surface whose bindings the resolver's table cannot express (the deck). */
+  readonly reader: ControllerReader
   /** Returns the unregister function; a surface calls it on unmount. */
   readonly registerFocusTarget: (target: FocusTarget) => () => void
   readonly activateFocusTarget: (id: string) => void
@@ -155,6 +157,7 @@ export function useController(): ControllerContextValue {
 const INERT_CONTROLLER: ControllerContextValue = {
   support: 'unavailable',
   connected: false,
+  reader: createAbsentControllerReader(),
   registerFocusTarget: () => () => {},
   activateFocusTarget: () => {},
   dispatchIntent: () => false,
@@ -312,6 +315,7 @@ export function ControllerProvider({
     () => ({
       support,
       connected,
+      reader: activeReader,
       registerFocusTarget: registry.register,
       activateFocusTarget: registry.activate,
       dispatchIntent: registry.dispatch,
@@ -327,6 +331,7 @@ export function ControllerProvider({
     [
       support,
       connected,
+      activeReader,
       registry,
       registerWheelAction,
       activeDictation,

@@ -24,3 +24,4 @@ mobile/src/app-update/app-update-runtime.ts — Android update checks now read t
 .github/workflows/mobile-android-release.yml — the fork release key is required and the tag prefix is the fork's (DECK-R45/R46) — T15, T16
 mobile/scripts/prepare-android-release.mjs — the fork's tag prefix in the version resolution — T16
 mobile/src/mobile-release/prepare-android-release-script.test.ts — expects the fork's tag prefix — T16
+mobile/src/gamepad/controller-provider.tsx — the deck reads live samples for chords Orca's resolver table cannot express (Y modifier, D2) — T26
