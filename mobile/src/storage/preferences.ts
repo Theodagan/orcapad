@@ -227,3 +227,17 @@ export function saveTerminalSplitLayout(layout: TerminalSplitLayout): Promise<vo
   })
   return write
 }
+
+export type MobileInterfacePreference = 'deck' | 'orca'
+const INTERFACE_PREFERENCE_KEY = 'orca:interface'
+// Orca's own screens stay the default until the deck covers the agent loop (PRD §4, T71).
+export const DEFAULT_INTERFACE_PREFERENCE: MobileInterfacePreference = 'orca'
+
+export async function loadInterfacePreference(): Promise<MobileInterfacePreference> {
+  const raw = await AsyncStorage.getItem(INTERFACE_PREFERENCE_KEY)
+  return raw === 'deck' ? 'deck' : DEFAULT_INTERFACE_PREFERENCE
+}
+
+export function saveInterfacePreference(preference: MobileInterfacePreference): Promise<void> {
+  return persistMirrored(INTERFACE_PREFERENCE_KEY, preference)
+}

@@ -13,3 +13,4 @@ Append only. Never reorder, rewrap or rewrite an existing line: parallel deck br
 file in the same commit as their touch, and appended lines merge without conflict.
 
 mobile/package.json — `deck:upstream-check` script entry for the PRD §5.3 merge checklist — T3
+mobile/src/storage/preferences.ts — stored `interface` preference for the deck entry switch — T5

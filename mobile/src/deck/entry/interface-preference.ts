@@ -1,0 +1,57 @@
+import { useSyncExternalStore } from 'react'
+import {
+  DEFAULT_INTERFACE_PREFERENCE,
+  loadInterfacePreference,
+  saveInterfacePreference,
+  type MobileInterfacePreference
+} from '../../storage/preferences'
+
+// One in-memory copy: the entry route reads it synchronously on first render, before storage answers.
+let current: MobileInterfacePreference = DEFAULT_INTERFACE_PREFERENCE
+let started: Promise<void> | null = null
+const listeners = new Set<() => void>()
+
+function publish(next: MobileInterfacePreference): void {
+  if (next === current) {
+    return
+  }
+  current = next
+  for (const listener of listeners) {
+    listener()
+  }
+}
+
+/** Loads the stored choice once per launch; the default shows until it lands. */
+export function startInterfacePreference(): Promise<void> {
+  started ??= loadInterfacePreference()
+    .then(publish)
+    .catch((error: unknown) => {
+      console.warn('Interface preference could not be loaded', error)
+    })
+  return started
+}
+
+export function getInterfacePreference(): MobileInterfacePreference {
+  return current
+}
+
+export function subscribeInterfacePreference(listener: () => void): () => void {
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
+}
+
+/** Writes through to storage; the in-memory switch happens first so a relaunch never races it. */
+export async function setInterfacePreference(next: MobileInterfacePreference): Promise<void> {
+  publish(next)
+  await saveInterfacePreference(next)
+}
+
+export function useInterfacePreference(): MobileInterfacePreference {
+  return useSyncExternalStore(subscribeInterfacePreference, getInterfacePreference)
+}
+
+export function useDeckInterface(): boolean {
+  return useInterfacePreference() === 'deck'
+}
