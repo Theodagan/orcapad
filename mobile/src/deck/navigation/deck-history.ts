@@ -5,7 +5,7 @@
 export type DeckHistoryEntry = {
   /** A stable key: the route plus what it showed (a workspace id, a session id). */
   readonly key: string
-  readonly title: readonly [string, string]
+  readonly titleKey: string
 }
 
 export type DeckHistory = { readonly entries: readonly DeckHistoryEntry[] }

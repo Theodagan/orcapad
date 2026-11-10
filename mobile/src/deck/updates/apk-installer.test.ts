@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { ApkInstallError, type ApkInstallerDeps, installApk } from './apk-installer'
 
+/** The rejection, narrowed: a test that cannot see its own error is not a test. */
+function rejectionOf(promise: Promise<unknown>): Promise<unknown> {
+  return promise.catch((caught: unknown) => caught)
+}
+
+function expectInstallError(value: unknown): ApkInstallError {
+  if (!(value instanceof ApkInstallError)) {
+    throw new Error('expected an ApkInstallError')
+  }
+  return value
+}
+
 function deps(overrides: Partial<ApkInstallerDeps> = {}) {
   const started: unknown[] = []
   const base: ApkInstallerDeps = {
@@ -37,30 +49,32 @@ describe('APK installer', () => {
         throw new Error('ENOENT')
       }
     })
-    const error = await installApk({ fileUri: '/gone.apk', deps: installer }).catch(
-      (caught) => caught
-    )
-    expect((error as ApkInstallError).detail).toEqual({ kind: 'missing-file' })
+    const error = await rejectionOf(installApk({ fileUri: '/gone.apk', deps: installer }))
+    expect(expectInstallError(error).detail).toEqual({ kind: 'missing-file' })
   })
 
   it('reports an installer that cannot be opened, and one the user cancels', async () => {
-    const noHandler = await installApk({
-      fileUri: '/a.apk',
-      deps: deps({
-        startActivityAsync: async () => {
-          throw new Error('ActivityNotFoundException')
-        }
-      }).deps
-    }).catch((caught) => caught)
-    expect((noHandler as ApkInstallError).detail).toEqual({
+    const noHandler = await rejectionOf(
+      installApk({
+        fileUri: '/a.apk',
+        deps: deps({
+          startActivityAsync: async () => {
+            throw new Error('ActivityNotFoundException')
+          }
+        }).deps
+      })
+    )
+    expect(expectInstallError(noHandler).detail).toEqual({
       kind: 'no-handler',
       reason: 'ActivityNotFoundException'
     })
 
-    const refused = await installApk({
-      fileUri: '/a.apk',
-      deps: deps({ startActivityAsync: async () => ({ resultCode: 0 }) }).deps
-    }).catch((caught) => caught)
-    expect((refused as ApkInstallError).detail).toEqual({ kind: 'refused', resultCode: 0 })
+    const refused = await rejectionOf(
+      installApk({
+        fileUri: '/a.apk',
+        deps: deps({ startActivityAsync: async () => ({ resultCode: 0 }) }).deps
+      })
+    )
+    expect(expectInstallError(refused).detail).toEqual({ kind: 'refused', resultCode: 0 })
   })
 })

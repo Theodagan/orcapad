@@ -18,8 +18,11 @@ function sample(
     buttons.set(button, 1)
   }
   const axisValues = new Map(base.axes)
-  for (const [axis, value] of Object.entries(axes)) {
-    axisValues.set(axis as ControllerAxis, value)
+  for (const axis of CONTROLLER_AXES) {
+    const value = axes[axis]
+    if (value !== undefined) {
+      axisValues.set(axis, value)
+    }
   }
   return { ...base, buttons, axes: axisValues, connected: true }
 }

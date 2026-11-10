@@ -1,12 +1,18 @@
 import { createElement } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
+import { Text } from 'react-native'
 import { describe, expect, it, vi } from 'vitest'
 import { DeckHintStrip, visibleHintCount } from './DeckHintStrip'
 
 let modifierHeld = false
-vi.mock('react-native', () => ({ Text: 'Text', View: 'View' }))
+
+vi.mock('react-native', async () => {
+  const { createElement: element } = await import('react')
+  const host = (type: string) => (props: Record<string, unknown>) => element(type, props)
+  return { Text: host('Text'), View: host('View') }
+})
 vi.mock('../../i18n/use-mobile-translation', () => ({
-  useMobileTranslation: () => (_key: string, fallback?: string) => fallback ?? _key
+  useMobileTranslation: () => (key: string, fallback?: string) => fallback ?? key
 }))
 vi.mock('../theme/deck-theme', () => ({
   useDeckTheme: () => ({
@@ -31,14 +37,15 @@ function render(width: number): ReactTestRenderer {
   return renderer
 }
 
+function chips(renderer: ReactTestRenderer): number {
+  return renderer.root.findAllByType(Text).length
+}
+
 describe('deck hint strip', () => {
   it('fits every chip inside the width it is given', () => {
-    const renderer = render(640)
-    const chips = renderer.root.findAll(
-      (node) => (typeof node.props.children === 'function') === false && node.type === 'Text'
-    )
-    expect(chips.length).toBeGreaterThan(0)
-    expect(chips.length).toBeLessThanOrEqual(visibleHintCount(99, 640))
+    const shown = chips(render(640))
+    expect(shown).toBeGreaterThan(0)
+    expect(shown).toBeLessThanOrEqual(visibleHintCount(99, 640))
   })
 
   it('drops the lowest-priority hints rather than overflowing', () => {
@@ -49,9 +56,9 @@ describe('deck hint strip', () => {
 
   it('swaps to the Y layer while the modifier is held', () => {
     modifierHeld = false
-    const plain = render(640).root.findAllByType('Text' as never).length
+    const plain = chips(render(640))
     modifierHeld = true
-    const withModifier = render(640).root.findAllByType('Text' as never).length
+    const withModifier = chips(render(640))
     modifierHeld = false
     expect(withModifier).toBeLessThan(plain)
     expect(withModifier).toBe(3)

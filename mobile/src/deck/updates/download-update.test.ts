@@ -1,5 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
 import { downloadUpdate, UpdateDownloadError, type DownloadDeps } from './download-update'
+
+function expectDownloadError(value: unknown): UpdateDownloadError {
+  if (!(value instanceof UpdateDownloadError)) {
+    throw new Error('expected an UpdateDownloadError')
+  }
+  return value
+}
+
+async function rejectionOf(promise: Promise<unknown>): Promise<unknown> {
+  return promise.catch((caught: unknown) => caught)
+}
 import type { DeckReleaseAsset } from '../../app-update/fork-release-update-source'
 
 const SHA = 'a'.repeat(64)
@@ -50,17 +61,11 @@ describe('update download', () => {
 
   it('deletes a file whose digest does not match', async () => {
     const { deps: downloadDeps, deleted } = deps({ digest: 'b'.repeat(64) })
-    await expect(
+    const error = await rejectionOf(
       downloadUpdate({ release: RELEASE, deps: downloadDeps, signal: new AbortController().signal })
-    ).rejects.toBeInstanceOf(UpdateDownloadError)
+    )
     expect(deleted).toEqual(['file:///cache/orcapad-update-1.5.0.apk'])
-    const error = await downloadUpdate({
-      release: RELEASE,
-      deps: downloadDeps,
-      signal: new AbortController().signal
-    }).catch((caught: unknown) => caught)
-    expect(error).toBeInstanceOf(UpdateDownloadError)
-    expect((error as UpdateDownloadError).detail).toEqual({
+    expect(expectDownloadError(error).detail).toEqual({
       kind: 'digest',
       expected: SHA,
       received: 'b'.repeat(64)
@@ -69,12 +74,10 @@ describe('update download', () => {
 
   it('deletes a short download', async () => {
     const { deps: downloadDeps, deleted } = deps({ size: 512 })
-    const error = await downloadUpdate({
-      release: RELEASE,
-      deps: downloadDeps,
-      signal: new AbortController().signal
-    }).catch((caught: unknown) => caught)
-    expect((error as UpdateDownloadError).detail).toEqual({
+    const error = await rejectionOf(
+      downloadUpdate({ release: RELEASE, deps: downloadDeps, signal: new AbortController().signal })
+    )
+    expect(expectDownloadError(error).detail).toEqual({
       kind: 'size',
       expected: 1024,
       received: 512
@@ -84,12 +87,14 @@ describe('update download', () => {
 
   it('refuses a release that publishes no digest', async () => {
     const { deps: downloadDeps } = deps()
-    const error = await downloadUpdate({
-      release: { ...RELEASE, digest: null },
-      deps: downloadDeps,
-      signal: new AbortController().signal
-    }).catch((caught: unknown) => caught)
-    expect((error as UpdateDownloadError).detail).toEqual({
+    const error = await rejectionOf(
+      downloadUpdate({
+        release: { ...RELEASE, digest: null },
+        deps: downloadDeps,
+        signal: new AbortController().signal
+      })
+    )
+    expect(expectDownloadError(error).detail).toEqual({
       kind: 'unverifiable',
       reason: 'the release publishes no sha256 digest'
     })
@@ -108,12 +113,10 @@ describe('update download', () => {
         pauseAsync
       })
     })
-    const error = await downloadUpdate({
-      release: RELEASE,
-      deps: downloadDeps,
-      signal: controller.signal
-    }).catch((caught: unknown) => caught)
-    expect((error as UpdateDownloadError).detail).toEqual({ kind: 'cancelled' })
+    const error = await rejectionOf(
+      downloadUpdate({ release: RELEASE, deps: downloadDeps, signal: controller.signal })
+    )
+    expect(expectDownloadError(error).detail).toEqual({ kind: 'cancelled' })
     expect(deleted).toHaveLength(1)
   })
 })

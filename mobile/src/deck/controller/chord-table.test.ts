@@ -23,8 +23,7 @@ describe('deck chord table', () => {
 
   it('labels every intent and names a touch alternative for every timed or chorded one', () => {
     for (const binding of DECK_CHORDS) {
-      expect(binding.label[0]).toMatch(/^deck\.chord\./)
-      expect(binding.label[1]).not.toBe('')
+      expect(binding.labelKey).toMatch(/^deck\.chord\./)
       if (isTimedOrChorded(binding)) {
         expect(binding.touchAlternative).toMatch(/^deck\.touch\./)
       }

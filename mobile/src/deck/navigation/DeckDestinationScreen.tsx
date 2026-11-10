@@ -14,11 +14,11 @@ export function DeckDestinationScreen({
   destination: DeckDestinationId
 }): ReactNode {
   const t = useMobileTranslation()
-  const { label } = destinationById(destination)
+  const { labelKey } = destinationById(destination)
   return (
     <DeckShell>
       <MobileStateView
-        title={t(label[0], label[1])}
+        title={t(labelKey, labelKey)}
         message={t(
           'deck.empty.body',
           'Nothing here yet. Pair a desktop or start an agent to fill it.'

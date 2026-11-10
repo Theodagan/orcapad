@@ -57,8 +57,8 @@ export type DeckChord = {
 export type DeckBinding = {
   readonly chord: DeckChord
   readonly intent: DeckIntent
-  /** i18n key and English fallback, in the hint bar's words. */
-  readonly label: readonly [string, string]
+  /** The catalog key, in the hint bar's words. The English lives in `locales/en.json`. */
+  readonly labelKey: string
   readonly scope: DeckScreenScope
   /** DECK-R13/PAD-8: the on-screen control that does the same thing without a controller. */
   readonly touchAlternative: string
@@ -88,14 +88,14 @@ export const DECK_CHORDS: readonly DeckBinding[] = [
   {
     chord: { control: 'a', kind: 'tap' },
     intent: 'confirm',
-    label: ['deck.chord.confirm', 'Select'],
+    labelKey: 'deck.chord.confirm',
     scope: 'root',
     touchAlternative: 'deck.touch.row'
   },
   {
     chord: { control: 'b', kind: 'tap' },
     intent: 'dismiss',
-    label: ['deck.chord.dismiss', 'Dismiss'],
+    labelKey: 'deck.chord.dismiss',
     scope: 'root',
     touchAlternative: 'deck.touch.close'
   },
@@ -103,7 +103,7 @@ export const DECK_CHORDS: readonly DeckBinding[] = [
   {
     chord: { control: 'b', with: MODIFIER, kind: 'chord' },
     intent: 'back',
-    label: ['deck.chord.back', 'Back'],
+    labelKey: 'deck.chord.back',
     scope: 'root',
     touchAlternative: 'deck.touch.back'
   },
@@ -111,28 +111,28 @@ export const DECK_CHORDS: readonly DeckBinding[] = [
   {
     chord: { control: 'l1', kind: 'tap' },
     intent: 'focus-previous-panel',
-    label: ['deck.chord.focusPreviousPanel', 'Previous panel'],
+    labelKey: 'deck.chord.focusPreviousPanel',
     scope: 'root',
     touchAlternative: 'deck.touch.panelTab'
   },
   {
     chord: { control: 'r1', kind: 'tap' },
     intent: 'focus-next-panel',
-    label: ['deck.chord.focusNextPanel', 'Next panel'],
+    labelKey: 'deck.chord.focusNextPanel',
     scope: 'root',
     touchAlternative: 'deck.touch.panelTab'
   },
   {
     chord: { control: 'l1', with: MODIFIER, kind: 'hold' },
     intent: 'toggle-panel',
-    label: ['deck.chord.toggleLeftPanel', 'Toggle left panel'],
+    labelKey: 'deck.chord.toggleLeftPanel',
     scope: 'root',
     touchAlternative: 'deck.touch.panelToggle'
   },
   {
     chord: { control: 'r1', with: MODIFIER, kind: 'hold' },
     intent: 'toggle-panel',
-    label: ['deck.chord.toggleRightPanel', 'Toggle right panel'],
+    labelKey: 'deck.chord.toggleRightPanel',
     scope: 'root',
     touchAlternative: 'deck.touch.panelToggle'
   },
@@ -140,14 +140,14 @@ export const DECK_CHORDS: readonly DeckBinding[] = [
   {
     chord: { control: 'l2', kind: 'hold' },
     intent: 'scroll-up',
-    label: ['deck.chord.scrollUp', 'Scroll up'],
+    labelKey: 'deck.chord.scrollUp',
     scope: 'root',
     touchAlternative: 'deck.touch.scroll'
   },
   {
     chord: { control: 'r2', kind: 'hold' },
     intent: 'scroll-down',
-    label: ['deck.chord.scrollDown', 'Scroll down'],
+    labelKey: 'deck.chord.scrollDown',
     scope: 'root',
     touchAlternative: 'deck.touch.scroll'
   },
@@ -155,7 +155,7 @@ export const DECK_CHORDS: readonly DeckBinding[] = [
   {
     chord: { control: 'dpad', kind: 'tap' },
     intent: 'move-up',
-    label: ['deck.chord.move', 'Move'],
+    labelKey: 'deck.chord.move',
     scope: 'root',
     touchAlternative: 'deck.touch.row'
   },
@@ -163,14 +163,14 @@ export const DECK_CHORDS: readonly DeckBinding[] = [
   {
     chord: { control: 'start', kind: 'tap' },
     intent: 'open-help',
-    label: ['deck.chord.help', 'Controls'],
+    labelKey: 'deck.chord.help',
     scope: 'root',
     touchAlternative: 'deck.touch.help'
   },
   {
     chord: { control: 'start', kind: 'hold' },
     intent: 'toggle-dictation',
-    label: ['deck.chord.dictation', 'Dictate'],
+    labelKey: 'deck.chord.dictation',
     scope: 'session',
     touchAlternative: 'deck.touch.mic'
   },
@@ -178,7 +178,7 @@ export const DECK_CHORDS: readonly DeckBinding[] = [
   {
     chord: { control: 'l3', with: 'r3', kind: 'chord' },
     intent: 'open-wheels',
-    label: ['deck.chord.wheels', 'Key wheels'],
+    labelKey: 'deck.chord.wheels',
     scope: 'session',
     touchAlternative: 'deck.touch.keyWheel'
   },
@@ -186,14 +186,14 @@ export const DECK_CHORDS: readonly DeckBinding[] = [
   {
     chord: { control: 'l2', with: MODIFIER, kind: 'chord' },
     intent: 'stage-file',
-    label: ['deck.chord.stage', 'Stage'],
+    labelKey: 'deck.chord.stage',
     scope: 'collection',
     touchAlternative: 'deck.touch.stage'
   },
   {
     chord: { control: 'r2', with: MODIFIER, kind: 'chord' },
     intent: 'unstage-file',
-    label: ['deck.chord.unstage', 'Unstage'],
+    labelKey: 'deck.chord.unstage',
     scope: 'collection',
     touchAlternative: 'deck.touch.unstage'
   }
@@ -229,7 +229,8 @@ export function bindingFor(
 
 /** A chord's label in the active language. */
 export function chordLabel(t: Translate, binding: DeckBinding): string {
-  return t(binding.label[0], binding.label[1])
+  // The key doubles as the fallback: a missing entry shows the key, never an English guess.
+  return t(binding.labelKey, binding.labelKey)
 }
 
 /** Timed or chorded: a plain tap of one button is not the whole gesture (PAD-8). */

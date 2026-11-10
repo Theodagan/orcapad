@@ -7,9 +7,9 @@ import {
   type DeckHistory
 } from './deck-history'
 
-const OVERVIEW = { key: 'overview', title: ['deck.destination.overview', 'Overview'] } as const
-const PROJECTS = { key: 'projects', title: ['deck.destination.projects', 'Projects'] } as const
-const WORKSPACE = { key: 'workspace:w1', title: ['deck.workspace', 'Workspace'] } as const
+const OVERVIEW = { key: 'overview', titleKey: 'deck.destination.overview' } as const
+const PROJECTS = { key: 'projects', titleKey: 'deck.destination.projects' } as const
+const WORKSPACE = { key: 'workspace:w1', titleKey: 'deck.workspace' } as const
 
 function walked(): DeckHistory {
   return [OVERVIEW, PROJECTS, WORKSPACE].reduce(pushDeckHistory, EMPTY_DECK_HISTORY)

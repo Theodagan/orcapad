@@ -10,15 +10,22 @@ export type NeutralValue = 'unknown'
 
 const UNKNOWN: NeutralValue = 'unknown'
 
+/** An object we can read fields from; arrays and null are not. */
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isKnownValue<T extends string>(value: unknown, known: readonly T[]): value is T {
+  return typeof value === 'string' && known.some((entry) => entry === value)
+}
+
 export function lenientRecord(raw: unknown): Readonly<Record<string, unknown>> {
-  return typeof raw === 'object' && raw !== null && !Array.isArray(raw)
-    ? (raw as Record<string, unknown>)
-    : {}
+  return isRecord(raw) ? raw : {}
 }
 
 /** A known value, or `unknown`: never the first entry, never a guess. */
 export function lenientEnum<T extends string>(raw: unknown, known: readonly T[]): T | NeutralValue {
-  return typeof raw === 'string' && known.includes(raw as T) ? (raw as T) : UNKNOWN
+  return isKnownValue(raw, known) ? raw : UNKNOWN
 }
 
 /** Items that parse, in order; one unreadable entry costs its own row, not the list. */

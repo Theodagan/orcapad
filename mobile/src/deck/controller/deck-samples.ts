@@ -1,4 +1,5 @@
 import {
+  CONTROLLER_AXES,
   neutralSample,
   type ControllerAxis,
   type ControllerButton,
@@ -20,9 +21,10 @@ export function sampleWith(
     buttons.set(button, 1)
   }
   const axes = new Map(base.axes)
-  for (const [axis, value] of Object.entries(options.axes ?? {})) {
+  for (const axis of CONTROLLER_AXES) {
+    const value = options.axes?.[axis]
     if (value !== undefined) {
-      axes.set(axis as ControllerAxis, value)
+      axes.set(axis, value)
     }
   }
   return { ...base, buttons, axes, connected: options.connected ?? true }

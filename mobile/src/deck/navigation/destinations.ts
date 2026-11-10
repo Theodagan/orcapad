@@ -14,20 +14,21 @@ export type DeckDestination = {
   readonly id: DeckDestinationId
   /** The route inside `app/deck/`. */
   readonly route: string
-  readonly label: readonly [string, string]
+  /** The catalog key; the English lives in `locales/en.json`. */
+  readonly labelKey: string
 }
 
 export const DECK_DESTINATIONS: readonly DeckDestination[] = [
-  { id: 'overview', route: '/deck/overview', label: ['deck.destination.overview', 'Overview'] },
-  { id: 'sessions', route: '/deck/sessions', label: ['deck.destination.sessions', 'Sessions'] },
-  { id: 'projects', route: '/deck/projects', label: ['deck.destination.projects', 'Projects'] },
+  { id: 'overview', route: '/deck/overview', labelKey: 'deck.destination.overview' },
+  { id: 'sessions', route: '/deck/sessions', labelKey: 'deck.destination.sessions' },
+  { id: 'projects', route: '/deck/projects', labelKey: 'deck.destination.projects' },
   {
     id: 'approvals',
     route: '/deck/approvals',
-    label: ['deck.destination.approvals', 'Approvals']
+    labelKey: 'deck.destination.approvals'
   },
-  { id: 'ports', route: '/deck/ports', label: ['deck.destination.ports', 'Ports'] },
-  { id: 'settings', route: '/deck/settings', label: ['deck.destination.settings', 'Settings'] }
+  { id: 'ports', route: '/deck/ports', labelKey: 'deck.destination.ports' },
+  { id: 'settings', route: '/deck/settings', labelKey: 'deck.destination.settings' }
 ]
 
 export const DECK_LANDING_DESTINATION: DeckDestinationId = 'overview'

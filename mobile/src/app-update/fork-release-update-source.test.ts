@@ -10,18 +10,19 @@ import {
 const APK_DIGEST = 'sha256:3f9c2b7d4e1a58c6b0d2f4a6e8c0b2d4f6a8c0e2b4d6f8a0c2e4b6d8f0a2c4e6'
 
 function json(body: unknown, status = 200): Response {
-  return { ok: status < 400, status, json: async () => body } as unknown as Response
+  return new Response(JSON.stringify(body), { status })
 }
 
 function sourceWith(replies: Record<string, Response>) {
-  const fetchImpl = vi.fn(async (url: string) => {
-    const reply = replies[url]
+  const fetchImpl: typeof fetch = vi.fn(async (input: RequestInfo | URL) => {
+    const reply = replies[String(input)]
     if (reply === undefined) {
-      throw new Error(`unexpected request: ${url}`)
+      throw new Error(`unexpected request: ${String(input)}`)
     }
-    return reply
+    // A Response body reads once; the fixture is asked for the same reply more than once.
+    return reply.clone()
   })
-  return { source: createForkReleaseUpdateSource(fetchImpl as unknown as typeof fetch), fetchImpl }
+  return { source: createForkReleaseUpdateSource(fetchImpl), fetchImpl }
 }
 
 const tagsUrl = `https://api.github.com/repos/${FORK_REPO}/git/matching-refs/tags/${FORK_TAG_PREFIX}`

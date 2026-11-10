@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useSyncExternalStore } from 'react'
+import { isRecord } from '../host/lenient-host-data'
 
 /**
  * The deck's own preferences — the ones Orca has no setting for. One store, so the split keyboard
@@ -41,12 +42,13 @@ export function parseDeckSettings(raw: string | null): DeckSettings {
   }
   try {
     const parsed: unknown = JSON.parse(raw)
-    if (typeof parsed !== 'object' || parsed === null) {
+    if (!isRecord(parsed)) {
       return DEFAULT_DECK_SETTINGS
     }
-    const stored = parsed as Record<string, unknown>
-    const booleanOr = (key: keyof DeckSettings): boolean =>
-      typeof stored[key] === 'boolean' ? (stored[key] as boolean) : DEFAULT_DECK_SETTINGS[key]
+    const booleanOr = (key: keyof DeckSettings): boolean => {
+      const value = parsed[key]
+      return typeof value === 'boolean' ? value : DEFAULT_DECK_SETTINGS[key]
+    }
     return {
       splitKeys: booleanOr('splitKeys'),
       focusTick: booleanOr('focusTick'),

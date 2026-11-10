@@ -11,10 +11,7 @@ import {
 } from 'lucide-react-native'
 import type { MobileSettingsMenuItem } from './mobile-settings-menu'
 import { translate } from '../i18n/mobile-i18n'
-import {
-  getInterfacePreference,
-  toggleInterfacePreference
-} from '../storage/interface-preference'
+import { getInterfacePreference, toggleInterfacePreference } from '../storage/interface-preference'
 
 export function mobileSettingsMenuItems(push: (route: string) => void): MobileSettingsMenuItem[] {
   return [

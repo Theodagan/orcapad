@@ -1,22 +1,37 @@
-import { createElement } from 'react'
+import { createElement, type ReactNode } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
+import { Pressable, Text } from 'react-native'
 import { describe, expect, it, vi } from 'vitest'
 import { DeckHostRefusal } from './DeckHostRefusal'
 
-vi.mock('react-native', () => ({
-  Pressable: 'Pressable',
-  Text: 'Text',
-  View: 'View'
-}))
+vi.mock('react-native', async () => {
+  const { createElement: element } = await import('react')
+  const host = (type: string) => (props: Record<string, unknown>) => element(type, props)
+  return { Pressable: host('Pressable'), Text: host('Text'), View: host('View') }
+})
 vi.mock('../../i18n/use-mobile-translation', () => ({
-  useMobileTranslation: () => (_key: string, fallback?: string) => fallback ?? _key
+  useMobileTranslation: () => (key: string, fallback?: string) => fallback ?? key
+}))
+vi.mock('../theme/deck-theme', () => ({
+  useDeckTheme: () => ({
+    color: { base: 'base', text1: 'text1', text2: 'text2', accent: 'accent', onAccent: 'onAccent' },
+    space: { xs: 4, md: 12, xl: 24 },
+    radius: { control: 12 },
+    text: { pageTitle: 22, body: 14 }
+  })
 }))
 
-/** react-test-renderer 19 unmounts a tree created outside `act`. */
-function render(element: Parameters<typeof create>[0]): ReactTestRenderer {
+/** Stands in for a deck screen: the refusal renders it only when the verdict is compatible. */
+function Screen(): ReactNode {
+  return createElement('Screen', null)
+}
+
+function render(verdict: Parameters<typeof DeckHostRefusal>[0]['verdict']): ReactTestRenderer {
   let renderer: ReactTestRenderer | null = null
   act(() => {
-    renderer = create(element)
+    renderer = create(
+      createElement(DeckHostRefusal, { verdict, onUpdate: () => {} }, createElement(Screen, null))
+    )
   })
   if (renderer === null) {
     throw new Error('renderer did not mount')
@@ -24,58 +39,32 @@ function render(element: Parameters<typeof create>[0]): ReactTestRenderer {
   return renderer
 }
 
-function textOf(renderer: ReactTestRenderer): string[] {
-  return renderer.root
-    .findAllByType('Text' as never)
-    .map((node) =>
-      Array.isArray(node.props.children) ? node.props.children.join('') : node.props.children
-    )
+function texts(renderer: ReactTestRenderer): string[] {
+  return renderer.root.findAllByType(Text).map((node) => String(node.props.children))
 }
 
 describe('deck host refusal', () => {
   it('shows the plain reason and an Update control when the desktop refuses this client', () => {
-    const renderer = render(
-      createElement(
-        DeckHostRefusal,
-        {
-          verdict: { kind: 'blocked', reason: 'mobile-too-old', desktopVersion: 3 },
-          onUpdate: () => {}
-        },
-        createElement('Child' as never)
-      )
-    )
-    expect(textOf(renderer)).toEqual([
+    const renderer = render({ kind: 'blocked', reason: 'mobile-too-old', desktopVersion: 3 })
+    expect(texts(renderer)).toEqual([
       'This desktop cannot talk to this app',
       'This desktop needs a newer Orcapad. Update the app, then try this host again.',
       'Update Orcapad'
     ])
-    expect(renderer.root.findAllByType('Pressable' as never)).toHaveLength(1)
+    expect(renderer.root.findAllByType(Pressable)).toHaveLength(1)
+    expect(renderer.root.findAllByType(Screen)).toHaveLength(0)
   })
 
   it('offers the desktop-side remedy when the desktop itself is too old', () => {
-    const renderer = render(
-      createElement(DeckHostRefusal, {
-        verdict: { kind: 'blocked', reason: 'desktop-too-old', desktopVersion: 1 },
-        onUpdate: () => {}
-      })
-    )
-    expect(textOf(renderer)).toContain(
+    const renderer = render({ kind: 'blocked', reason: 'desktop-too-old', desktopVersion: 1 })
+    expect(texts(renderer)).toContain(
       'This desktop is too old for this build of Orcapad. Update Orca on your computer, then try again.'
     )
   })
 
   it('renders the screen when the verdict is compatible', () => {
-    const renderer = render(
-      createElement(
-        DeckHostRefusal,
-        {
-          verdict: { kind: 'ok' },
-          onUpdate: () => {}
-        },
-        createElement('Child' as never)
-      )
-    )
-    expect(renderer.root.findAllByType('Child' as never)).toHaveLength(1)
-    expect(renderer.root.findAllByType('Text' as never)).toHaveLength(0)
+    const renderer = render({ kind: 'ok' })
+    expect(renderer.root.findAllByType(Screen)).toHaveLength(1)
+    expect(renderer.root.findAllByType(Text)).toHaveLength(0)
   })
 })

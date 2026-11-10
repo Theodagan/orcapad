@@ -25,8 +25,7 @@ describe('deck destinations', () => {
 
   it('labels every destination', () => {
     for (const destination of DECK_DESTINATIONS) {
-      expect(destination.label[0]).toMatch(/^deck\.destination\./)
-      expect(destination.label[1]).not.toBe('')
+      expect(destination.labelKey).toMatch(/^deck\.destination\./)
     }
   })
 

@@ -182,6 +182,44 @@
       "children_other": "{{count}} children"
     }
   },
+  "deck": {
+    "chord": {
+      "back": "Back",
+      "confirm": "Select",
+      "dictation": "Dictate",
+      "dismiss": "Dismiss",
+      "focusNextPanel": "Next panel",
+      "focusPreviousPanel": "Previous panel",
+      "help": "Controls",
+      "move": "Move",
+      "scrollDown": "Scroll down",
+      "scrollUp": "Scroll up",
+      "stage": "Stage",
+      "toggleLeftPanel": "Toggle left panel",
+      "toggleRightPanel": "Toggle right panel",
+      "unstage": "Unstage",
+      "wheels": "Key wheels"
+    },
+    "destination": {
+      "approvals": "Approvals",
+      "overview": "Overview",
+      "ports": "Ports",
+      "projects": "Projects",
+      "sessions": "Sessions",
+      "settings": "Settings"
+    },
+    "feature": {
+      "agentHistory": "Agent history",
+      "agentSession": "Agent sessions",
+      "quickCommands": "Quick commands"
+    },
+    "reason": {
+      "notConnected": "This desktop is not connected.",
+      "notDeclared": "This desktop does not provide it.",
+      "unknownHost": "This desktop has not said what it supports yet.",
+      "unsupportedHost": "This desktop is too old for it."
+    }
+  },
   "dictation": {
     "controls": {
       "durationMinutes_one": "{{count}} minute",

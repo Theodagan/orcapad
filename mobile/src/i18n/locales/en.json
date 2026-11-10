@@ -61,7 +61,8 @@
       "voice": "Voice",
       "notifications": "Notifications",
       "troubleshooting": "Troubleshooting",
-      "about": "About"
+      "about": "About",
+      "interface": "Interface"
     },
     "nativeChatSettingsScreen": {
       "title": "Chat UI",
@@ -4862,6 +4863,83 @@
     "activity": {
       "needsWindow": "Couldn’t update. Open Orca on {{desktop}}.",
       "failed": "Couldn’t update the agent list."
+    }
+  },
+  "deck": {
+    "title": "Deck",
+    "empty": {
+      "body": "Nothing here yet. Pair a desktop or start an agent to fill it."
+    },
+    "interface": {
+      "deck": "Deck",
+      "orca": "Orca"
+    },
+    "help": {
+      "title": "Controls"
+    },
+    "hostRefusal": {
+      "title": "This desktop cannot talk to this app",
+      "mobileTooOld": "This desktop needs a newer Orcapad. Update the app, then try this host again.",
+      "desktopTooOld": "This desktop is too old for this build of Orcapad. Update Orca on your computer, then try again.",
+      "update": "Update Orcapad"
+    },
+    "reason": {
+      "notConnected": "This desktop is not connected.",
+      "unknownHost": "This desktop has not said what it supports yet.",
+      "notDeclared": "This desktop does not provide it.",
+      "unsupportedHost": "This desktop is too old for it."
+    },
+    "feature": {
+      "agentHistory": "Agent history",
+      "quickCommands": "Quick commands",
+      "agentSession": "Agent sessions"
+    },
+    "destination": {
+      "overview": "Overview",
+      "sessions": "Sessions",
+      "projects": "Projects",
+      "approvals": "Approvals",
+      "ports": "Ports",
+      "settings": "Settings"
+    },
+    "chord": {
+      "confirm": "Select",
+      "dismiss": "Dismiss",
+      "back": "Back",
+      "focusPreviousPanel": "Previous panel",
+      "focusNextPanel": "Next panel",
+      "toggleLeftPanel": "Toggle left panel",
+      "toggleRightPanel": "Toggle right panel",
+      "scrollUp": "Scroll up",
+      "scrollDown": "Scroll down",
+      "move": "Move",
+      "help": "Controls",
+      "dictation": "Dictate",
+      "wheels": "Key wheels",
+      "stage": "Stage",
+      "unstage": "Unstage"
+    },
+    "update": {
+      "available": "Orcapad",
+      "availableSuffix": "is ready to install.",
+      "open": "Update now",
+      "later": "Later",
+      "title": "App update",
+      "installed": "Installed",
+      "latest": "Latest",
+      "check": "Check for updates",
+      "download": "Update",
+      "install": "Install",
+      "checkFailed": "The update check failed",
+      "downloadFailed": "The download failed",
+      "installFailed": "Android did not install it",
+      "cancelled": "Download cancelled."
+    },
+    "installPermission": {
+      "title": "Allow installs from Orcapad",
+      "body": "Android asks once, in Settings, whether this app may install updates. Turn it on there, then come back and press Update.",
+      "open": "Open Android settings",
+      "later": "Not now"
     }
   }
 }
