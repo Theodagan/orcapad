@@ -1,4 +1,4 @@
-import type { DeckReleaseAsset } from './fork-release-update-source'
+import type { DeckReleaseAsset } from '../../app-update/fork-release-update-source'
 
 /**
  * D6: the APK is downloaded with `expo-file-system` and checked against the release before it is

@@ -18,3 +18,6 @@ mobile/app/index.tsx — entry redirects to the deck when the interface preferen
 mobile/src/settings/mobile-settings-menu-items.ts — the Interface row that switches shells — T7
 mobile/src/settings/settings-menu-screen.tsx — re-renders the menu when the Interface row switches — T7
 mobile/src/storage/interface-preference.ts — in-memory interface switch for the entry route and Settings, neither of which may import the deck (DECK-R40) — T8
+mobile/src/app-update/fork-release-update-source.ts — the fork APK channel; Orca screens ask it too, and Orca may not import the deck (DECK-R40) — T22
+mobile/src/app-update/app-update-channel.ts — picks the fork channel on Android (DECK-R47) — T22
+mobile/src/app-update/app-update-runtime.ts — Android update checks now read the fork releases — T22

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { downloadUpdate, UpdateDownloadError, type DownloadDeps } from './download-update'
-import type { DeckReleaseAsset } from './fork-release-update-source'
+import type { DeckReleaseAsset } from '../../app-update/fork-release-update-source'
 
 const SHA = 'a'.repeat(64)
 const RELEASE: DeckReleaseAsset = {
