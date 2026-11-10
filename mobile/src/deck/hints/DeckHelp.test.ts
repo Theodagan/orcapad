@@ -1,0 +1,31 @@
+import { describe, expect, it } from 'vitest'
+import { bindingsForScope, type DeckBinding } from '../controller/chord-table'
+import { helpRows } from './DeckHelp'
+
+const translate = (key: string, fallback?: string): string => fallback ?? key
+
+describe('deck help diagram', () => {
+  it('labels each control from the live chord table', () => {
+    const rows = helpRows(translate, 'root')
+    expect(rows.find((row) => row.control === 'a')?.label).toBe('A: Select')
+    expect(rows.find((row) => row.control === 'l1')?.label).toBe('L1: Previous panel')
+    expect(rows.find((row) => row.control === 'start')?.label).toBe('START: Controls')
+  })
+
+  it('shows the modifier on the controls the Y layer rebinds', () => {
+    const changed: readonly DeckBinding[] = bindingsForScope('root').map((binding) =>
+      binding.chord.control === 'l1'
+        ? { ...binding, label: ['deck.chord.renamed', 'Renamed'] }
+        : binding
+    )
+    expect(helpRows(translate, 'root', changed).find((row) => row.control === 'l1')?.label).toBe(
+      'L1: Renamed'
+    )
+  })
+
+  it('omits controls the table leaves free on this screen', () => {
+    const controls = helpRows(translate, 'wheel').map((row) => row.control)
+    expect(controls).toContain('a')
+    expect(controls).not.toContain('l3')
+  })
+})
