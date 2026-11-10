@@ -21,3 +21,6 @@ mobile/src/storage/interface-preference.ts — in-memory interface switch for th
 mobile/src/app-update/fork-release-update-source.ts — the fork APK channel; Orca screens ask it too, and Orca may not import the deck (DECK-R40) — T22
 mobile/src/app-update/app-update-channel.ts — picks the fork channel on Android (DECK-R47) — T22
 mobile/src/app-update/app-update-runtime.ts — Android update checks now read the fork releases — T22
+.github/workflows/mobile-android-release.yml — the fork release key is required and the tag prefix is the fork's (DECK-R45/R46) — T15, T16
+mobile/scripts/prepare-android-release.mjs — the fork's tag prefix in the version resolution — T16
+mobile/src/mobile-release/prepare-android-release-script.test.ts — expects the fork's tag prefix — T16
