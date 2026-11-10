@@ -1,57 +1,28 @@
 import { useSyncExternalStore } from 'react'
 import {
   DEFAULT_INTERFACE_PREFERENCE,
-  loadInterfacePreference,
-  saveInterfacePreference,
+  getInterfacePreference,
+  setInterfacePreference,
+  startInterfacePreference,
+  subscribeInterfacePreference,
+  toggleInterfacePreference,
   type MobileInterfacePreference
-} from '../../storage/preferences'
+} from '../../storage/interface-preference'
 
-// One in-memory copy: the entry route reads it synchronously on first render, before storage answers.
-let current: MobileInterfacePreference = DEFAULT_INTERFACE_PREFERENCE
-let started: Promise<void> | null = null
-const listeners = new Set<() => void>()
-
-function publish(next: MobileInterfacePreference): void {
-  if (next === current) {
-    return
-  }
-  current = next
-  for (const listener of listeners) {
-    listener()
-  }
+/**
+ * The deck's view of the interface switch. The store itself lives in Orca's storage layer because
+ * the entry route and the Settings row read it too, and neither may import the deck (DECK-R40).
+ */
+export {
+  getInterfacePreference,
+  setInterfacePreference,
+  startInterfacePreference,
+  subscribeInterfacePreference,
+  toggleInterfacePreference
 }
+export type { MobileInterfacePreference }
 
-/** Loads the stored choice once per launch; the default shows until it lands. */
-export function startInterfacePreference(): Promise<void> {
-  started ??= loadInterfacePreference()
-    .then(publish)
-    .catch((error: unknown) => {
-      console.warn('Interface preference could not be loaded', error)
-    })
-  return started
-}
-
-export function getInterfacePreference(): MobileInterfacePreference {
-  return current
-}
-
-export function subscribeInterfacePreference(listener: () => void): () => void {
-  listeners.add(listener)
-  return () => {
-    listeners.delete(listener)
-  }
-}
-
-/** Writes through to storage; the in-memory switch happens first so a relaunch never races it. */
-export async function setInterfacePreference(next: MobileInterfacePreference): Promise<void> {
-  publish(next)
-  await saveInterfacePreference(next)
-}
-
-/** The Settings row's switch: the deck when Orca is showing, and the other way round. */
-export function toggleInterfacePreference(): Promise<void> {
-  return setInterfacePreference(current === 'deck' ? 'orca' : 'deck')
-}
+export const DEFAULT_DECK_INTERFACE: MobileInterfacePreference = DEFAULT_INTERFACE_PREFERENCE
 
 export function useInterfacePreference(): MobileInterfacePreference {
   return useSyncExternalStore(subscribeInterfacePreference, getInterfacePreference)

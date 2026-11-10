@@ -5,7 +5,7 @@ import { MobileSettingsSection } from './mobile-settings-menu'
 import { mobileSettingsMenuItems } from './mobile-settings-menu-items'
 import { SettingsScreen } from './settings-screen-frame'
 import { useMobileTranslation } from '../i18n/use-mobile-translation'
-import { useInterfacePreference } from '../deck/entry/interface-preference'
+import { useInterfacePreference } from '../storage/interface-preference'
 
 export default function SettingsMenuScreen({
   push,

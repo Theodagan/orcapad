@@ -14,7 +14,7 @@ import { translate } from '../i18n/mobile-i18n'
 import {
   getInterfacePreference,
   toggleInterfacePreference
-} from '../deck/entry/interface-preference'
+} from '../storage/interface-preference'
 
 export function mobileSettingsMenuItems(push: (route: string) => void): MobileSettingsMenuItem[] {
   return [
