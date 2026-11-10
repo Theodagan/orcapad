@@ -3,7 +3,9 @@ src/terminal/terminal-webview-engine.generated.ts
 src/terminal/terminal-webview-engine-css.generated.ts
 src/terminal/terminal-webview-document-script.generated.ts
 src/components/pr-sidebar/mermaid-page-engine.generated.ts
+src/components/pr-sidebar/mermaid-webview-engine.generated.ts
 src/components/katex-page-style.generated.ts
+src/components/rich-markdown-editor-document-script.generated.ts
 .expo/
 dist/
 /android/
@@ -17,3 +19,4 @@ dist/
 web-build/
 /modules/*/android/build/
 /modules/*/android/.gradle/
+/packages/expo-two-way-audio/android/build/
