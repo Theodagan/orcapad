@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type {
-  ControllerButton,
-  ControllerSample
+import {
+  CONTROLLER_AXES,
+  neutralSample,
+  type ControllerAxis,
+  type ControllerButton,
+  type ControllerSample
 } from '../../gamepad/controller-input/controller-sample'
-import { neutralSample } from '../../gamepad/controller-input/controller-sample'
 import { createDeckChordMatcher, DICTATION_HOLD_MS, PANEL_TOGGLE_HOLD_MS } from './deck-chord-input'
 import type { DeckIntent } from './chord-table'
 
