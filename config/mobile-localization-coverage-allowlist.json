@@ -644,5 +644,376 @@
     "dynamic": false,
     "count": 1,
     "reason": "Internal RPC reply validation diagnostic; the operation reader rejects the reply and the UI renders automationErrorMessage, never the Zod issue text."
+  },
+  {
+    "filePath": "mobile/src/gamepad/ActionHintBar.tsx",
+    "kind": "jsx-attribute:accessibilityLabel",
+    "text": "Controller actions",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/ActionHintBar.tsx",
+    "kind": "jsx-attribute:accessibilityLabel",
+    "text": "Controller actions,",
+    "dynamic": true,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/bindings/go-wheel-actions.ts",
+    "kind": "object-property:label",
+    "text": "Back",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/bindings/go-wheel-actions.ts",
+    "kind": "object-property:label",
+    "text": "Chat ⇄ Terminal",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/bindings/go-wheel-actions.ts",
+    "kind": "object-property:label",
+    "text": "New worktree",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/bindings/go-wheel-actions.ts",
+    "kind": "object-property:label",
+    "text": "Pages",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/bindings/go-wheel-actions.ts",
+    "kind": "object-property:label",
+    "text": "Pair desktop",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/bindings/go-wheel-actions.ts",
+    "kind": "object-property:label",
+    "text": "Settings",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/bindings/use-agent-controller-binding.ts",
+    "kind": "object-property:label",
+    "text": "Show or hide prompt",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/bindings/use-agent-controller-binding.ts",
+    "kind": "object-property:label",
+    "text": "Stop agent",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/bindings/use-terminal-controller-binding.ts",
+    "kind": "object-property:label",
+    "text": "Stop agent",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-connection/ControllerConnectionNotice.tsx",
+    "kind": "jsx-text",
+    "text": "Controller disconnected — touch still works",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/action-hints.ts",
+    "kind": "object-property:label",
+    "text": "More",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/controller-bindings.ts",
+    "kind": "object-property:label",
+    "text": "L2",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/controller-bindings.ts",
+    "kind": "object-property:label",
+    "text": "L3",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/controller-bindings.ts",
+    "kind": "object-property:label",
+    "text": "LB",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/controller-bindings.ts",
+    "kind": "object-property:label",
+    "text": "Left stick",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/controller-bindings.ts",
+    "kind": "object-property:label",
+    "text": "R2",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/controller-bindings.ts",
+    "kind": "object-property:label",
+    "text": "R3",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/controller-bindings.ts",
+    "kind": "object-property:label",
+    "text": "RB",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/controller-bindings.ts",
+    "kind": "object-property:label",
+    "text": "Right stick",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/controller-bindings.ts",
+    "kind": "object-property:label",
+    "text": "Select",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/controller-bindings.ts",
+    "kind": "object-property:label",
+    "text": "Start",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/controller-bindings.ts",
+    "kind": "object-property:label",
+    "text": "X modifier",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/controller-bindings.ts",
+    "kind": "object-property:label",
+    "text": "X+L2",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/controller-bindings.ts",
+    "kind": "object-property:label",
+    "text": "X+LB",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/controller-bindings.ts",
+    "kind": "object-property:label",
+    "text": "X+R2",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/controller-bindings.ts",
+    "kind": "object-property:label",
+    "text": "X+RB",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/controller-bindings.ts",
+    "kind": "object-property:label",
+    "text": "X+Select",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/controller-bindings.ts",
+    "kind": "object-property:label",
+    "text": "X+Y",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/dpad-navigation-bindings.ts",
+    "kind": "object-property:label",
+    "text": "D-pad down",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/dpad-navigation-bindings.ts",
+    "kind": "object-property:label",
+    "text": "D-pad left",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/dpad-navigation-bindings.ts",
+    "kind": "object-property:label",
+    "text": "D-pad right",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/controller-input/dpad-navigation-bindings.ts",
+    "kind": "object-property:label",
+    "text": "D-pad up",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/wheel/WheelOverlay.tsx",
+    "kind": "jsx-attribute:accessibilityLabel",
+    "text": "Wheel",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/wheel/WheelOverlay.tsx",
+    "kind": "jsx-attribute:accessibilityLabel",
+    "text": "Wheel,",
+    "dynamic": true,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/wheel/WheelOverlay.tsx",
+    "kind": "jsx-attribute:label",
+    "text": "Back",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/wheel/WheelOverlay.tsx",
+    "kind": "jsx-attribute:label",
+    "text": "Cancel",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/wheel/use-wheel-controller.ts",
+    "kind": "object-property:message",
+    "text": "Could not load",
+    "dynamic": false,
+    "count": 2
+  },
+  {
+    "filePath": "mobile/src/gamepad/wheel/wheel-layouts.ts",
+    "kind": "object-property:label",
+    "text": "Back",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/wheel/wheel-layouts.ts",
+    "kind": "object-property:label",
+    "text": "Chat ⇄ Terminal",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/wheel/wheel-layouts.ts",
+    "kind": "object-property:label",
+    "text": "Close tab",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/wheel/wheel-layouts.ts",
+    "kind": "object-property:label",
+    "text": "Do",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/wheel/wheel-layouts.ts",
+    "kind": "object-property:label",
+    "text": "Go",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/wheel/wheel-layouts.ts",
+    "kind": "object-property:label",
+    "text": "Keyboard",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/wheel/wheel-layouts.ts",
+    "kind": "object-property:label",
+    "text": "Keys",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/wheel/wheel-layouts.ts",
+    "kind": "object-property:label",
+    "text": "Launch agent",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/wheel/wheel-layouts.ts",
+    "kind": "object-property:label",
+    "text": "New worktree",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/wheel/wheel-layouts.ts",
+    "kind": "object-property:label",
+    "text": "Pages",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/wheel/wheel-layouts.ts",
+    "kind": "object-property:label",
+    "text": "Stop agent",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/wheel/wheel-layouts.ts",
+    "kind": "object-property:label",
+    "text": "View",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/wheel/wheel-menu.ts",
+    "kind": "object-property:label",
+    "text": "More…",
+    "dynamic": false,
+    "count": 1
+  },
+  {
+    "filePath": "mobile/src/gamepad/wheel/wheel-menu.ts",
+    "kind": "object-property:message",
+    "text": "Loading…",
+    "dynamic": false,
+    "count": 1
   }
 ]

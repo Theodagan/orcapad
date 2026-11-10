@@ -31,6 +31,11 @@ follow-up runs to refine; aim for **most of the job done and everything compilin
     `pnpm test <path> --maxWorkers=2`; lint `pnpm exec oxlint <files>`, format
     `pnpm exec oxfmt --write <files>`. Mobile-only: in `mobile/`, `pnpm typecheck`, `pnpm lint`.
   - No vague file names (`helpers`, `utils`…); comments only when code can't say it, one line.
+  - **Every user-visible deck string is localized** with `useMobileTranslation`
+    (`mobile/src/i18n/`) and the catalogs in `mobile/locales/`; the mobile localization coverage check
+    in `pnpm check:changed` fails otherwise. Do not add deck strings to
+    `config/mobile-localization-coverage-allowlist.json` (its `mobile/src/gamepad/` entries are the
+    interim pad code, reviewed 2026-11-10).
   - No type assertions except `as const` (or a `SAFETY:` comment).
 - **Scope:** new code goes in `mobile/src/deck/` and `mobile/app/deck/`. No Orca module imports from
   them. Any edit outside them is appended to `mobile/src/deck/UPSTREAM-TOUCHES.md`
