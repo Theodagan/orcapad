@@ -76,7 +76,7 @@ The full suite is the bar, and it found three things the per-card runs could not
   raw-control rule treats like `controller-input/`; `help-rows.ts` derives its controls from the
   table instead of naming them. — T26
 
-After them: `npx vitest run` in `mobile/` — 717 files, 4750 passed, 4 skipped, 0 failed.
+After them: `npx vitest run` in `mobile/` — 717 files, 4751 passed, 4 skipped, 0 failed.
 
 ## Steps 8–15 — skipped (run budget)
 
