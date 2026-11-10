@@ -5,9 +5,33 @@ in this repository (`Theodagan/orcapad`, a public fork of `stablyai/orca`). This
 brief: work through it top to bottom in one run. The owner tests on the device afterwards and sends
 follow-up runs to refine; aim for **most of the job done and everything compiling**, not perfection.
 
+## Run 2 — start here
+
+Run 1 is on branch `implement/deck-build` (42 commits): steps 1–5 done, step 6 half done, step 7
+started. **Continue on that same branch** (merge `origin/main` into it first) and keep its
+`mobile/src/deck/HANDOFF-LOG.md` going.
+
+1. **Make `pnpm check:changed` green before anything else.** Run 1 left four failures:
+   - _format_ — `mobile/src/settings/mobile-settings-menu-items.ts`.
+   - _changed-code quality_ — 33 type assertions (`as …`): mostly `deck/controller/chord-table.ts` and
+     `deck/navigation/destinations.ts`, also `DeckHostRefusal`, `lenient-host-data.ts`,
+     `mobile-settings-menu-items.ts` and several tests. Replace them with annotations, `satisfies`
+     or type guards; a cast that is truly unavoidable gets the `SAFETY:` comment the error message
+     shows.
+   - _mobile localization coverage_ — English labels sit beside keys in `chord-table.ts` (and
+     `destinations.ts`): keep the keys, drop the English literals.
+   - _mobile localization_ — every `deck.*` key and `settings.menuItems.interface` is missing from
+     `mobile/src/i18n/locales/en.json`: add them.
+     Commit as `deck: make check:changed green`, push, then continue.
+2. **Mislabelled in run 1:** T21 and T23 were logged "done" but are not implemented. Do them.
+3. **Resume at T40** (step 7) and go to the end. Tasks struck through below are done.
+4. When the run ends, open the PR (`implement/deck-build` → `main`, title `deck: build 1`) with the
+   description _How to run this_ asks for, written into the PR itself — not into `docs/`, which git
+   ignores (run 1's report and PR body were lost there).
+
 ## How to run this
 
-- Branch `deck/build-1` from `main`. One commit per step below (`deck(CFnn): <title>`), one PR
+- Branch: `implement/deck-build` (see _Run 2_). One commit per step (`deck(CFnn): <title>`), one PR
   against `Theodagan/orcapad` `main` titled `deck: build 1`. Open it as a draft early and push as
   you go, so partial progress is never lost.
 - Follow the steps in order: each builds on the previous ones. If a step is blocked, do what you can,
@@ -27,13 +51,16 @@ follow-up runs to refine; aim for **most of the job done and everything compilin
     invariants (T27–T32), the update state machine and digest check (T19, T20), lenient host-data
     parsing (T12), request-bound decision confirmation (T61), wheel gesture and gain maths (T74, T75).
     Not worth writing: render-only, copy, style, registry-count or mock-echo tests.
-  - Before every push: `pnpm check:changed` (never `--no-verify`). Typecheck `pnpm tc`; tests
+  - **Before every push: `pnpm check:changed` must pass** (never `--no-verify`). Run 1 skipped it and
+    left four failing checks; a push with a red `check:changed` is not progress. Typecheck `pnpm tc`; tests
     `pnpm test <path> --maxWorkers=2`; lint `pnpm exec oxlint <files>`, format
     `pnpm exec oxfmt --write <files>`. Mobile-only: in `mobile/`, `pnpm typecheck`, `pnpm lint`.
   - No vague file names (`helpers`, `utils`…); comments only when code can't say it, one line.
   - **Every user-visible deck string is localized** with `useMobileTranslation`
-    (`mobile/src/i18n/`) and the catalogs in `mobile/locales/`; the mobile localization coverage check
-    in `pnpm check:changed` fails otherwise. Do not add deck strings to
+    (`mobile/src/i18n/`): add each key to `mobile/src/i18n/locales/en.json` (the catalog the app
+    loads; `mobile/locales/` is not it) and to `en-runtime-required.json` when the boot bundle needs
+    it. Put only keys in code, never an English fallback beside the key — the coverage check reads
+    every string literal in a label position. Do not add deck strings to
     `config/mobile-localization-coverage-allowlist.json` (its `mobile/src/gamepad/` entries are the
     interim pad code, reviewed 2026-11-10).
   - No type assertions except `as const` (or a `SAFETY:` comment).
@@ -147,161 +174,56 @@ also a risk (§11).
 
 ### Step 1 — Seam and shell skeleton (`CF01`)
 
-- **T4 — Start the touched-file ledger**
-  - Files: `mobile/src/deck/UPSTREAM-TOUCHES.md` (create)
-  - Do: Header naming the baseline (upstream `c82839fb7b6` + pad plumbing, decided 2026-11-09) and the append-only line format `path — reason — task`.
-  - Accept: the file exists with the baseline line and format.
-- **T3 — Add the upstream merge check script**
-  - Files: `mobile/scripts/deck-upstream-check.mjs` (create), `mobile/package.json` (edit: `deck:upstream-check` script)
-  - Do: Script for the PRD §5.3 checklist: (1) for each Orca module imported from `src/deck/**`, the native file (not only `.web.*`) exists; (2) each RPC method name the deck calls (collected from `src/deck/**` operation files) exists in `src/main/runtime/rpc/methods/`. Prints a pass/fail table.
-  - Accept: `pnpm deck:upstream-check` exits 0 on the baseline and exits 1 when a probe import to a deleted file is added to a fixture directory used by its own test (`mobile/scripts/deck-upstream-check.test.ts`).
-- **T5 — Add the interface preference**
-  - Files: `mobile/src/storage/preferences.ts` (edit), `mobile/src/deck/entry/interface-preference.ts` (create), `mobile/src/deck/entry/interface-preference.test.ts` (create)
-  - Do: One stored value `interface: 'deck' | 'orca'`, default `'orca'` until M3, read through a deck-owned hook. Log the `preferences.ts` touch.
-  - Accept: unit test covers default, write, read-after-restart (mocked storage).
-- **T6 — Mount the deck route group**
-  - Files: `mobile/app/deck/_layout.tsx` (create), `mobile/app/deck/index.tsx` (create), `mobile/src/deck/DeckShell.tsx` (create)
-  - Do: Expo Router group for the deck; `DeckShell` renders an empty frame with the deck background. Inherits `RpcClientProvider` and `ControllerShell` from `app/_layout.tsx`.
-  - Accept: navigating to `/deck` on device shows the deck frame; Orca's routes still work. → the device part is the owner's later test; you prove the behaviour in code (and against `pnpm mock-server` where it serves the data).
-- **T7 — Route the app entry by the interface preference**
-  - Files: `mobile/app/index.tsx` (edit), `mobile/src/settings/mobile-settings-menu-items.ts` (edit)
-  - Do: `app/index.tsx` redirects to `/deck` when the preference is `deck`; Orca Settings gets an "Interface" row to switch. Log both touches.
-  - Accept: toggling the row and relaunching lands on the chosen shell (device check + a render test of `app/index.tsx`). → the device part is the owner's later test; you prove the behaviour in code (and against `pnpm mock-server` where it serves the data).
-- **T8 — Add the deck boundary test**
-  - Files: `mobile/src/deck/deck-boundary.test.ts` (create)
-  - Do: Fails when any file outside `src/deck/` and `app/deck/` imports from them (DECK-R40 seam), and when `src/deck/**` imports `mobile-web-shell/**`, `modules/orca-mobile-web-shell/**` or `transport/mobile-web-bundle-*` (DECK-R40). Pattern from `gamepad-boundary.test.ts` (source scan with `typescript`).
-  - Accept: test passes; adding a probe import in a fixture makes each rule fail (predicates unit-tested like the gamepad ratchets).
-- **T9 — Create and verify the coverage ledger**
-  - Files: `mobile/src/deck/COVERAGE.md` (create)
-  - Do: One row per PRD §6 area: rule IDs → tier (R/N/H/P) → status → owning file. Verify each R row by naming the Orca hook or RPC that serves it (e.g. Sessions → `worktree/worktree-list-snapshot.ts`, prompts → `session/native-chat/use-mobile-native-chat-prompts.ts`); correct tiers that are wrong.
-  - Accept: no row says "unverified"; every R row cites a file that exists (`pnpm deck:upstream-check` style spot check).
-- **T11 — Feature gate hook**
-  - Files: `mobile/src/deck/host/use-host-feature.ts` (create), `mobile/src/deck/host/disabled-reason.ts` (create), tests (create)
-  - Do: `useHostFeature(capability)` returns `{ available: true } | { available: false, reason }` from the negotiated capabilities (`transport/mobile-runtime-capability-negotiation.ts`). DECK-R41, DECK-R37.
-  - Accept: tests cover: capability present, absent (reason "This desktop doesn't provide …"), host not connected (reason distinct).
-- **T12 — Lenient host-data parsing and engine parser audit**
-  - Files: `mobile/src/deck/host/lenient-host-data.ts` (create, + test), `mobile/src/deck/COVERAGE.md` (edit: "Strict parsers" section)
-  - Do: Helpers that wrap Orca reply schemas so unknown fields pass and unknown enum values map to a neutral `unknown` (DECK-R42). Audit the `*-reply-schema.ts` files the deck will read and list strict ones.
-  - Accept: tests feed an unknown field and an unknown status value and get data + `unknown`; the audit lists every schema the ledger's R rows rely on.
+- ~~T4 — Start the touched-file ledger~~ done in run 1 (keep it working).
+- ~~T3 — Add the upstream merge check script~~ done in run 1 (keep it working).
+- ~~T5 — Add the interface preference~~ done in run 1 (keep it working).
+- ~~T6 — Mount the deck route group~~ done in run 1 (keep it working).
+- ~~T7 — Route the app entry by the interface preference~~ done in run 1 (keep it working).
+- ~~T8 — Add the deck boundary test~~ done in run 1 (keep it working).
+- ~~T9 — Create and verify the coverage ledger~~ done in run 1 (keep it working).
+- ~~T11 — Feature gate hook~~ done in run 1 (keep it working).
+- ~~T12 — Lenient host-data parsing and engine parser audit~~ done in run 1 (keep it working).
 
 ### Step 2 — Orca design system for the deck, host refusal screen (`CF02`)
 
-- **T10 — Build the deck theme on Orca's design system**
-  - Files: `mobile/src/deck/theme/deck-theme.ts` (create), `mobile/src/deck/theme/deck-theme.test.ts` (create)
-  - Do: DECK-R34: re-export Orca's `paletteForScheme`, `spacing`, `radii`, `typography`, `feedback` under the maquette's role names (PRD §7.8 table) and add only page title size (22), focus ring, and wheel kind colours/shapes derived from Orca's palette. Follows Orca's light/dark scheme and appearance preference.
-  - Accept: test asserts every deck role resolves to an Orca token or a listed addition, in both schemes; status colours meet contrast on their pane backgrounds (approach from `theme/mobile-theme-contrast.test.ts`).
-- **T104 — Component reuse inventory**
-  - Files: `mobile/src/deck/REUSE.md` (create)
-  - Do: For each deck element in PRD §7.8's table, confirm the Orca component exists after T1, is router-free (or name the one router reference to lift out, e.g. `MobileFileExplorerPanel`), and note props the deck needs. Add a row per new deck component with why no Orca piece fit (DECK-R50).
-  - Accept: every §7.8 row has a verified path and a reuse verdict; `rg` confirms each path exists.
-- **T106 — Deck design guard**
-  - Files: `mobile/src/deck/deck-design-guard.test.ts` (create)
-  - Do: Source scan of `src/deck/**` (except `theme/deck-theme.ts`): fails on hex/`rgb(` colour literals, numeric `fontSize`, `borderRadius` and `fontFamily` literals, and imports of maquette `logos/` when `MobileAgentIcon` has the agent (DECK-R34, R35). Same idea as the desktop design-system lint in `AGENTS.md`.
-  - Accept: passes on the deck; a probe file with `color: '#fff'` makes it fail.
-- **T13 — Host refusal screen**
-  - Files: `mobile/src/deck/host/DeckHostRefusal.tsx` (create, + render test)
-  - Do: When `transport/protocol-compat.ts` reports the desktop refuses this client, reuse `ProtocolBlockScreen`'s wording and `MobileStateView`; show the plain reason and the in-app Update entry (wired in T23). DECK-R43, DECK-R39.
-  - Accept: render test with a refused verdict shows the message and an Update control; with a compatible verdict renders children.
+- ~~T10 — Build the deck theme on Orca's design system~~ done in run 1 (keep it working).
+- ~~T104 — Component reuse inventory~~ done in run 1 (keep it working).
+- ~~T106 — Deck design guard~~ done in run 1 (keep it working).
+- ~~T13 — Host refusal screen~~ done in run 1 (keep it working).
 
 ### Step 3 — Fork update source and download (`CF03`)
 
-- **T17 — Fork release update source**
-  - Files: `mobile/src/deck/updates/fork-release-update-source.ts` (create, + test with fixtures)
-  - Do: Implements the existing `AppUpdateSource` interface (`app-update/app-update-source.ts`) against the fork repo and tag prefix; returns version, APK asset URL, size and `digest` (sha256) when GitHub provides it. Reuse `parseMobileAndroidTagVersions`-style parsing; do not edit upstream's source (DECK-R47).
-  - Accept: tests cover newer version found, no newer version, tag without APK, rate-limited reply (error surfaced), never contacting `stablyai/orca`.
-- **T19 — Download and verify the update**
-  - Files: `mobile/src/deck/updates/download-update.ts` (create, + test)
-  - Do: `expo-file-system` resumable download to the cache dir with progress callback; verify size and sha256 (`expo-crypto`) against T17's digest; delete on mismatch.
-  - Accept: tests (mocked FS) cover progress, success, digest mismatch → error and file removed, cancel.
-- **T22 — Point Orca's update runtime at the fork source**
-  - Files: `mobile/src/app-update/app-update-runtime.ts` (edit)
-  - Do: Use the fork source from T17 so Orca's own screens (version strip, Settings rows) never offer upstream's APK. Log the touch.
-  - Accept: `pnpm test src/app-update` passes with a test asserting the configured source repo is the fork.
+- ~~T17 — Fork release update source~~ done in run 1 (keep it working).
+- ~~T19 — Download and verify the update~~ done in run 1 (keep it working).
+- ~~T22 — Point Orca's update runtime at the fork source~~ done in run 1 (keep it working).
 
 ### Step 4 — Fork release pipeline (workflow and script edits only) (`CF09`)
 
-- **T15 — Require the fork's release signing key in CI**
-  - Files: `.github/workflows/mobile-android-release.yml` (edit), `mobile/src/mobile-release/` (edit the signing plugin/script the workflow uses)
-  - Do: Read keystore, alias and passwords from fork secrets; fail the job when any is missing; never fall back to the debug key (DECK-R45). Document the off-repo backup location in `mobile/src/deck/RELEASING.md` (create).
-  - Accept: a dispatch run without secrets fails at the signing step; with secrets, `apksigner verify --print-certs` on the artifact shows the fork certificate.
-- **T16 — Publish releases to the fork under its own tag prefix**
-  - Files: `.github/workflows/mobile-android-release.yml` (edit)
-  - Do: Tag prefix from D3; release created on `Theodagan/orcapad`; remove or guard the job that checks out `stablyai/orca-marketing-website` (line ~274), which cannot run in the fork (DECK-R46).
-  - Accept: a `workflow_dispatch` run creates a release on the fork with one `.apk` asset and the expected tag.
+- ~~T15 — Require the fork's release signing key in CI~~ workflow edits are in `mobile/src/deck/pending-workflow-changes.patch`; the owner applies them (your token cannot push `.github/workflows/`). Nothing left for you.
+- ~~T16 — Publish releases to the fork under its own tag prefix~~ same as T15; the `prepare-android-release.mjs` part is done.
 
 ### Step 5 — Deck controller contract (`CF04`)
 
-- **T66 — Split keys setting**
-  - Files: `mobile/src/deck/settings/deck-settings-store.ts` (create, + test)
-  - Do: Deck settings store (split vs bottom keys, focus tick, haptics, sounds, prototype notes); used by T36, T65, T88.
-  - Accept: tests for defaults and persistence.
-- **T25 — Deck chord table**
-  - Files: `mobile/src/deck/controller/chord-table.ts` (create, + test)
-  - Do: One table: control/chord → intent → label → screen scope, per PAD-1…13, NAV-*, IH-6. Single source for bindings, hints (T33) and Help (T35).
-  - Accept: test asserts no duplicate chord per scope and every intent has a label.
-- **T26 — Deck binding layer over the existing input runtime**
-  - Files: `mobile/src/deck/controller/use-deck-bindings.ts` (create), `mobile/src/gamepad/bindings/surface-binding.ts` (edit only if a hook point is missing; log it)
-  - Do: While the deck is mounted, deck intents from the chord table take the controller via `controller-input/controller-runtime.ts` and `bindings/use-surface-binding.ts`; Orca-screen bindings stay inactive.
-  - Accept: a composed-screen test (spec 005 standard) shows a deck intent fires and no Orca-screen binding fires.
-- **T27 — Contract: A / X / B, and B never switches destination**
-  - Files: `mobile/src/deck/controller/contract-face-buttons.test.tsx` (create), `use-deck-bindings.ts` (edit)
-  - Do: PAD-1, PAD-11 (Y+B is the only back).
-  - Accept: test: B dismisses an open layer and does nothing else at root; Y+B pops history.
-- **T28 — Contract: L1/R1 and Y + L1/R1 tap / long-press**
-  - Files: `mobile/src/deck/controller/contract-shoulders.test.tsx` (create), `use-deck-bindings.ts` (edit)
-  - Do: PAD-2; PAD-6 with 450 ms long-press via `controller-input/tap-tracker.ts`, haptic on toggle.
-  - Accept: test with fake timers: tap moves panel focus, 450 ms hold toggles panel and fires haptic once.
-- **T29 — Contract: L2/R2 analog scroll everywhere**
-  - Files: `mobile/src/deck/controller/use-deck-scroll.ts` (create, + test)
-  - Do: PAD-3, SCR-11; reuse `bindings/controller-scroll-rate.ts` and `controller-scroll-tracker.ts`.
-  - Accept: test: trigger value maps to scroll rate monotonically; no other trigger meaning outside a wheel or Y chord.
-- **T30 — Contract: Y is a modifier only**
-  - Files: `mobile/src/deck/controller/contract-modifier.test.tsx` (create), `use-deck-bindings.ts` (edit)
-  - Do: PAD-9 per D2; reuse `controller-input/use-modifier-held.ts`.
-  - Accept: test: Y press/release alone fires no intent; Y held switches the active scope to the Y layer.
-- **T31 — Contract: arrows bound to the focused pane, one focus, stable restore**
-  - Files: `mobile/src/deck/focus/deck-focus.ts` (create, + test)
-  - Do: NAV-6/7/11/12 on `gamepad/focus/focus-registry.ts` and `zones/zone-grid.ts`; focus keys are stable ids.
-  - Accept: test: arrows never leave the focused pane; exactly one focused element; re-render keeps focus on the same key.
-- **T32 — Contract: Start, hold-Start dictation, L3/R3**
-  - Files: `mobile/src/deck/controller/contract-start-sticks.test.tsx` (create), `use-deck-bindings.ts` (edit)
-  - Do: PAD-7 (650 ms hold toggles dictation via `bindings/active-dictation.ts`); PAD-5 (L3/R3 alone inert; L3+R3 opens TUI wheels, wired in T81).
-  - Accept: fake-timer test for 650 ms threshold; L3 alone fires nothing.
-- **T33 — Hint strip with Y layer**
-  - Files: `mobile/src/deck/hints/DeckHintStrip.tsx` (create, + render test)
-  - Do: Reads the chord table for the current scope; shows the Y layer while Y is held (PAD-13, IH-6); never overflows (VIS-6, SD-2): drops lowest-priority hints.
-  - Accept: render test at 640 px width shows no overflow; holding Y swaps content.
-- **T34 — Hints on elements**
-  - Files: `mobile/src/deck/hints/Hintify.tsx` (create, + test)
-  - Do: HINT-2/6: focused element shows its button glyph; falls back to the strip when it would break layout (HINT-8).
-  - Accept: test: focused hintified element renders glyph; constrained layout routes it to the strip.
-- **T35 — Help diagram from live bindings**
-  - Files: `mobile/src/deck/hints/DeckHelp.tsx` (create, + test)
-  - Do: SD-10: controller drawing labelled from the chord table for the current screen.
-  - Accept: test: changing a binding in the table changes the diagram label.
-- **T36 — Focus tick**
-  - Files: `mobile/src/deck/feedback/focus-tick.ts` (create, + test)
-  - Do: SD-9: light click + `expo-haptics` on controller focus moves only, not taps; switch stored in deck settings.
-  - Accept: test: pad focus move triggers once, touch focus does not, switch off silences.
-- **T37 — Touch alternative registry**
-  - Files: `mobile/src/deck/controller/touch-alternatives.test.ts` (create)
-  - Do: DECK-R13/PAD-8: every timed or chorded intent in the chord table names its touch control.
-  - Accept: test fails when a chorded intent lacks a touch alternative.
-- **T105 — Pad-focus wrappers for Orca components**
-  - Files: `mobile/src/deck/focus/focusable-orca.tsx` (create, + test)
-  - Do: Small wrappers that put Orca components (rows, segmented control, switch, sheet primary button) in a `gamepad/zones/ZoneItem` with `ControllerFocusRing`, so pad focus is drawn without restyling the component and touch looks unchanged.
-  - Accept: render test: a wrapped `WorktreeListRow` shows the focus ring only when focused and calls the same handler on A as on tap.
+- ~~T66 — Split keys setting~~ done in run 1 (keep it working).
+- ~~T25 — Deck chord table~~ done in run 1 (keep it working).
+- ~~T26 — Deck binding layer over the existing input runtime~~ done in run 1 (keep it working).
+- ~~T27 — Contract: A / X / B, and B never switches destination~~ done in run 1 (keep it working).
+- ~~T28 — Contract: L1/R1 and Y + L1/R1 tap / long-press~~ done in run 1 (keep it working).
+- ~~T29 — Contract: L2/R2 analog scroll everywhere~~ done in run 1 (keep it working).
+- ~~T30 — Contract: Y is a modifier only~~ done in run 1 (keep it working).
+- ~~T31 — Contract: arrows bound to the focused pane, one focus, stable restore~~ done in run 1 (keep it working).
+- ~~T32 — Contract: Start, hold-Start dictation, L3/R3~~ done in run 1 (keep it working).
+- ~~T33 — Hint strip with Y layer~~ done in run 1 (keep it working).
+- ~~T34 — Hints on elements~~ done in run 1 (keep it working).
+- ~~T35 — Help diagram from live bindings~~ done in run 1 (keep it working).
+- ~~T36 — Focus tick~~ done in run 1 (keep it working).
+- ~~T37 — Touch alternative registry~~ done in run 1 (keep it working).
+- ~~T105 — Pad-focus wrappers for Orca components~~ done in run 1 (keep it working).
 
 ### Step 6 — APK installer, update flow and UI (`CF08`)
 
-- **T18 — APK installer**
-  - Files: `mobile/package.json` (edit: add `expo-intent-launcher`), `mobile/app.json` (edit: `android.permissions` += `REQUEST_INSTALL_PACKAGES`), `mobile/src/deck/updates/apk-installer.ts` (create)
-  - Do: Implement D6 directly (no device spike): `FileSystem.getContentUriAsync` + `IntentLauncher.startActivityAsync` with `INSTALL_PACKAGE`/`VIEW`, `GRANT_READ_URI_PERMISSION`, APK MIME type; add `expo-intent-launcher` and the `REQUEST_INSTALL_PACKAGES` permission. If a FileProvider turns out to be required, add it in a deck-owned config plugin.
-  - Accept: unit tests (mocked `expo-file-system` / `expo-intent-launcher`) cover success, missing file, intent refused; `app.json` declares the permission. Installing on a device is part of the owner's local test.
-- **T20 — Update state store**
-  - Files: `mobile/src/deck/updates/deck-update-store.ts` (create, + test)
-  - Do: States `idle → checking → available → downloading(progress) → ready → installing | error(reason)`; check on launch (non-blocking) and on demand; composes T17, T19, T18.
-  - Accept: state-machine tests cover every transition and every error reason (DECK-R49).
+- ~~T18 — APK installer~~ done in run 1 (keep it working).
+- ~~T20 — Update state store~~ done in run 1 (keep it working).
 - **T21 — Unknown-sources guidance**
   - Files: `mobile/src/deck/updates/install-permission-explainer.tsx` (create, + render test)
   - Do: Before the first install, explain Android's "install unknown apps" permission and open that setting via `IntentLauncher` (`MANAGE_UNKNOWN_APP_SOURCES` with package URI).
@@ -313,22 +235,13 @@ also a risk (§11).
 
 ### Step 7 — Navigation shell (`CF05`)
 
-- **T38 — Destinations registry**
-  - Files: `mobile/src/deck/navigation/destinations.ts` (create, + test)
-  - Do: UXA-R18: Overview (landing), Sessions, Projects, Approvals, Ports, Settings; one registry feeds nav, left wheel and previews.
-  - Accept: test asserts order, landing, and unique ids.
-- **T39 — Deck routes per destination**
-  - Files: `mobile/app/deck/(dest)/overview.tsx`, `sessions.tsx`, `projects.tsx`, `approvals.tsx`, `ports.tsx`, `settings.tsx` (create, placeholders)
-  - Do: One route per destination, each rendering an empty state with `MobileStateView` that says what is empty (DECK-R38).
-  - Accept: each route renders on device; render tests for empty states. → the device part is the owner's later test; you prove the behaviour in code (and against `pnpm mock-server` where it serves the data).
+- ~~T38 — Destinations registry~~ done in run 1 (keep it working).
+- ~~T39 — Deck routes per destination~~ done in run 1 (keep it working).
 - **T40 — Context resolver**
   - Files: `mobile/src/deck/context/deck-context.ts` (create, + test)
   - Do: UXA-R23: current host / project / workspace / session / request from the route + stores; session actions only on session screens (DECK-R4).
   - Accept: table test over route shapes returns the right context and session-action visibility.
-- **T41 — Navigation history and Y + B**
-  - Files: `mobile/src/deck/navigation/deck-history.ts` (create, + test)
-  - Do: History stack for Y+B (PAD-11); B never pops it.
-  - Accept: test: Overview → Projects → workspace, Y+B twice returns to Overview.
+- ~~T41 — Navigation history and Y + B~~ done in run 1 (keep it working).
 - **T42 — Panel columns system**
   - Files: `mobile/src/deck/panels/PanelColumns.tsx` (create), `mobile/src/deck/panels/panel-registry.ts` (create), tests
   - Do: DECK-R3/PANEL-1/PNL-2: left and right columns split width, never overlay; right panels per screen from a registry that returns disabled reasons.
