@@ -88,7 +88,7 @@
       },
       "usesCleartextTraffic": true,
       "allowBackup": false,
-      "permissions": ["RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS"],
+      "permissions": ["RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS", "REQUEST_INSTALL_PACKAGES"],
       "package": "com.theodagan.orcapad",
       "versionCode": 28
     },

@@ -25,3 +25,5 @@ mobile/src/app-update/app-update-runtime.ts — Android update checks now read t
 mobile/scripts/prepare-android-release.mjs — the fork's tag prefix in the version resolution — T16
 mobile/src/mobile-release/prepare-android-release-script.test.ts — expects the fork's tag prefix — T16
 mobile/src/gamepad/controller-provider.tsx — the deck reads live samples for chords Orca's resolver table cannot express (Y modifier, D2) — T26
+mobile/package.json, mobile/pnpm-lock.yaml — `expo-intent-launcher` for the in-app APK install (D6) — T18
+mobile/app.json — declares REQUEST_INSTALL_PACKAGES for the in-app APK install (D6) — T18
