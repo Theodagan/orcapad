@@ -12,13 +12,13 @@ reinstall: Android refuses an update signed by a different key.
   (`Orcapad release key`), holding the `.keystore` file and its two passwords.
 - CI gets it as repository secrets and one variable:
 
-| Name                              | Kind     | What it is                                   |
-| --------------------------------- | -------- | -------------------------------------------- |
-| `ORCA_ANDROID_KEYSTORE_BASE64`    | secret   | the keystore, base64-encoded                 |
-| `ORCA_ANDROID_KEYSTORE_PASSWORD`  | secret   | the keystore password                        |
-| `ORCA_ANDROID_KEY_ALIAS`          | secret   | the key alias inside it                      |
-| `ORCA_ANDROID_KEY_PASSWORD`       | secret   | that key's password                          |
-| `ORCA_ANDROID_RELEASE_CERT_SHA256`| variable | the certificate's SHA-256, as the workflow's check expects |
+| Name                               | Kind     | What it is                                                 |
+| ---------------------------------- | -------- | ---------------------------------------------------------- |
+| `ORCA_ANDROID_KEYSTORE_BASE64`     | secret   | the keystore, base64-encoded                               |
+| `ORCA_ANDROID_KEYSTORE_PASSWORD`   | secret   | the keystore password                                      |
+| `ORCA_ANDROID_KEY_ALIAS`           | secret   | the key alias inside it                                    |
+| `ORCA_ANDROID_KEY_PASSWORD`        | secret   | that key's password                                        |
+| `ORCA_ANDROID_RELEASE_CERT_SHA256` | variable | the certificate's SHA-256, as the workflow's check expects |
 
 ## What the workflow does
 

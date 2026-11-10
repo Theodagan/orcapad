@@ -24,13 +24,11 @@ function render(): ReactTestRenderer {
   let renderer: ReactTestRenderer | null = null
   act(() => {
     renderer = create(
-      createElement(FocusableOrca, {
-        zone: 'list',
-        id: 'row-1',
-        order: 0,
-        onActivate,
-        children: 'WorktreeRow'
-      })
+      createElement(
+        FocusableOrca,
+        { zone: 'list', id: 'row-1', order: 0, onActivate },
+        'WorktreeRow'
+      )
     )
   })
   if (renderer === null) {

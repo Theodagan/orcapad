@@ -45,7 +45,10 @@ function walk(directory) {
 }
 
 function deckFiles(mobileRoot) {
-  return DECK_ROOTS.flatMap((root) => walk(path.join(mobileRoot, root)))
+  // Tests hold probe strings that are not imports; only shipped sources are checked.
+  return DECK_ROOTS.flatMap((root) => walk(path.join(mobileRoot, root))).filter(
+    (file) => !/\.test\.[cm]?[jt]sx?$/.test(file)
+  )
 }
 
 /** Specifiers a file imports, in source order and without duplicates. */

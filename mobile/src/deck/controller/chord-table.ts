@@ -64,6 +64,23 @@ export type DeckBinding = {
   readonly touchAlternative: string
 }
 
+/** Every control the deck can name, in the order a controller drawing lists them. */
+export const DECK_CONTROLS: readonly DeckControl[] = [
+  'a',
+  'b',
+  'x',
+  'y',
+  'start',
+  'select',
+  'dpad',
+  'l1',
+  'r1',
+  'l2',
+  'r2',
+  'l3',
+  'r3'
+]
+
 const MODIFIER: DeckControl = 'y'
 
 export const DECK_CHORDS: readonly DeckBinding[] = [

@@ -65,6 +65,19 @@ Baseline before any change: `npx vitest run` in `mobile/` — 687 files, 4620 pa
 - T41 — done — same run. — Overview → Projects → workspace → back → back.
 - T40, T42, T43, T44, T45, T46, T47, T48 — skipped (run budget) — the deck has its destinations but no context resolver, panel columns, header, grouping, collection model or collection layouts yet.
 
+## Fixes after the first full-suite run
+
+The full suite is the bar, and it found three things the per-card runs could not:
+
+- `scripts/deck-upstream-check.mjs` — skipped `*.test.*` files, whose probe strings are not imports. — T3
+- `hints/help-rows.ts` split out of `DeckHelp.tsx`: a `.ts` test cannot import a module that pulls in
+  `react-native`. — T35
+- `gamepad-boundary.test.ts` — the deck's chord vocabulary now sits in `deck/controller/`, which the
+  raw-control rule treats like `controller-input/`; `help-rows.ts` derives its controls from the
+  table instead of naming them. — T26
+
+After them: `npx vitest run` in `mobile/` — 717 files, 4750 passed, 4 skipped, 0 failed.
+
 ## Steps 8–15 — skipped (run budget)
 
 T49–T54, T55–T69, T63, T64, T72, T74–T83, T85–T91, T92–T97, T98, T99, T71, T101, T102, T103 were

@@ -8,7 +8,7 @@ import { DECK_CHORDS, isTimedOrChorded, type DeckIntent } from './chord-table'
 describe('touch alternatives', () => {
   it('names a touch control for every timed or chorded intent', () => {
     const missing = DECK_CHORDS.filter(isTimedOrChorded)
-      .filter((binding) => !/^deck\.touch\./.test(binding.touchAlternative))
+      .filter((binding) => !binding.touchAlternative.startsWith('deck.touch.'))
       .map((binding) => binding.intent)
     expect(missing).toEqual([])
   })

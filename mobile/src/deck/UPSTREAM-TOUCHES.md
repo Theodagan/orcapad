@@ -27,3 +27,4 @@ mobile/src/mobile-release/prepare-android-release-script.test.ts — expects the
 mobile/src/gamepad/controller-provider.tsx — the deck reads live samples for chords Orca's resolver table cannot express (Y modifier, D2) — T26
 mobile/package.json, mobile/pnpm-lock.yaml — `expo-intent-launcher` for the in-app APK install (D6) — T18
 mobile/app.json — declares REQUEST_INSTALL_PACKAGES for the in-app APK install (D6) — T18
+mobile/src/gamepad/gamepad-boundary.test.ts — the deck resolves its own Y chord table, so deck/controller joins controller-input as a place raw controls are named — T26

@@ -22,7 +22,9 @@ const WHEEL_KINDS: readonly DeckWheelKind[] = [
 /** WCAG 2.1 relative luminance, from the sRGB hex Orca's palette stores. */
 function luminance(hex: string): number {
   const value = hex.replace('#', '')
-  const channels = [0, 2, 4].map((offset) => Number.parseInt(value.slice(offset, offset + 2), 16) / 255)
+  const channels = [0, 2, 4].map(
+    (offset) => Number.parseInt(value.slice(offset, offset + 2), 16) / 255
+  )
   const [r, g, b] = channels.map((channel) =>
     channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
   )

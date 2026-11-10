@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { createDeckUpdateStore, type DeckUpdateState } from './deck-update-store'
 import { UpdateDownloadError } from './download-update'
 

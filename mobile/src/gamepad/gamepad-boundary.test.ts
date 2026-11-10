@@ -31,6 +31,12 @@ const mobileRoot = fileURLToPath(new URL('../..', import.meta.url))
 const srcRoot = join(mobileRoot, 'src')
 const gamepadRoot = join(srcRoot, 'gamepad')
 const controllerInputRoot = join(gamepadRoot, 'controller-input')
+/**
+ * The deck resolves its own chord table — its modifier is Y, not Orca's X (D2) — so its raw-control
+ * vocabulary lives in `deck/controller/` exactly as Orca's lives in `controller-input/`. Anywhere
+ * else in the deck still fails this rule.
+ */
+const deckControllerRoot = join(srcRoot, 'deck', 'controller')
 const wheelRoot = join(gamepadRoot, 'wheel')
 const experimentsRoot = join(wheelRoot, 'experiments')
 const bindingsRoot = join(gamepadRoot, 'bindings')
@@ -274,7 +280,7 @@ export function rawControlViolations(path: string, source: string): string[] {
  * translation leaked into the thing it was supposed to keep clean.
  */
 export function upstreamRawControlViolations(path: string, source: string): string[] {
-  if (testFile.test(path) || within(gamepadRoot, path)) {
+  if (testFile.test(path) || within(gamepadRoot, path) || within(deckControllerRoot, path)) {
     return []
   }
   const allowed = new Set(

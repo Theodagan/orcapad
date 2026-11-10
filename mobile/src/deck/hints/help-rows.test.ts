@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { bindingsForScope, type DeckBinding } from '../controller/chord-table'
-import { helpRows } from './DeckHelp'
+import { helpRows } from './help-rows'
 
 const translate = (key: string, fallback?: string): string => fallback ?? key
 
