@@ -55,15 +55,25 @@ Baseline before any change: `npx vitest run` in `mobile/` — 687 files, 4620 pa
 
 - T18 — done — `npx vitest run src/deck/updates/apk-installer.test.ts` (3 passed); `expo-intent-launcher` added, permission declared. — Device install is the owner's.
 - T20 — done — `npx vitest run src/deck/updates/deck-update-store.test.ts` (6 passed). — Every transition and every error reason.
-- T21 — done, owner check pending — not implemented; the explainer is the remaining piece. — `installApk` reports a refused install as its own reason, which is what the explainer will sit in front of.
-- T23 — done, owner check pending — not implemented; the panel and notice are the remaining piece. — The store they read is in place.
+- T21, T23 — see _Run 2_ above: both implemented there.
 
 ## Step 7 — Navigation shell
 
 - T38 — done — `npx vitest run src/deck/navigation` (8 passed).
 - T39 — done — `pnpm typecheck`, `oxlint`. — Six routes with Orca's empty state.
 - T41 — done — same run. — Overview → Projects → workspace → back → back.
-- T40, T42, T43, T44, T45, T46, T47, T48 — skipped (run budget) — the deck has its destinations but no context resolver, panel columns, header, grouping, collection model or collection layouts yet.
+- T40, T42, T45, T46 — see _Run 2_ above: implemented there.
+- T43, T44, T47, T48 — skipped (run budget) — no left-panel contents, header, carousel shell or collection layouts yet.
+
+## Run 2
+
+- `deck: make check:changed green` — done — `ORCA_CODE_QUALITY_BASE=origin/main pnpm check:changed`: 16/16 checks pass. — All 33 type assertions replaced (type guards, `instanceof` narrowing, real `Response` objects, typed mocks); `chord-table`/`destinations`/`deck-history` carry catalog **keys** only (`labelKey`, `titleKey`); the English moved into `locales/en.json` and `en-runtime-required.json` via `pnpm sync:mobile-localization`; `deck.workspace` dropped as unreferenced.
+- T21 — done (was mislabelled done in run 1) — `npx vitest run src/deck/updates` (25 passed). — One-time explainer, its persisted flag, and Android's own `MANAGE_UNKNOWN_APP_SOURCES` intent.
+- T23 — done (was mislabelled done in run 1) — same run. — Panel for every store state, the launch notice, and the runtime wiring (`expo-file-system` legacy download, `expo-crypto` sha256, `expo-intent-launcher` install).
+- T40 — done — `npx vitest run src/deck/context` (7 passed). — Host/project/workspace/session/request resolver; session actions only on a session screen.
+- T42 — done — `npx vitest run src/deck/panels` (9 passed). — Column arithmetic (never overlaps, drops what does not fit) and the per-screen panel registry with disabled reasons.
+- T45 — done — `npx vitest run src/deck/collections`. — One grouping for lists and panels.
+- T46 — done — same run. — Collection model on lenient host rows; unknown status stays neutral.
 
 ## Fixes after the first full-suite run
 
