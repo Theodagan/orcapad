@@ -28,3 +28,4 @@ mobile/src/gamepad/controller-provider.tsx — the deck reads live samples for c
 mobile/package.json, mobile/pnpm-lock.yaml — `expo-intent-launcher` for the in-app APK install (D6) — T18
 mobile/app.json — declares REQUEST_INSTALL_PACKAGES for the in-app APK install (D6) — T18
 mobile/src/gamepad/gamepad-boundary.test.ts — the deck resolves its own Y chord table, so deck/controller joins controller-input as a place raw controls are named — T26
+mobile/src/gamepad/ControllerShell.tsx — on `/deck` routes the shell stops resolving intents and stops mounting Orca's back binding, native-focus fallback, hint strip and wheel overlay, so the deck's dispatcher is the only reader (names the route prefix, never imports the deck) — T26
