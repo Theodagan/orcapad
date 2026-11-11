@@ -255,8 +255,8 @@ importers:
         specifier: ^55.0.24
         version: 55.0.24(expo@55.0.31)
       expo-intent-launcher:
-        specifier: ^58.0.3
-        version: 58.0.3(expo@55.0.31)
+        specifier: ~55.0.16
+        version: 55.0.16(expo@55.0.31)
       expo-keep-awake:
         specifier: ~55.0.8
         version: 55.0.8(expo@55.0.31)(react@19.2.8)
@@ -4543,8 +4543,8 @@ packages:
       react-native-web:
         optional: true
 
-  expo-intent-launcher@58.0.3:
-    resolution: {integrity: sha512-m+InwjvC5z9mAEqNhOmen5TkAFU6vqGdr+CSL9XSQmEpT1YfanJsHg9mc8P5g5mCepKk39If7v9vz8v9iekrsg==}
+  expo-intent-launcher@55.0.16:
+    resolution: {integrity: sha512-0jVpzSPT3Ey7seNAzwEyf3+OVVYRqKGecSzgQdgMI41TqMFCfawgdP4E/KGNfFUgcSBwAACGXP+WF0jNyZQS9Q==}
     peerDependencies:
       expo: '*'
 
@@ -12336,7 +12336,7 @@ snapshots:
     optionalDependencies:
       react-native-web: 0.21.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
 
-  expo-intent-launcher@58.0.3(expo@55.0.31):
+  expo-intent-launcher@55.0.16(expo@55.0.31):
     dependencies:
       expo: 55.0.31(0def556739f9e1a9e497ee4bc3b81b41)
 
