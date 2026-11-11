@@ -1,9 +1,46 @@
 # deck: build 1
 
-> This file is the pull-request description for `implement/deck-build` → `main`. It lives in the
-> deck's own folder because this repository ignores `docs/` (planning material stays local), and
-> run 1 lost its report there. Paste it into the PR when opening it; there is no API credential on
-> the worker that could open the PR itself.
+> This file is the pull-request description for the deck branch → `main`. It lives in the deck's own
+> folder because this repository ignores `docs/` (planning material stays local), and run 1 lost its
+> report there. Paste it into the PR when opening it; there is no API credential on the worker that
+> could open the PR itself.
+>
+> **Run 3 (`implement/cloud-continue`)** owns the branch now. Compare:
+> <https://github.com/Theodagan/orcapad/compare/main...implement/cloud-continue>. The section below
+> it is the corrected picture; the run 1–2 text is kept as history.
+
+## Run 3 — corrections (C1–C4 of the continuation brief)
+
+The continuation brief's four corrections are done. They were defects in what runs 1–2 claimed, not
+polish:
+
+- **C1 updates (T18/T19/T23).** The check hashed the APK's base64 _text_, so no published digest
+  could match: it now hashes the file's bytes through a streamed `FileHandle` read, with a hardcoded
+  SHA-256 regression over binary bytes. `expo-intent-launcher` is pinned to the SDK 55 release
+  (`~55.0.16`) instead of the 58.0.3 the branch carried. The installer no longer reads success out
+  of an activity result: it re-checks size and digest, carries the result code out as data, keeps
+  the download for another attempt, and offers Android's own permission screen on every attempt.
+  Failures keep the platform's words instead of becoming `cancelled`/`missing-file`. The store,
+  panel, explainer and launch notice are wired to Settings and the deck shell, each control its own
+  zone item.
+- **C2 controller (T25/T26).** Bare L1/R1 step the focused area's items; Y+L1/R1 taps open that side,
+  450 ms holds toggle that side, both shoulders toggle both; Y+arrows resize and never move; Start
+  toggles the text target's keys, stops a live microphone and otherwise does nothing, with a 650 ms
+  hold for dictation; Y+L2 unstage / Y+R2 stage, with per-scope hunk, arm-decision and TUI-key
+  meanings. The matcher filters by scope, suppresses undefined Y chords instead of leaking plain
+  A/B/X, and the shell stops resolving intents and unmounts Orca's back binding, native-focus
+  fallback, hint strip and wheel overlay on `/deck` routes, so one dispatcher answers.
+- **C3 test types.** Every deck test file typechecks (`pnpm typecheck:tests`), and the render/copy/
+  registry tests that only pinned the old table were deleted rather than repaired. The remaining
+  `mobile/src/gamepad/**` test type errors (64, 23 files) are the pre-existing baseline: unchanged
+  from `origin/main`, reported in the run's report, not claimed green.
+- **C4 audit.** `workspacePorts.scan/scanHost/probePage/kill/killHost` exist and are registered;
+  what is missing is the phone's route table entry, which `rpc-caller-scope.ts` refuses by name.
+  `stats.summary` is in the same position. `COVERAGE.md`, the panel comment and
+  `UPSTREAM-CANDIDATES.md` now say that instead of "no ports RPC exists".
+
+**Still not done:** T43, T44, T47–T54 (live destinations), T55–T69/T63/T64 (session loop), T72,
+T74–T83 (wheels), T85–T91 (review), T92–T99, T71, T101–T103. Nothing is blocked by what landed.
 
 PocketDeck's first build: the seam, the design system, the update channel, the controller contract,
 the installer and update flow, and the navigation shell's registry, routes, context and panels.

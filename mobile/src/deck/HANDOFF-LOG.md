@@ -94,3 +94,74 @@ T49–T54, T55–T69, T63, T64, T72, T74–T83, T85–T91, T92–T97, T98, T99, 
 not started. The run reached its limit after the foundational layers (seam, theme, host gating,
 parsing, updates, controller contract, hints, focus, destinations). Each is independent of the
 others per the handoff's waves, so they dispatch as follow-up runs without rework.
+
+## Run 3 — cloud-continue (the brief's corrections C1–C4)
+
+Branch `implement/cloud-continue`, branched from the checkout's HEAD (`main` @ `f2bcd1eb5f`) and fast-forwarded
+onto `implement/deck-build` @ `c35fe5e322`, which is where the brief said to continue. Plan:
+`docs/plans/cloud-continue/plan.md` (not committed: the brief forbids publishing the private attachment).
+
+### C1 — the update path
+
+- **T19** — done — `npx vitest run src/deck/updates/file-sha256.test.ts` (3 passed). — The digest is over
+  the APK's bytes, streamed through `expo-file-system`'s `FileHandle` in 1 MiB chunks with a UI yield
+  every 8 MiB. The owning regression pins a hardcoded SHA-256 over binary bytes (ZIP magic, NUL,
+  invalid UTF-8) and a short-read refusal.
+- **T18 (launcher)** — done — `mobile/package.json`, `mobile/pnpm-lock.yaml`; `pnpm typecheck`. —
+  `expo-intent-launcher` was `^58.0.3`; Expo's `bundledNativeModules.json` for SDK 55 wants `~55.0.16`.
+  Same `startActivityAsync`/`ResultCode` surface, so nothing else changed.
+- **T18 (contract)** — done — `npx vitest run src/deck/updates` (28 passed across 7 files). — Size and
+  digest are re-checked before a content URI is handed over; the activity's result code is carried out
+  as `install-reported` data (never "installed"), the download is kept for another attempt, the
+  permission screen is reachable on every attempt, and platform failures keep their own words.
+- **T23 (wiring)** — done — `npx vitest run src/deck` (32 files, 140 tests); `pnpm typecheck`. —
+  `app/deck/(dest)/settings.tsx` renders the real `DeckSettings` (update panel + explainer + Android's
+  install screen), the shell checks once per deck screen and announces an available release, and every
+  control is its own `ZoneItem`. The render/copy tests that pinned the old panel were deleted.
+
+### C2 — the controller contract
+
+- **T25** — done — `npx vitest run src/deck/controller` (13 passed). — Chord table split into
+  `deck-chords.ts` (vocabulary) and `deck-chord-bindings.ts` (the table) to stay inside the line cap.
+  Bare shoulders select items; Y+shoulder tap opens / 450 ms hold toggles that side / both shoulders
+  toggle both; Y+left-right resizes, Y+up-down does nothing; Start taps keys-or-stop and holds to
+  dictate; Y+L2 unstage / Y+R2 stage plus per-scope hunk, arm and TUI meanings. The matcher is
+  scope-filtered, suppresses undefined Y chords (no plain A/B/X leak), and keeps the modifier a press
+  began with.
+- **T26** — done — `mobile/src/gamepad/ControllerShell.tsx` + `use-deck-bindings.ts`. — On `/deck`
+  routes the shell resolves no intents and mounts no back binding, native-focus fallback, hint strip or
+  wheel; the deck's `useFocusEffect`-scoped dispatcher is the only reader, so a retained deck screen
+  stops answering. Navigation intents go through the existing focus/zone dispatch so one focus language
+  remains. Logged in `UPSTREAM-TOUCHES.md`.
+- **T33/T35** — done — hints and Help read the new table; the Help diagram draws bare and Y rows.
+- **T83 (deck routes only)** — partial — the Orca overlay/dispatch/hint response is off on deck routes;
+  the wheels themselves arrive with T74–T82.
+
+### C3 — test types and claims
+
+- `pnpm typecheck:tests` (mobile) has **no** deck or `app-update` errors left. The four render tests the
+  brief listed (`focusable-orca`, `Hintify`, `DeckHostRefusal`, `PanelColumns`) and
+  `deck-update-ui.test.tsx`, `install-explainer.test.ts`, `install-permission-explainer.test.tsx`,
+  `contract-*.test.tsx`, `touch-alternatives.test.ts` were **deleted** under the repository's test
+  policy, not repaired; `fork-release-update-source.test.ts` was fixed by typing its `vi.fn`.
+- **Remaining baseline failures:** 64 errors in 23 files, all `mobile/src/gamepad/**`, none of which
+  this run touched (`git diff origin/main -- mobile/src/gamepad` is `ControllerShell.tsx` only).
+  `pnpm check:tests-typecheck` therefore still fails exactly as it does on `main`; its baseline file
+  (`mobile/tests-typecheck-baseline.txt`) is empty, so this is a pre-existing gate failure, not a
+  regression, and it is **not** claimed green.
+
+### C4 — the ports audit
+
+- **T9/T42/T54/T86 (audit half)** — done — evidence in `COVERAGE.md` and `UPSTREAM-CANDIDATES.md`. —
+  `workspacePorts.scan/scanHost/probePage/kill/killHost` exist (`methods/workspace-ports/`) with
+  permission `workspace`, but they are not in `EXECUTION_HOST_METHODS`/`MOBILE_RPC_METHOD_ROUTES`, and
+  `rpc-caller-scope.ts` refuses any method missing from it. `stats.summary` is in the same position.
+  Implementing Ports needs a desktop route entry, which this run may not make (no desktop RPC
+  changes).
+
+### Not started
+
+T43, T44, T47–T54, T55–T69, T63, T64, T72, T74–T83, T85–T91, T92–T99, T71, T101–T103. **First next
+task: T44 (`deck/chrome/DeckHeader.tsx`) and T47/T48/T49** — the shell still draws only a View and the
+six destinations still render `DeckDestinationScreen`, so the next run starts by giving Sessions its
+real route and the shared carousel, then the header that holds them.
