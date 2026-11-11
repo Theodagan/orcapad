@@ -1,3 +1,4 @@
+import Constants from 'expo-constants'
 import { File } from 'expo-file-system'
 import * as FileSystem from 'expo-file-system/legacy'
 import * as IntentLauncher from 'expo-intent-launcher'
@@ -27,9 +28,13 @@ function openApkBytes(uri: string): ByteSource {
   return { size, read: (bytes) => handle.readBytes(bytes), close: () => handle.close() }
 }
 
+/** The fork's own package, for Android's "install unknown apps" screen. */
+const PACKAGE_NAME = Constants.expoConfig?.android?.package ?? 'com.theodagan.orcapad'
+
 function createRuntimeStore(): DeckUpdateStore {
   return createDeckUpdateStore({
     installedVersion: installedAppVersion ?? '0.0.0',
+    packageName: PACKAGE_NAME,
     deps: {
       checkRelease: (installedVersion, signal) =>
         forkReleaseUpdateSource.checkRelease(installedVersion, signal),
@@ -43,7 +48,8 @@ function createRuntimeStore(): DeckUpdateStore {
             downloadAsync: async () => {
               const result = await resumable.downloadAsync()
               if (result === undefined) {
-                throw new Error('the download did not finish')
+                // The platform pauses a resumable download by resolving with nothing.
+                return null
               }
               const info = await FileSystem.getInfoAsync(result.uri)
               return { uri: result.uri, size: info.exists ? (info.size ?? 0) : 0 }
@@ -55,6 +61,11 @@ function createRuntimeStore(): DeckUpdateStore {
         deleteFile: (uri) => FileSystem.deleteAsync(uri, { idempotent: true })
       },
       installer: {
+        fileSize: async (fileUri) => {
+          const info = await FileSystem.getInfoAsync(fileUri)
+          return info.exists ? (info.size ?? null) : null
+        },
+        digestSha256: (uri) => sha256OfFile(uri, openApkBytes),
         getContentUriAsync: (fileUri) => FileSystem.getContentUriAsync(fileUri),
         startActivityAsync: async (action, options) => {
           const result = await IntentLauncher.startActivityAsync(action, options)
