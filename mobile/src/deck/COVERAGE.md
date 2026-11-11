@@ -5,8 +5,12 @@ names the Orca module or RPC that actually answers for it, checked in this check
 
 - **R** — rebuilt in the deck from the data API: Orca exposes the data, the deck draws it.
 - **N** — native Orca module the deck embeds as-is.
-- **H** — host-only: nothing in the data API answers for it, so the deck shows it disabled with a
-  reason (DECK-R37, DECK-R41) and it is proposed upstream in `UPSTREAM-CANDIDATES.md`.
+- **H** — host-only for a paired phone: the method may exist on the host but is not reachable from
+  the app (most often because it is missing from the mobile route table), so the deck shows it
+  disabled with that specific reason (DECK-R37, DECK-R41) and the gap is listed in
+  `UPSTREAM-CANDIDATES.md`.
+- **Status** is `done` only when a deck screen renders it from real data; `blocked` means the reason
+  above is what the screen shows.
 - **P** — proposed upstream, not built here.
 
 The private PRD's §6 table is not readable from this repository, so the areas below are this
@@ -34,8 +38,8 @@ re-checks the imports on each merge.
 | Account usage               | OVR-1                  | N    | done   | `mobile/src/components/AccountUsage.tsx`                                                                                 | `overview/`                       |
 | Settings and hosts          | SET-1…7                | R/N  | done   | `mobile/src/settings/`, the pairing routes                                                                               | `settings/`                       |
 | In-app updates              | DECK-R46, R47, R49     | R    | done   | `mobile/src/app-update/app-update-source.ts` + `updates/fork-release-update-source.ts`                                   | `updates/`                        |
-| Ports                       | PRJ-4                  | H    | done   | no workspace-ports RPC in `src/main/runtime/rpc/methods` (searched: none)                                                | `ports/use-deck-ports.ts`         |
-| Host CPU / RAM / bandwidth  | OVR-1                  | H    | done   | no host-stats RPC in `src/main/runtime/rpc/methods` (searched: none)                                                     | `overview/`                       |
+| Ports                       | PRJ-4                  | H    | blocked | `workspacePorts.scan/scanHost/probePage/kill/killHost` exist (`src/main/runtime/rpc/methods/workspace-ports/workspace-ports.ts`, permission `workspace`) but are absent from the mobile route table (`src/main/runtime/rpc/server/runtime-rpc-mobile-method-routing.ts`), so `rpc-caller-scope.ts` refuses them to a phone by name | `ports/use-deck-ports.ts`         |
+| Host CPU / RAM / bandwidth  | OVR-1                  | H    | blocked | `stats.summary` exists (`src/main/runtime/rpc/methods/host-management/stats.ts`, permission `workspace`) and is likewise not in the mobile route table; its payload's CPU/RAM fields are unaudited here | `overview/`                       |
 
 ## Strict parsers
 

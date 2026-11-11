@@ -220,8 +220,8 @@ describe('deck chord matcher', () => {
   it('scrolls on a bare trigger and never turns a modified trigger into a scroll', () => {
     const scrolling = events([
       [[], 0],
-      [['r2'], 16, { r2: 0.9 }],
-      [['r2'], 32, { r2: 0.9 }]
+      [[], 16, { r2: 0.9 }],
+      [[], 32, { r2: 0.9 }]
     ])
     expect(scrolling.map((event) => event.intent)).toEqual(['scroll-down', 'scroll-down'])
     expect(scrolling[0].pressure).toBe(0.9)

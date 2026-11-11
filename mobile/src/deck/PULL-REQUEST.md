@@ -72,8 +72,9 @@ Neither group is blocked by what landed; each continues from the layers that are
   modifier is Y, not Orca's X). Both logged in `UPSTREAM-TOUCHES.md`.
 - Tests follow `AGENTS.md` rather than each card's wording: no render-only, copy or registry-count
   tests beyond the ones the brief lists as worth having.
-- Ports and host CPU/RAM are **H** rows in `COVERAGE.md`: this baseline exposes no workspace-ports
-  RPC and no host-stats RPC (both searched).
+- Ports and host CPU/RAM are **H** rows in `COVERAGE.md`: the host has the methods
+  (`workspacePorts.*`, `stats.summary`) but the phone has no route for them, so a paired client is
+  refused by name (`UPSTREAM-CANDIDATES.md` 1 and 2).
 
 ## Verification
 
