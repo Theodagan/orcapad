@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react'
-import { Pressable, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 import { useMobileTranslation } from '../../i18n/use-mobile-translation'
+import { FocusableOrca } from '../focus/focusable-orca'
 import { useDeckTheme } from '../theme/deck-theme'
 
 /**
  * DECK-R47: a new version is announced once, without blocking anything. The notice is a toast with
- * one action; dismissing it is as valid as taking it.
+ * two controls, both reachable by pad and finger; dismissing it is as valid as taking it.
  */
 export function DeckUpdateNotice({
   version,
@@ -31,16 +32,28 @@ export function DeckUpdateNotice({
         {`${t('deck.update.available', 'Orcapad')} ${version} ${t('deck.update.availableSuffix', 'is ready to install.')}`}
       </Text>
       <View style={{ flexDirection: 'row', gap: theme.space.md }}>
-        <Pressable accessibilityRole="button" onPress={onOpen}>
+        <FocusableOrca
+          zone="shortcuts"
+          id="deck-update-notice-open"
+          order={0}
+          onActivate={onOpen}
+          accessibilityLabel={t('deck.update.open', 'Update now')}
+        >
           <Text style={{ color: theme.color.accent, fontSize: theme.text.body }}>
             {t('deck.update.open', 'Update now')}
           </Text>
-        </Pressable>
-        <Pressable accessibilityRole="button" onPress={onDismiss}>
+        </FocusableOrca>
+        <FocusableOrca
+          zone="shortcuts"
+          id="deck-update-notice-later"
+          order={1}
+          onActivate={onDismiss}
+          accessibilityLabel={t('deck.update.later', 'Later')}
+        >
           <Text style={{ color: theme.color.text3, fontSize: theme.text.body }}>
             {t('deck.update.later', 'Later')}
           </Text>
-        </Pressable>
+        </FocusableOrca>
       </View>
     </View>
   )

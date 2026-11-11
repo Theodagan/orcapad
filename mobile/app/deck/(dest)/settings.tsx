@@ -1,5 +1,5 @@
-import { DeckDestinationScreen } from '../../../src/deck/navigation/DeckDestinationScreen'
+import { DeckSettings } from '../../../src/deck/settings/DeckSettings'
 
 export default function SettingsRoute() {
-  return <DeckDestinationScreen destination="settings" />
+  return <DeckSettings />
 }

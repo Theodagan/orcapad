@@ -4932,14 +4932,29 @@
       "install": "Install",
       "checkFailed": "The update check failed",
       "downloadFailed": "The download failed",
-      "installFailed": "Android did not install it",
-      "cancelled": "Download cancelled."
+      "installFailed": "Android did not take the file",
+      "cancelled": "Download cancelled.",
+      "progress": "{{percent}}% of {{total}} MB",
+      "cancel": "Cancel download",
+      "openSettings": "Android install settings",
+      "done": "Done",
+      "kept": "The downloaded update stays cached until it is installed or the system clears it.",
+      "reportOk": "Android’s installer reports it finished. Reopen Orcapad to use the new version.",
+      "reportCancelled": "Android’s installer reports the install was cancelled. The download is kept; try again when you want.",
+      "reportOther": "Android’s installer reports result code {{code}}.",
+      "sizeMismatch": "the file is {{received}} bytes, the release {{expected}}",
+      "digestMismatch": "the file’s checksum {{received}} is not the release’s {{expected}}",
+      "unverifiable": "the release publishes no checksum to compare against",
+      "fileGone": "the download is gone; fetch it again"
     },
     "installPermission": {
       "title": "Allow installs from Orcapad",
-      "body": "Android asks once, in Settings, whether this app may install updates. Turn it on there, then come back and press Update.",
+      "body": "Android asks whether this app may install apps. Turn that on for Orcapad, then come back and press Install.",
       "open": "Open Android settings",
       "later": "Not now"
+    },
+    "settings": {
+      "title": "Settings"
     }
   }
 }

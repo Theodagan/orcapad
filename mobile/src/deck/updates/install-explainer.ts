@@ -2,15 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 /**
  * T21/DECK-R49: Android will not install an app it has never been allowed to install. The deck
- * explains that once, before the first install, and then never again — a dialog on every update
- * would be worse than the permission screen it explains.
+ * explains that before the first install. The explanation is a reminder, not the check: every
+ * install attempt still opens with a real way to reach Android's own permission screen.
  */
 const EXPLAINER_SHOWN_KEY = 'orca:deck:installExplainerShown'
-
-/** Whether the explainer still has something to say (it does not, once it has been shown). */
-export function shouldExplainInstall(alreadyShown: boolean): boolean {
-  return !alreadyShown
-}
 
 export async function loadInstallExplainerShown(): Promise<boolean> {
   try {

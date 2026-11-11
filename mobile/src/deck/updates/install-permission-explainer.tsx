@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react'
-import { Pressable, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 import { useMobileTranslation } from '../../i18n/use-mobile-translation'
+import { FocusableOrca } from '../focus/focusable-orca'
 import { useDeckTheme } from '../theme/deck-theme'
 
 /**
- * T21: the one-time explanation before the first in-app install. The words are the deck's; the
- * permission screen it opens is Android's own.
+ * T21: the explanation shown alongside the first in-app install. The words are the deck's; the
+ * permission screen it opens is Android's own, and every control here is pad-reachable.
  */
 export function InstallPermissionExplainer({
   onOpenSettings,
@@ -31,28 +32,41 @@ export function InstallPermissionExplainer({
       <Text style={{ color: theme.color.text2, fontSize: theme.text.body }}>
         {t(
           'deck.installPermission.body',
-          'Android asks once, in Settings, whether this app may install updates. Turn it on there, then come back and press Update.'
+          'Android asks whether this app may install apps. Turn that on for Orcapad, then come back and press Install.'
         )}
       </Text>
-      <Pressable
-        accessibilityRole="button"
-        onPress={onOpenSettings}
-        style={{
-          backgroundColor: theme.color.accent,
-          borderRadius: theme.radius.control,
-          padding: theme.space.md,
-          alignItems: 'center'
-        }}
+      <FocusableOrca
+        zone="list"
+        id="deck-install-permission-open"
+        order={0}
+        onActivate={onOpenSettings}
+        accessibilityLabel={t('deck.installPermission.open', 'Open Android settings')}
       >
-        <Text style={{ color: theme.color.onAccent, fontSize: theme.text.body }}>
-          {t('deck.installPermission.open', 'Open Android settings')}
-        </Text>
-      </Pressable>
-      <Pressable accessibilityRole="button" onPress={onDismiss}>
+        <View
+          style={{
+            backgroundColor: theme.color.accent,
+            borderRadius: theme.radius.control,
+            padding: theme.space.md,
+            alignItems: 'center'
+          }}
+        >
+          <Text style={{ color: theme.color.onAccent, fontSize: theme.text.body }}>
+            {t('deck.installPermission.open', 'Open Android settings')}
+          </Text>
+        </View>
+      </FocusableOrca>
+      <FocusableOrca
+        zone="list"
+        id="deck-install-permission-later"
+        order={1}
+        row={1}
+        onActivate={onDismiss}
+        accessibilityLabel={t('deck.installPermission.later', 'Not now')}
+      >
         <Text style={{ color: theme.color.text3, fontSize: theme.text.meta }}>
           {t('deck.installPermission.later', 'Not now')}
         </Text>
-      </Pressable>
+      </FocusableOrca>
     </View>
   )
 }
