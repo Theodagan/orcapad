@@ -14,7 +14,7 @@ function json(body: unknown, status = 200): Response {
 }
 
 function sourceWith(replies: Record<string, Response>) {
-  const fetchImpl: typeof fetch = vi.fn(async (input: RequestInfo | URL) => {
+  const fetchImpl = vi.fn<(input: RequestInfo | URL) => Promise<Response>>(async (input) => {
     const reply = replies[String(input)]
     if (reply === undefined) {
       throw new Error(`unexpected request: ${String(input)}`)
