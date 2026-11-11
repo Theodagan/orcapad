@@ -1,4 +1,4 @@
-import * as Crypto from 'expo-crypto'
+import { File } from 'expo-file-system'
 import * as FileSystem from 'expo-file-system/legacy'
 import * as IntentLauncher from 'expo-intent-launcher'
 import { useSyncExternalStore } from 'react'
@@ -9,6 +9,7 @@ import {
   type DeckUpdateState,
   type DeckUpdateStore
 } from './deck-update-store'
+import { sha256OfFile, type ByteSource } from './file-sha256'
 import { MANAGE_UNKNOWN_APP_SOURCES, unknownSourcesSettingsUri } from './install-explainer'
 
 /**
@@ -16,6 +17,16 @@ import { MANAGE_UNKNOWN_APP_SOURCES, unknownSourcesSettingsUri } from './install
  * `expo-file-system`'s legacy entry point is the one with the download, content-URI and file-info
  * calls this needs; `expo-intent-launcher` hands the APK to Android.
  */
+function openApkBytes(uri: string): ByteSource {
+  const handle = new File(uri).open()
+  const size = handle.size
+  if (size === null) {
+    handle.close()
+    throw new Error(`${uri} reports no size`)
+  }
+  return { size, read: (bytes) => handle.readBytes(bytes), close: () => handle.close() }
+}
+
 function createRuntimeStore(): DeckUpdateStore {
   return createDeckUpdateStore({
     installedVersion: installedAppVersion ?? '0.0.0',
@@ -40,14 +51,7 @@ function createRuntimeStore(): DeckUpdateStore {
             pauseAsync: () => resumable.pauseAsync()
           }
         },
-        digestSha256: async (uri) => {
-          const base64 = await FileSystem.readAsStringAsync(uri, {
-            encoding: FileSystem.EncodingType.Base64
-          })
-          return Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, base64, {
-            encoding: Crypto.CryptoEncoding.HEX
-          })
-        },
+        digestSha256: (uri) => sha256OfFile(uri, openApkBytes),
         deleteFile: (uri) => FileSystem.deleteAsync(uri, { idempotent: true })
       },
       installer: {
