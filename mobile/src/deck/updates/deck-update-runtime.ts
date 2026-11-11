@@ -80,6 +80,17 @@ function createRuntimeStore(): DeckUpdateStore {
 
 export const deckUpdateStore = createRuntimeStore()
 
+let checkedThisLaunch = false
+
+/** DECK-R47: one check per launch, however many deck screens open; Settings can still ask again. */
+export function ensureDeckUpdateChecked(): void {
+  if (checkedThisLaunch) {
+    return
+  }
+  checkedThisLaunch = true
+  void deckUpdateStore.check()
+}
+
 export function useDeckUpdate(): DeckUpdateState {
   return useSyncExternalStore(deckUpdateStore.subscribe, deckUpdateStore.get)
 }

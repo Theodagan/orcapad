@@ -3,7 +3,11 @@ import { View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useDeckTheme } from './theme/deck-theme'
 import { DeckUpdateNotice } from './updates/DeckUpdateNotice'
-import { deckUpdateStore, useDeckUpdate } from './updates/deck-update-runtime'
+import {
+  deckUpdateStore,
+  ensureDeckUpdateChecked,
+  useDeckUpdate
+} from './updates/deck-update-runtime'
 
 /**
  * The deck's frame: the page every destination draws into. Inherits the RPC client and the
@@ -14,10 +18,8 @@ export function DeckShell({ children }: { children?: ReactNode }): ReactNode {
   const router = useRouter()
   const update = useDeckUpdate()
 
-  // DECK-R47: one check when a deck screen opens, never a wall in front of it.
-  useEffect(() => {
-    void deckUpdateStore.check()
-  }, [])
+  // DECK-R47: a check when the deck is first opened, never a wall in front of it.
+  useEffect(ensureDeckUpdateChecked, [])
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.color.base }}>
