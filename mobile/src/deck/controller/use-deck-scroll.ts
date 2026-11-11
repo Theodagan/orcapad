@@ -34,9 +34,10 @@ export function useDeckScroll(
 ): Pick<DeckActionHandlers, 'scroll-up' | 'scroll-down'> {
   return useMemo(() => {
     const scroll = (input: DeckIntentInput): void => {
-      const step = deckScrollRate(input.pressure) * (1 / 60)
-      if (step > 0) {
-        onScroll(input.intent === 'scroll-up' ? -step : step)
+      // A speed times the time this sample stands for, so a slow pad scrolls as far as a fast one.
+      const points = (deckScrollRate(input.pressure) * input.elapsedMs) / 1000
+      if (points > 0) {
+        onScroll(input.intent === 'scroll-up' ? -points : points)
       }
     }
     return { 'scroll-up': scroll, 'scroll-down': scroll }

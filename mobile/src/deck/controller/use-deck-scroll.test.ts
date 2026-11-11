@@ -32,7 +32,7 @@ describe('deck analog scroll', () => {
     const plainTriggers = DECK_CHORDS.filter(
       (binding) =>
         (binding.chord.control === 'l2' || binding.chord.control === 'r2') &&
-        binding.chord.with === undefined
+        binding.chord.modifier !== true
     )
     expect(plainTriggers.map((binding) => binding.intent).sort()).toEqual([
       'scroll-down',

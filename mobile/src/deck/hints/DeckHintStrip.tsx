@@ -9,16 +9,9 @@ import {
 } from '../controller/chord-table'
 import { useDeckModifierHeld } from '../controller/use-deck-bindings'
 import { useDeckTheme } from '../theme/deck-theme'
+import { CHIP_WIDTH, visibleHintCount } from './hint-strip-width'
 
-/** A hint chip's painted width, used to decide how many fit (VIS-6/SD-2: never overflow). */
-const CHIP_WIDTH = 96
-const STRIP_PADDING = 24
-
-/** How many chips fit the available width; the lowest-priority ones are dropped, not wrapped. */
-export function visibleHintCount(bindings: number, width: number): number {
-  const room = Math.max(width - STRIP_PADDING, 0)
-  return Math.max(Math.min(bindings, Math.floor(room / CHIP_WIDTH)), 0)
-}
+export { visibleHintCount } from './hint-strip-width'
 
 /**
  * PAD-13/IH-6: the strip reads the chord table for the current screen, and while Y is held it
@@ -47,7 +40,7 @@ export function DeckHintStrip({
     >
       {shown.map((binding) => (
         <View
-          key={`${binding.chord.control}-${binding.chord.with ?? ''}-${binding.intent}`}
+          key={`${binding.chord.control}-${binding.chord.modifier === true ? 'y' : ''}-${binding.chord.direction ?? ''}-${binding.intent}`}
           style={{
             width: CHIP_WIDTH,
             borderRadius: theme.radius.pill,
@@ -56,7 +49,7 @@ export function DeckHintStrip({
           }}
         >
           <Text numberOfLines={1} style={{ color: theme.color.text2, fontSize: theme.text.meta }}>
-            {`${binding.chord.control.toUpperCase()}  ${chordLabel(t, binding)}`}
+            {`${binding.chord.modifier === true ? 'Y+' : ''}${binding.chord.control.toUpperCase()}  ${chordLabel(t, binding)}`}
           </Text>
         </View>
       ))}

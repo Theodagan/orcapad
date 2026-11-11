@@ -26,6 +26,7 @@ import { createActionRefusalStore, refusalMessageFor } from './action-refusal/ac
 import { triggerError } from '../platform/haptics'
 import { useRootBackBinding } from './bindings/use-root-back-binding'
 import { useFocusModeSystemBars } from './session-chrome/use-focus-mode-system-bars'
+import type { ControllerIntent } from './controller-input/controller-intent'
 
 /**
  * Everything the pad adds around the app's screens, kept out of the root layout so that layout
@@ -145,6 +146,19 @@ function useGoWheelActions(
   ])
 }
 
+/**
+ * T26: the deck owns the pad on its own routes. Its dispatcher answers with the deck's own table,
+ * so this shell must not also read a press — no GO/DO wheel, no back binding, no Android focus
+ * fallback and no hint strip — or one press would be two gestures. The deck's route prefix is
+ * named here rather than imported: Orca does not import the deck (DECK-R40).
+ */
+const DECK_ROUTE_PREFIX = '/deck'
+const NO_INTENTS = (): readonly ControllerIntent[] => []
+
+function deckOwnsInput(pathname: string): boolean {
+  return pathname === DECK_ROUTE_PREFIX || pathname.startsWith(`${DECK_ROUTE_PREFIX}/`)
+}
+
 /** D-pad and `A` through Android's own focus on screens with no pad zones. Inside the provider. */
 function NativeFocusFallback(): null {
   useNativeFocusFallbackBinding(controllerRuntime.nativeFocus)
@@ -161,9 +175,11 @@ export function ControllerShell({
   const pathname = usePathname()
   const segments = useSegments()
   const screen = wheelScreenFor(segments)
+  const deckOnly = deckOwnsInput(pathname)
   // GO on the left stick and, in a session, DO on the right (`012`).
   const wheel = useWheelController({
-    presets: wheelLayoutsFor(screen),
+    // No preset, no wheel: on a deck route the deck's own dispatcher is the only reader.
+    presets: deckOnly ? {} : wheelLayoutsFor(screen),
     registry: wheelRegistry,
     deadZone: 0.15,
     // An open wheel owns the pad: Android must not also move its own focus underneath it.
@@ -172,12 +188,15 @@ export function ControllerShell({
   // A pad that drops mid-gesture must not leave an open wheel swallowing the screen.
   useCancelWheelOnDisconnect(controllerRuntime.reader, wheel.cancel)
   useGoWheelActions(wheelRegistry, screen, segments, pathname)
-  const overlay = useMemo(() => <WheelOverlay controller={wheel} />, [wheel])
+  const overlay = useMemo(
+    () => (deckOnly ? null : <WheelOverlay controller={wheel} />),
+    [deckOnly, wheel]
+  )
 
   return (
     <ControllerProvider
       reader={controllerRuntime.reader}
-      resolve={controllerRuntime.resolve}
+      resolve={deckOnly ? NO_INTENTS : controllerRuntime.resolve}
       intercept={wheel.intercept}
       captured={wheel.isOpen}
       registerWheelAction={wheelRegistry.register}
@@ -190,10 +209,16 @@ export function ControllerShell({
       <View style={styles.root} onLayout={onLayout}>
         {children}
       </View>
-      <RootBackBinding />
-      <NativeFocusFallback />
+      {deckOnly ? null : <RootBackBinding />}
+      {deckOnly ? null : <NativeFocusFallback />}
       <FocusModeSystemBars />
-      <ActionHintBar wheel={wheel.view} actions={wheelRegistry} reader={controllerRuntime.reader} />
+      {deckOnly ? null : (
+        <ActionHintBar
+          wheel={wheel.view}
+          actions={wheelRegistry}
+          reader={controllerRuntime.reader}
+        />
+      )}
       <ControllerNoticeStack>
         <ControllerConnectionNotice />
         <ActionRefusalNotice store={actionRefusals} />

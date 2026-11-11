@@ -6,13 +6,19 @@ import {
   type ControllerSample
 } from '../../gamepad/controller-input/controller-sample'
 import { isDown, wentDown, wentUp } from '../../gamepad/controller-input/sample-edges'
-import { bindingFor, type DeckControl, type DeckIntent } from './chord-table'
+import { bindingFor, type DeckControl, type DeckIntent, type DeckScreenScope } from './chord-table'
 
 /**
  * The deck's own chord matcher. Orca's resolver reads a table whose modifier is X and whose Y tap
- * toggles dictation; the deck's modifier is Y (D2), and Y alone must do nothing (PAD-9). Rather than
- * fork the resolver, the deck resolves its own table in `chord-table.ts` — same sample vocabulary,
- * same tap-versus-chord rules as Orca's tap tracker, different table.
+ * toggles dictation; the deck's modifier is Y (D2), and Y is a modifier only (PAD-9). Rather than
+ * fork the resolver, the deck resolves its own table — same sample vocabulary, same edges.
+ *
+ * The rules it enforces that a table alone cannot state:
+ * - a chord the table does not define does nothing; it never falls through to the bare button
+ *   (so Y held with an A press is silent, and Y + up/down is not movement);
+ * - a press that begins under the modifier keeps the modifier it began with, so releasing Y mid
+ *   press cannot turn one gesture into two;
+ * - a binding only fires in a scope where the table gives it one.
  *
  * Pure: samples in, intents out.
  */
@@ -21,11 +27,19 @@ export const DECK_MODIFIER_BUTTON: ControllerButton = 'y'
 export const PANEL_TOGGLE_HOLD_MS = 450
 /** PAD-7: holding Start this long toggles dictation. */
 export const DICTATION_HOLD_MS = 650
-/** Where a trigger counts as pulled, for the Y + trigger chords. */
+/** Where a trigger counts as pulled, for the modified-trigger chords and for scrolling. */
 export const TRIGGER_DEAD_ZONE = 0.5
 
-/** A trigger crossing its dead zone fires its chord once, on the way in. */
-const TRIGGER_CHORDS: readonly (readonly [ControllerAxis, DeckControl])[] = [
+/** One thing the deck should do, with what a speed-based intent needs to know. */
+export type DeckIntentEvent = {
+  readonly intent: DeckIntent
+  /** Trigger pressure, 0..1, for the scroll intents. */
+  readonly pressure: number
+  /** Time this sample stands for, so a scroll is a speed rather than a step. */
+  readonly elapsedMs: number
+}
+
+const TRIGGERS: readonly (readonly [ControllerAxis, DeckControl])[] = [
   ['l2', 'l2'],
   ['r2', 'r2']
 ]
@@ -43,16 +57,19 @@ const CONTROL_OF_BUTTON: Partial<Record<ControllerButton, DeckControl>> = {
   select: 'select'
 }
 
-const DIRECTION_OF_BUTTON: Partial<Record<ControllerButton, DeckIntent>> = {
-  'dpad-up': 'move-up',
-  'dpad-down': 'move-down',
-  'dpad-left': 'move-left',
-  'dpad-right': 'move-right'
+const DIRECTION_OF_BUTTON: Partial<Record<ControllerButton, 'up' | 'down' | 'left' | 'right'>> = {
+  'dpad-up': 'up',
+  'dpad-down': 'down',
+  'dpad-left': 'left',
+  'dpad-right': 'right'
 }
 
-function controlOf(button: ControllerButton): DeckControl | null {
-  return CONTROL_OF_BUTTON[button] ?? null
-}
+const MOVEMENT_OF_DIRECTION = {
+  up: 'move-up',
+  down: 'move-down',
+  left: 'move-left',
+  right: 'move-right'
+} as const
 
 function axisOf(sample: ControllerSample, axis: ControllerAxis): number {
   return sample.axes.get(axis) ?? 0
@@ -73,101 +90,148 @@ function heldButtons(
   return CONTROLLER_BUTTONS.filter((button) => button !== except && isDown(sample, button))
 }
 
+/** The chord that names `control` and, when a partner is given, that partner too. */
+function pairBinding(
+  control: DeckControl,
+  partner: DeckControl,
+  scope: DeckScreenScope,
+  modifier: boolean
+) {
+  return (
+    bindingFor(control, 'chord', { scope, modifier, withControl: partner }) ??
+    bindingFor(partner, 'chord', { scope, modifier, withControl: control })
+  )
+}
+
 export type DeckChordMatcher = (
   previous: ControllerSample,
   next: ControllerSample
-) => readonly DeckIntent[]
+) => readonly DeckIntentEvent[]
 
-export function createDeckChordMatcher(): DeckChordMatcher {
+export function createDeckChordMatcher(scope: DeckScreenScope = 'root'): DeckChordMatcher {
   const downAt = new Map<ControllerButton, number>()
+  /** Whether the modifier was held when this button went down: the gesture's identity. */
+  const modifiedAtPress = new Map<ControllerButton, boolean>()
+  /** What was already held alongside it: only a partner that arrives later makes it a chord. */
+  const partnersAtPress = new Map<ControllerButton, ReadonlySet<ControllerButton>>()
   // A press that became part of a chord cannot also be a tap.
   const spent = new Set<ControllerButton>()
   const heldFired = new Set<ControllerButton>()
 
   const reset = (): void => {
     downAt.clear()
+    modifiedAtPress.clear()
+    partnersAtPress.clear()
     spent.clear()
     heldFired.clear()
   }
 
   return (previous, next) => {
+    const elapsedMs = Math.max(next.sampledAt - previous.sampledAt, 0)
     if (!next.connected) {
       reset()
       return []
     }
-    const intents: DeckIntent[] = []
+    const events: DeckIntentEvent[] = []
+    const report = (intent: DeckIntent, pressure = 0): void => {
+      events.push({ intent, pressure, elapsedMs })
+    }
     const modifierHeld = isDown(next, DECK_MODIFIER_BUTTON)
 
-    // Y + a trigger is the only meaning a trigger has beyond scrolling (PAD-3, FILE-5).
-    if (modifierHeld) {
-      for (const [axis, control] of TRIGGER_CHORDS) {
+    // A trigger's modified chord fires once per crossing; bare, the triggers scroll (PAD-3/SCR-11).
+    for (const [axis, control] of TRIGGERS) {
+      const pressure = axisOf(next, axis)
+      if (modifierHeld) {
         if (crossedDeadZone(previous, next, axis)) {
-          const chord = bindingFor(control, 'chord', { withModifier: true })
-          if (chord !== undefined) {
-            intents.push(chord.intent)
+          const binding = bindingFor(control, 'chord', { scope, modifier: true })
+          if (binding !== undefined) {
+            report(binding.intent, pressure)
           }
         }
+        continue
+      }
+      if (pressure >= TRIGGER_DEAD_ZONE) {
+        report(control === 'l2' ? 'scroll-up' : 'scroll-down', pressure)
       }
     }
 
     for (const button of CONTROLLER_BUTTONS) {
       const direction = DIRECTION_OF_BUTTON[button]
       if (direction !== undefined) {
-        // Arrows move the focused pane and repeat; the deck takes the press, not a tap.
         if (wentDown(previous, next, button)) {
-          intents.push(direction)
+          const resize = modifierHeld
+            ? bindingFor('dpad', 'tap', { scope, modifier: true, direction })
+            : undefined
+          if (resize !== undefined) {
+            report(resize.intent)
+          } else if (!modifierHeld) {
+            report(MOVEMENT_OF_DIRECTION[direction])
+          }
         }
         continue
       }
-      const control = controlOf(button)
-      if (control === null) {
+      const control = CONTROL_OF_BUTTON[button]
+      if (control === null || control === undefined) {
         continue
       }
       const partners = heldButtons(next, button)
 
       if (wentDown(previous, next, button)) {
         downAt.set(button, next.sampledAt)
-        // This button is the second half of a chord?
+        modifiedAtPress.set(button, modifierHeld)
+        partnersAtPress.set(button, new Set(partners))
+        const isModifier = button === DECK_MODIFIER_BUTTON
         for (const partner of partners) {
-          const partnerControl = controlOf(partner)
-          if (partnerControl === null) {
+          const partnerControl = CONTROL_OF_BUTTON[partner]
+          if (partnerControl === null || partnerControl === undefined) {
             continue
           }
-          const chord =
-            partner === DECK_MODIFIER_BUTTON
-              ? bindingFor(control, 'chord', { withModifier: true })
-              : bindingFor(partnerControl, 'chord', { withControl: control })
-          if (chord !== undefined) {
-            intents.push(chord.intent)
+          if (isModifier) {
+            const straight = bindingFor(partnerControl, 'chord', { scope, modifier: true })
+            if (straight !== undefined) {
+              report(straight.intent)
+              spent.add(button)
+              spent.add(partner)
+            }
+            continue
+          }
+          if (partner === DECK_MODIFIER_BUTTON) {
+            // The modifier is not a partner control: it is the chord's modifier.
+            const modified = bindingFor(control, 'chord', { scope, modifier: true })
+            if (modified !== undefined) {
+              report(modified.intent)
+              spent.add(button)
+              spent.add(partner)
+            }
+            continue
+          }
+          const pair = pairBinding(control, partnerControl, scope, modifierHeld)
+          if (pair !== undefined) {
+            report(pair.intent)
             spent.add(button)
             spent.add(partner)
           }
         }
-      } else if (partners.length > 0) {
+      } else if (
+        downAt.has(button) &&
+        partners.some((partner) => !partnersAtPress.get(button)?.has(partner))
+      ) {
         // A partner arrived while this was held: the press is a chord, whatever it becomes.
         spent.add(button)
       }
 
       const pressedAt = downAt.get(button)
-      const threshold =
-        control === 'start'
-          ? DICTATION_HOLD_MS
-          : control === 'l1' || control === 'r1'
-            ? PANEL_TOGGLE_HOLD_MS
-            : null
-      if (
-        threshold !== null &&
-        pressedAt !== undefined &&
-        isDown(next, button) &&
-        !heldFired.has(button) &&
-        next.sampledAt - pressedAt >= threshold
-      ) {
-        const hold = bindingFor(control, 'hold', { withModifier: modifierHeld })
-        // Start needs the modifier state captured the way the table says: Start alone taps Help.
-        const holdForControl =
-          control === 'start' ? bindingFor('start', 'hold') : modifierHeld ? hold : undefined
-        if (holdForControl !== undefined) {
-          intents.push(holdForControl.intent)
+      if (pressedAt !== undefined && isDown(next, button) && !heldFired.has(button)) {
+        const modified = modifiedAtPress.get(button) === true
+        const hold =
+          control === 'start'
+            ? bindingFor('start', 'hold', { scope })
+            : control === 'l1' || control === 'r1'
+              ? bindingFor(control, 'hold', { scope, modifier: modified })
+              : undefined
+        const threshold = control === 'start' ? DICTATION_HOLD_MS : PANEL_TOGGLE_HOLD_MS
+        if (hold !== undefined && next.sampledAt - pressedAt >= threshold) {
+          report(hold.intent)
           heldFired.add(button)
           spent.add(button)
         }
@@ -175,15 +239,22 @@ export function createDeckChordMatcher(): DeckChordMatcher {
 
       if (wentUp(previous, next, button)) {
         const quick = pressedAt !== undefined && next.sampledAt - pressedAt <= TAP_MAX_MS
-        const tap = quick && !spent.has(button) ? bindingFor(control, 'tap') : undefined
-        if (tap !== undefined && control !== DECK_MODIFIER_BUTTON) {
-          intents.push(tap.intent)
+        const modified = modifiedAtPress.get(button) === true
+        // The modifier itself never taps, and an unbound modified press stays silent.
+        const tap =
+          quick && !spent.has(button) && button !== DECK_MODIFIER_BUTTON
+            ? bindingFor(control, 'tap', { scope, modifier: modified })
+            : undefined
+        if (tap !== undefined) {
+          report(tap.intent)
         }
         downAt.delete(button)
+        modifiedAtPress.delete(button)
+        partnersAtPress.delete(button)
         spent.delete(button)
         heldFired.delete(button)
       }
     }
-    return intents
+    return events
   }
 }
