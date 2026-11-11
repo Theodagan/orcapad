@@ -159,6 +159,16 @@ onto `implement/deck-build` @ `c35fe5e322`, which is where the brief said to con
   Implementing Ports needs a desktop route entry, which this run may not make (no desktop RPC
   changes).
 
+### Verification this run actually ran
+
+- `ORCA_CODE_QUALITY_BASE=origin/main pnpm check:changed` — 16/16 (three attempts: two failures on
+  `switch-exhaustiveness-check` and `format`, both fixed).
+- `cd mobile && pnpm typecheck` — clean; `pnpm typecheck:tests` — deck and `app-update` clean, the
+  remaining 64 errors are the untouched `src/gamepad/**` baseline.
+- `cd mobile && npx vitest run src/deck src/gamepad` — 98 files, 795 passed, 4 skipped.
+- `cd mobile && npx vitest run --maxWorkers=2` (full suite) — 713 files, 4743 passed, 4 skipped, 0 failed.
+- `node mobile/scripts/deck-upstream-check.mjs` — 109 checks, 0 failed.
+
 ### Not started
 
 T43, T44, T47–T54, T55–T69, T63, T64, T72, T74–T83, T85–T91, T92–T99, T71, T101–T103. **First next
