@@ -31,7 +31,10 @@ export function AllOpen({
   if (items.length === 0) {
     return (
       <Text style={{ color: theme.color.text3, fontSize: theme.text.meta }}>
-        {t('deck.panel.allOpen.empty', 'deck.panel.allOpen.empty')}
+        {t(
+          'deck.panel.allOpen.empty',
+          'Nothing open yet. Open a workspace or a session to list it here.'
+        )}
       </Text>
     )
   }

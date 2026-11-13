@@ -57,7 +57,7 @@ export function CarouselShell({
     id: 'carousel',
     zone: 'list',
     accepts: new Set(['cycle-tab']),
-    labels: { 'cycle-tab': t('deck.chord.itemNext', 'deck.chord.itemNext') },
+    labels: { 'cycle-tab': t('deck.chord.itemNext', 'Next item') },
     handle: (intent) => {
       if (intent.kind !== 'cycle-tab') {
         return
@@ -72,13 +72,15 @@ export function CarouselShell({
         onMoveShouldSetPanResponder: (_event, gesture) => swipeDirection(gesture.dx) !== null,
         onPanResponderRelease: (_event, gesture) => {
           const direction = swipeDirection(gesture.dx)
-          if (direction !== null) {
-            move(direction)
+          if (direction === null) {
+            return
+          }
+          const next = moveCarouselSelection(items, selectedId, direction)
+          if (next !== null) {
+            onSelectItem(next)
           }
         }
       }),
-    // `move` closes over the current selection, so the responder follows it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- regenerating on selection is the point.
     [items, selectedId, onSelectItem]
   )
 
