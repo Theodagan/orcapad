@@ -4971,6 +4971,16 @@
       "allOpen": {
         "empty": "Nothing open yet. Open a workspace or a session to list it here."
       }
+    },
+    "crumb": {
+      "host": "Host",
+      "project": "Project",
+      "workspace": "Workspace",
+      "session": "Session"
+    },
+    "view": {
+      "chat": "Chat UI",
+      "tui": "TUI"
     }
   }
 }

@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react'
 import { useWindowDimensions } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useLocalSearchParams, usePathname, useRouter } from 'expo-router'
 import { useMobileTranslation } from '../../i18n/use-mobile-translation'
 import { MobileStateView } from '../../components/MobileStateView'
 import { DeckShell } from '../DeckShell'
+import { DeckHeader } from '../chrome/DeckHeader'
+import { deckRouteFromRouter, resolveDeckContext } from '../context/deck-context'
 import { PanelColumns } from '../panels/PanelColumns'
 import { AllOpen, type DeckOpenItem } from '../panels/left/AllOpen'
 import { QuickMenu } from '../panels/left/QuickMenu'
@@ -11,6 +13,8 @@ import type { DeckPanel } from '../panels/panel-registry'
 import { destinationById, type DeckDestinationId } from './destinations'
 
 const NO_OPEN_ITEMS: readonly DeckOpenItem[] = []
+
+const NO_CRUMB_NAMES = { host: null, project: null, workspace: null, session: null } as const
 
 /**
  * DECK-R38: a destination with nothing to show says what is empty and how it fills, and says it
@@ -28,6 +32,7 @@ export function DeckDestinationScreen({
   const t = useMobileTranslation()
   const router = useRouter()
   const { width } = useWindowDimensions()
+  const context = resolveDeckContext(deckRouteFromRouter(usePathname(), useLocalSearchParams()))
   const { labelKey } = destinationById(destination)
   const renderPanel = (panel: DeckPanel): ReactNode | undefined => {
     if (panel.id === 'quick-menu') {
@@ -44,6 +49,7 @@ export function DeckDestinationScreen({
   }
   return (
     <DeckShell>
+      <DeckHeader context={context} names={NO_CRUMB_NAMES} />
       <PanelColumns screen={destination} windowWidth={width} renderPanel={renderPanel}>
         <MobileStateView
           title={t(labelKey, labelKey)}

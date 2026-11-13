@@ -38,6 +38,18 @@ function param(params: DeckRoute['params'], key: string): string | null {
   return value === undefined || value === '' ? null : value
 }
 
+/** What the router hands a screen, flattened: expo-router repeats a key for a repeated param. */
+export function deckRouteFromRouter(
+  pathname: string,
+  params: Readonly<Record<string, string | string[]>>
+): DeckRoute {
+  const flat: Record<string, string | undefined> = {}
+  for (const [key, value] of Object.entries(params)) {
+    flat[key] = Array.isArray(value) ? value[0] : value
+  }
+  return { pathname, params: flat }
+}
+
 /** A route in, the deck's whole notion of "where am I" out. */
 export function resolveDeckContext(route: DeckRoute): DeckContext {
   const session = SESSION_ROUTE.exec(route.pathname)
