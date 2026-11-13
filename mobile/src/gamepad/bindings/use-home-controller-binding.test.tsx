@@ -5,7 +5,13 @@ import { ControllerProvider, useController } from '../controller-provider'
 import type { ControllerIntent } from '../controller-input/controller-intent'
 import type { ControllerReader } from '../controller-input/controller-reader'
 import { neutralSample, type ControllerSample } from '../controller-input/controller-sample'
-import { createWheelRegistry } from '../wheel/wheel-registry'
+import {
+  createWheelRegistry,
+  isRunnableAction,
+  type WheelActionBinding,
+  type WheelActionBindingId,
+  type WheelRegistry
+} from '../wheel/wheel-registry'
 import { GO_ACTION_IDS } from './wheel-action-ids'
 import { useHomeControllerBinding } from './use-home-controller-binding'
 
@@ -182,7 +188,7 @@ describe('home controller binding', () => {
     const home = mount()
     expect(home.registry.lookup(GO_ACTION_IDS.new)?.label).toBe('Pair desktop')
 
-    home.registry.lookup(GO_ACTION_IDS.new)?.run()
+    runnableAction(home.registry, GO_ACTION_IDS.new).run()
     expect(home.onPairDesktop).toHaveBeenCalledTimes(1)
 
     act(() => home.renderer.unmount())
@@ -199,3 +205,12 @@ describe('home controller binding', () => {
     expect(home.onOpen).not.toHaveBeenCalled()
   })
 })
+
+/** A wheel action the registry really holds: a menu binding has no `run`, so it is not one. */
+function runnableAction(registry: WheelRegistry, id: WheelActionBindingId): WheelActionBinding {
+  const binding = registry.lookup(id)
+  if (binding === null || !isRunnableAction(binding)) {
+    throw new Error(`no runnable wheel action: ${id}`)
+  }
+  return binding
+}

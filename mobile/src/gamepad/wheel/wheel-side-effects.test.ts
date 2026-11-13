@@ -60,7 +60,7 @@ function drive(
     state = stateAfter(outcome)
     dispatchWheelOutcome(
       outcome,
-      p.segmentsFor(event.kind === 'motion' ? event.wheel : 1),
+      p.segmentsFor(event.kind === 'motion' ? event.wheel : 1, []),
       (id) => {
         invoked.push(id)
       }

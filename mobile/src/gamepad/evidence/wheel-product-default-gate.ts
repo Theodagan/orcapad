@@ -52,14 +52,17 @@ export function validateProductDefaultDecision(decision: unknown): readonly stri
  * The gate itself: which contractual presets are unaccounted for. Takes the ids rather than the
  * presets so it can be run over source text, before any such preset exists to import.
  */
+/** A record from disk is unknown until it validates; the gate reads only the ones that do. */
+function isProductDefaultDecision(value: unknown): value is ProductDefaultDecision {
+  return validateProductDefaultDecision(value).length === 0
+}
+
 export function unapprovedProductDefaults(
   contractualPresetIds: readonly string[],
-  decisions: readonly ProductDefaultDecision[]
+  decisions: readonly unknown[]
 ): readonly string[] {
   const approved = new Set(
-    decisions
-      .filter((decision) => validateProductDefaultDecision(decision).length === 0)
-      .map((decision) => decision.presetId)
+    decisions.filter(isProductDefaultDecision).map((entry) => entry.presetId)
   )
   return contractualPresetIds.filter((id) => !approved.has(id))
 }

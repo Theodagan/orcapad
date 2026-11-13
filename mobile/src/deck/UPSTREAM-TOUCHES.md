@@ -29,3 +29,5 @@ mobile/package.json, mobile/pnpm-lock.yaml — `expo-intent-launcher` for the in
 mobile/app.json — declares REQUEST_INSTALL_PACKAGES for the in-app APK install (D6) — T18
 mobile/src/gamepad/gamepad-boundary.test.ts — the deck resolves its own Y chord table, so deck/controller joins controller-input as a place raw controls are named — T26
 mobile/src/gamepad/ControllerShell.tsx — on `/deck` routes the shell stops resolving intents and stops mounting Orca's back binding, native-focus fallback, hint strip and wheel overlay, so the deck's dispatcher is the only reader (names the route prefix, never imports the deck) — T26
+mobile/src/gamepad/** *.test.ts(x) — the pad tests moved onto the current intent, binding and renderer types, which is what the red tests-typecheck gate was reporting (64 errors, 23 files); no baseline entry was added — run 4 item 1
+mobile/src/gamepad/evidence/wheel-product-default-gate.ts — `unapprovedProductDefaults` takes records read from disk, which are unknown until they validate, so its decision parameter is `readonly unknown[]` — run 4 item 1

@@ -104,15 +104,23 @@ describe('WheelOverlay', () => {
     return publish
   }
 
+  /** The controller arrives during the mount, so it is read through a getter afterwards. */
+  function mountAndCapture(registry: WheelRegistry): () => WheelController | null {
+    const captured: { controller: WheelController | null } = { controller: null }
+    mount(registry, (c) => (captured.controller = c))
+    return () => captured.controller
+  }
+
   /** The label of each segment, not the hub's. */
   function labels(): string[] {
     const segments =
       renderer?.root.findAll(
         (node) =>
-          node.type === 'View' && String(node.props.testID ?? '').startsWith('wheel-segment:')
+          String(node.type) === 'View' &&
+          String(node.props.testID ?? '').startsWith('wheel-segment:')
       ) ?? []
     return segments.flatMap((node) => {
-      const text = node.findAll((child) => child.type === 'Text')[0]
+      const text = node.findAll((child) => String(child.type) === 'Text')[0]
       return typeof text?.children[0] === 'string' ? [text.children[0]] : []
     })
   }
@@ -123,7 +131,7 @@ describe('WheelOverlay', () => {
     return cue === undefined
       ? null
       : cue
-          .findAll((node) => node.type === 'Text')
+          .findAll((node) => String(node.type) === 'Text')
           .map((node) => node.children.join(''))
           .join(' | ')
   }
@@ -132,7 +140,7 @@ describe('WheelOverlay', () => {
     let controller: WheelController | null = null
     mount(createWheelRegistry(), (c) => (controller = c))
 
-    expect(renderer?.root.findAll((node) => node.type === 'View')).toHaveLength(1) // provider root
+    expect(renderer?.root.findAll((node) => String(node.type) === 'View')).toHaveLength(1) // provider root
     expect(controller).not.toBeNull()
   })
 
@@ -157,7 +165,7 @@ describe('WheelOverlay', () => {
     })
 
     const layer = renderer?.root.findAll(
-      (node) => node.type === 'View' && node.props.pointerEvents === 'auto'
+      (node) => String(node.type) === 'View' && node.props.pointerEvents === 'auto'
     )
     expect(layer).toHaveLength(1)
     expect(layer?.[0]?.props.onStartShouldSetResponder()).toBe(true)
@@ -210,7 +218,7 @@ describe('WheelOverlay', () => {
 
     const dial = renderer?.root.findAll(
       (node) =>
-        node.type === 'View' &&
+        String(node.type) === 'View' &&
         Array.isArray(node.props.style) &&
         node.props.style.some(
           (entry: unknown) => entry !== null && typeof entry === 'object' && 'height' in entry
@@ -219,7 +227,7 @@ describe('WheelOverlay', () => {
     // A one-slot parent keeps the small ring (96); the half circle sits 120 outside it.
     expect(dial?.props.style[1]).toMatchObject({ height: 432, width: 432 })
     const label = renderer?.root.findAll(
-      (node) => node.type === 'Text' && node.props.numberOfLines === 1
+      (node) => String(node.type) === 'Text' && node.props.numberOfLines === 1
     )[0]
     expect(label?.props.style.maxWidth).toBe(96)
   })
@@ -300,32 +308,29 @@ describe('WheelOverlay', () => {
     const registry = createWheelRegistry()
     const run = vi.fn()
     registry.register({ id: 'noop.one', label: 'North', availability: 'available', run })
-    let controller: WheelController | null = null
-    mount(registry, (c) => (controller = c))
+    const wheel = mountAndCapture(registry)
 
     // Deliberately outside act(): no re-render is flushed between the motion and the confirm,
     // so a commit that depended on rendering would not happen.
-    controller?.intercept(up)
-    controller?.intercept({ kind: 'confirm' })
+    wheel()?.intercept(up)
+    wheel()?.intercept({ kind: 'confirm' })
 
     expect(run).toHaveBeenCalledTimes(1)
   })
 
   it('leaves A to the focused surface while no wheel is open', () => {
-    let controller: WheelController | null = null
-    mount(createWheelRegistry(), (c) => (controller = c))
+    const wheel = mountAndCapture(createWheelRegistry())
 
-    expect(controller?.intercept({ kind: 'confirm' })).toBe(false)
+    expect(wheel()?.intercept({ kind: 'confirm' })).toBe(false)
   })
 
   it('claims A while a wheel is open, so the surface does not also act', () => {
-    let controller: WheelController | null = null
-    mount(createWheelRegistry(), (c) => (controller = c))
+    const wheel = mountAndCapture(createWheelRegistry())
 
     act(() => {
-      controller?.intercept(up)
+      wheel()?.intercept(up)
     })
-    expect(controller?.intercept({ kind: 'confirm' })).toBe(true)
+    expect(wheel()?.intercept({ kind: 'confirm' })).toBe(true)
   })
 
   it('renders an unavailable segment disabled rather than removing it', () => {
@@ -337,7 +342,7 @@ describe('WheelOverlay', () => {
 
     const faded = renderer?.root.findAll(
       (node) =>
-        node.type === 'View' &&
+        String(node.type) === 'View' &&
         String(node.props.testID ?? '').startsWith('wheel-segment:') &&
         node.props.style?.some?.(
           (s: unknown) => s !== null && typeof s === 'object' && 'opacity' in s

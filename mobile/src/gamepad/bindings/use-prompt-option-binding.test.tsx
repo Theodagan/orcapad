@@ -1,4 +1,4 @@
-import { createElement, type ReactNode } from 'react'
+import { createElement, type ReactElement, type ReactNode } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { describe, expect, it, vi } from 'vitest'
 import { ControllerProvider, useController } from '../controller-provider'
@@ -27,8 +27,7 @@ function mount(optionCount = 3, withAgentBeneath = false) {
         sessionId: 'wt-1',
         canStop: true,
         onStop: agentStop,
-        scrollTo: vi.fn(),
-        onDetachFromTail: vi.fn()
+        scrollBy: vi.fn()
       })
     }
     return createElement(Card)
@@ -48,13 +47,7 @@ function mount(optionCount = 3, withAgentBeneath = false) {
     return null
   }
 
-  let renderer: ReactTestRenderer | null = null
-  act(() => {
-    renderer = create(createElement(ControllerProvider, {}, createElement(Chat)))
-  })
-  if (renderer === null) {
-    throw new Error('renderer did not mount')
-  }
+  const renderer = mountOnce(createElement(ControllerProvider, {}, createElement(Chat)))
 
   return {
     renderer,
@@ -120,3 +113,16 @@ describe('answering an agent prompt with a controller', () => {
     expect(card.agentStop).not.toHaveBeenCalled()
   })
 })
+
+/** `act` hands nothing back, so the created tree is carried out of it rather than narrowed. */
+function mountOnce(element: ReactElement): ReactTestRenderer {
+  const created: ReactTestRenderer[] = []
+  act(() => {
+    created.push(create(element))
+  })
+  const mounted = created[0]
+  if (mounted === undefined) {
+    throw new Error('renderer did not mount')
+  }
+  return mounted
+}

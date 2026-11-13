@@ -60,6 +60,7 @@ const EVERY_INTENT: Record<ControllerIntentKind, ControllerIntent> = {
   'toggle-dictation': { kind: 'toggle-dictation' },
   'move-selection': { kind: 'move-selection', direction: 'down' },
   'move-horizontal': { kind: 'move-horizontal', direction: 'right' },
+  'jump-message': { kind: 'jump-message', direction: 'previous' },
   'run-action': { kind: 'run-action', actionId: 'test.act' }
 }
 

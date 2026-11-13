@@ -5,7 +5,13 @@ import { ControllerProvider, useController } from '../controller-provider'
 import type { ControllerIntent } from '../controller-input/controller-intent'
 import type { ControllerReader } from '../controller-input/controller-reader'
 import { neutralSample, type ControllerSample } from '../controller-input/controller-sample'
-import { createWheelRegistry } from '../wheel/wheel-registry'
+import {
+  createWheelRegistry,
+  isRunnableAction,
+  type WheelActionBinding,
+  type WheelActionBindingId,
+  type WheelRegistry
+} from '../wheel/wheel-registry'
 import { pairingRouteBinding } from './pairing-route-binding'
 import { useHomeControllerBinding } from './use-home-controller-binding'
 import { useWorkspaceControllerBinding } from './use-workspace-controller-binding'
@@ -179,7 +185,7 @@ describe('controller and touch reach the same action', () => {
     })
 
     onStop()
-    harness.registry.lookup('do.stop')?.run()
+    runnableAction(harness.registry, 'do.stop').run()
 
     expect(onStop).toHaveBeenCalledTimes(2)
   })
@@ -196,7 +202,6 @@ describe('controller and touch reach the same action', () => {
         onToggleDirectory: vi.fn(),
         onPreviewFile,
         onRetryDirectory: vi.fn(),
-        onCollapseAll: vi.fn(),
         onBack: vi.fn(),
         scrollBy: vi.fn()
       })
@@ -217,6 +222,7 @@ describe('controller and touch reach the same action', () => {
       useTerminalControllerBinding({
         handle: 'h1',
         enabled: true,
+        editingText: false,
         scrollLines: vi.fn(),
         sendKey,
         actions: [{ id: 'terminal.escape', label: 'Esc', send: '\u001b', enabled: true }]
@@ -225,7 +231,7 @@ describe('controller and touch reach the same action', () => {
     })
 
     sendKey('\u001b') // the shortcut key row's Esc
-    harness.registry.lookup('terminal.escape')?.run()
+    runnableAction(harness.registry, 'terminal.escape').run()
     harness.press({ kind: 'back' })
 
     expect(sendKey).toHaveBeenCalledTimes(3)
@@ -249,6 +255,7 @@ describe('an unmounted binding reaches nothing', () => {
       useTerminalControllerBinding({
         handle: 'h1',
         enabled: true,
+        editingText: false,
         scrollLines: vi.fn(),
         sendKey,
         actions: [{ id: 'terminal.escape', label: 'Esc', send: '\u001b', enabled: true }]
@@ -291,6 +298,7 @@ describe('an unavailable target does nothing rather than something', () => {
       useTerminalControllerBinding({
         handle: 'h1',
         enabled: true,
+        editingText: false,
         scrollLines: vi.fn(),
         sendKey,
         actions: [{ id: 'terminal.quick', label: 'Deploy', send: 'x\r', enabled: false }]
@@ -320,3 +328,12 @@ describe('an unavailable target does nothing rather than something', () => {
     expect(onStop).not.toHaveBeenCalled()
   })
 })
+
+/** A wheel action the registry really holds: a menu binding has no `run`, so it is not one. */
+function runnableAction(registry: WheelRegistry, id: WheelActionBindingId): WheelActionBinding {
+  const binding = registry.lookup(id)
+  if (binding === null || !isRunnableAction(binding)) {
+    throw new Error(`no runnable wheel action: ${id}`)
+  }
+  return binding
+}
