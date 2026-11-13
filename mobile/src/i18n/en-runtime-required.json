@@ -229,6 +229,11 @@
       "notDeclared": "This desktop does not provide it.",
       "unknownHost": "This desktop has not said what it supports yet.",
       "unsupportedHost": "This desktop is too old for it."
+    },
+    "panel": {
+      "allOpen": {
+        "empty": "Nothing open yet. Open a workspace or a session to list it here."
+      }
     }
   },
   "dictation": {

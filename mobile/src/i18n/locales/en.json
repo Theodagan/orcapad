@@ -4966,6 +4966,11 @@
     },
     "settings": {
       "title": "Settings"
+    },
+    "panel": {
+      "allOpen": {
+        "empty": "Nothing open yet. Open a workspace or a session to list it here."
+      }
     }
   }
 }

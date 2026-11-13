@@ -7,14 +7,20 @@ import { useDeckTheme } from '../theme/deck-theme'
 import { columnVisible, panelColumnsLayout } from './panel-columns'
 import { panelsForSide, type DeckPanel } from './panel-registry'
 
-/** DECK-R3: three columns that split the width; a column with no width is not rendered at all. */
+/**
+ * DECK-R3: three columns that split the width; a column with no width is not rendered at all.
+ * `renderPanel` is how a panel with content of its own draws it; a panel it does not answer for
+ * keeps its title and its disabled reason instead of looking like an empty list.
+ */
 export function PanelColumns({
   screen,
   windowWidth,
+  renderPanel,
   children
 }: {
   screen: DeckScreenKind
   windowWidth: number
+  renderPanel?: (panel: DeckPanel) => ReactNode | undefined
   children: ReactNode
 }): ReactNode {
   const theme = useDeckTheme()
@@ -23,19 +29,25 @@ export function PanelColumns({
   const layout = panelColumnsLayout(windowWidth, { left: left.length > 0, right: right.length > 0 })
   return (
     <View style={{ flex: 1, flexDirection: 'row', backgroundColor: theme.color.base }}>
-      {columnVisible(layout.left) ? <PanelColumn panels={left} width={layout.left} /> : null}
+      {columnVisible(layout.left) ? (
+        <PanelColumn panels={left} width={layout.left} renderPanel={renderPanel} />
+      ) : null}
       <View style={{ width: layout.main, flexGrow: 1 }}>{children}</View>
-      {columnVisible(layout.right) ? <PanelColumn panels={right} width={layout.right} /> : null}
+      {columnVisible(layout.right) ? (
+        <PanelColumn panels={right} width={layout.right} renderPanel={renderPanel} />
+      ) : null}
     </View>
   )
 }
 
 function PanelColumn({
   panels,
-  width
+  width,
+  renderPanel
 }: {
   panels: readonly DeckPanel[]
   width: number
+  renderPanel?: (panel: DeckPanel) => ReactNode | undefined
 }): ReactNode {
   const t = useMobileTranslation()
   const theme = useDeckTheme()
@@ -55,11 +67,12 @@ function PanelColumn({
           <Text style={{ color: theme.color.text1, fontSize: theme.text.body }}>
             {t(panel.titleKey, panel.titleKey)}
           </Text>
-          {panel.disabledReason === null ? null : (
-            <Text style={{ color: theme.color.text3, fontSize: theme.text.meta }}>
-              {disabledReasonText(t, panel.disabledReason)}
-            </Text>
-          )}
+          {renderPanel?.(panel) ??
+            (panel.disabledReason === null ? null : (
+              <Text style={{ color: theme.color.text3, fontSize: theme.text.meta }}>
+                {disabledReasonText(t, panel.disabledReason)}
+              </Text>
+            ))}
         </View>
       ))}
     </View>
