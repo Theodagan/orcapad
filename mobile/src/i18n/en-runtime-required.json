@@ -257,6 +257,13 @@
       "idle": "Idle",
       "done": "Done",
       "unknown": "Unknown"
+    },
+    "wheels": {
+      "latency": {
+        "title": "Stick to frame",
+        "none": "No turns measured yet",
+        "line": "p50 {{p50}} ms · p95 {{p95}} ms"
+      }
     }
   },
   "dictation": {
