@@ -57,3 +57,15 @@ below are the ones behind the R rows, with what each one does to a field this bu
 
 The two `z.object` rows never fail a parse, so they cannot blank a screen; they do drop fields, so a
 deck screen that needs one of them reads the raw reply through the helpers above.
+
+## Layouts against the maquette (T48)
+
+`WorktreeAgentRow` needs a `RuntimeWorktreeAgentRow`, which only the live worktree snapshot has, so
+until T49 lands the layouts draw the collection model through `AgentStateDot` rather than the row
+component. `DOT_STATE_FOR_STATUS` is the mapping: needs-you → permission, running → working, idle →
+idle, done → done, and any status this build has not seen → unconfirmed, Orca's neutral mark
+(DECK-R42).
+
+The side-by-side against `Pocketdeck/explorations/maquette-v3/collections.js` (SES-0, IH-10) is
+**not done**: the maquette lives in the private repo, which the worker cannot read. Cards, kanban,
+list and grid were built from the card text only, so the owner should expect arrangement differences.

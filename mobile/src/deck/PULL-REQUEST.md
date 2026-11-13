@@ -5,9 +5,72 @@
 > report there. Paste it into the PR when opening it; there is no API credential on the worker that
 > could open the PR itself.
 >
-> **Run 3 (`implement/cloud-continue`)** owns the branch now. Compare:
-> <https://github.com/Theodagan/orcapad/compare/main...implement/cloud-continue>. The section below
-> it is the corrected picture; the run 1–2 text is kept as history.
+> **Run 4 (`implement/deck-build`)** is the current run: compare
+> <https://github.com/Theodagan/orcapad/compare/main...implement/deck-build>. The run 1–3 sections
+> below are kept as history.
+
+## Run 4 — step 7 finished
+
+Branch `implement/deck-build`, cut from `main` @ `0cd251dba3`. The brief asked for steps 7–10 (and
+step 11 with budget); this run finished **step 7** and the pad-test gate that was first in line,
+then stopped rather than open step 8 with no budget to finish it. Step 8 (T49–T54), step 9
+(T55–T69), step 10 (T63, T64) and step 11 are **not started**.
+
+### The gate first: mobile pad tests
+
+`pnpm check:tests-typecheck` was red on `main`: 64 type errors in 23 pad test files. All of them are
+fixed at the call sites — the tests were still written against older intent, binding and renderer
+shapes — and `mobile/tests-typecheck-baseline.txt` is untouched (still empty). In this sandbox the
+gate still exits 1, on its **second** program (`mobile/tsconfig.test.mobile-declarations.json`,
+`exit null`); that failure reproduces on a clean tree and the same `tsc` invocation passes by hand,
+so it is an environment limit here, not a claim of green. One production type moved with the tests:
+`unapprovedProductDefaults` takes `readonly unknown[]`, because the decisions it reads come from
+JSON on disk.
+
+### Steps, as delivered
+
+| Step         | Card                             | State                                                                                                          |
+| ------------ | -------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| 7            | T43 quick menu + all open        | done, except that `All open` draws its empty state until step 8's screens supply open items                    |
+| 7            | T44 breadcrumb header            | done                                                                                                           |
+| 7            | T47 carousel shell               | done                                                                                                           |
+| 7            | T48 cards / kanban / list / grid | done, maquette side-by-side **pending** (the maquette is in the private repo and not readable from the worker) |
+| 8, 9, 10, 11 | T49–T69, T63, T64, T72–T83       | **not started**                                                                                                |
+
+Tests: the cards that pin behaviour got one (breadcrumb per context, carousel parity, the status-to-dot
+mapping). The render/copy tests the card text asked for were **not** written: `AGENTS.md` says a test
+must fail when its change is reverted and hardcode its expectations, and a render-only test of copy or
+arrangement does not. That is the deviation from the per-task wording, and it is deliberate.
+
+### Files touched outside `mobile/src/deck/` and `mobile/app/deck/`
+
+- `mobile/src/gamepad/**` — 22 test files brought onto the current APIs (the gate above), and
+  `evidence/wheel-product-default-gate.ts` for the parameter type. Each is a line in
+  `mobile/src/deck/UPSTREAM-TOUCHES.md`.
+- Nothing else. No desktop code, no RPC routing, no workflow, no dependency change.
+
+### What the owner can try
+
+There is no desktop or device in the cloud, so everything below is the list to run on the handheld —
+none of it has been seen on a screen:
+
+1. **Ordinary Orca screens** — still the default interface. Nothing in step 7 touches them.
+2. **Settings → Interface → Deck.** Each deck destination should now draw a header row on top and,
+   in landscape, a left column with **Quick menu** (every destination, one press each) and **All
+   open** (says it is empty, and how to fill it).
+3. **Pad:** press `A` on a Quick menu row — it should open that destination. The left column's rows
+   should be reachable by the D-pad and show the deck's focus ring.
+4. **Small screens / portrait:** the left column collapses rather than overlaying the content
+   (`DECK-R3`); the content keeps its minimum width.
+5. **Report anything that looks unlike Orca.** The deck now has its own header and panel content;
+   layout differences from the maquette are expected for the four session layouts, since they were
+   built from the card text alone.
+
+### Next run starts at T49
+
+`sessions/use-deck-sessions.ts` over `worktree/worktree-list-snapshot.ts`,
+`transport/connection/use-all-host-clients.ts` and the session-tabs stream; the Sessions route still
+renders `DeckDestinationScreen`. `HANDOFF-LOG.md`'s Run 4 section has the per-card commands.
 
 ## Run 3 — corrections (C1–C4 of the continuation brief)
 
