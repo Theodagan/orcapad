@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   collectionItemsFromHostRows,
   collectionSummary,
+  DOT_STATE_FOR_STATUS,
   EMPTY_COLLECTION,
   selectCollectionItem,
   setCollectionLayout
@@ -54,5 +55,18 @@ describe('collection model', () => {
 
   it('keeps the chosen layout', () => {
     expect(setCollectionLayout(EMPTY_COLLECTION, 'kanban').layout).toBe('kanban')
+  })
+})
+
+describe('the dot a bucket gets (IH-10)', () => {
+  // A bucket the deck has no mark for must land on the neutral one, never on a guess (DECK-R42).
+  it('draws every bucket with Orca’s own dot state, unknown included', () => {
+    expect(DOT_STATE_FOR_STATUS).toEqual({
+      'needs-you': 'permission',
+      running: 'working',
+      idle: 'idle',
+      done: 'done',
+      unknown: 'unconfirmed'
+    })
   })
 })

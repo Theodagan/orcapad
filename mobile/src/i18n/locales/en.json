@@ -4987,6 +4987,13 @@
       "kanban": "Kanban",
       "list": "List",
       "grid": "Grid"
+    },
+    "status": {
+      "needs-you": "Needs you",
+      "running": "Running",
+      "idle": "Idle",
+      "done": "Done",
+      "unknown": "Unknown"
     }
   }
 }
