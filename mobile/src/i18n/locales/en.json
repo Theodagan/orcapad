@@ -4981,6 +4981,12 @@
     "view": {
       "chat": "Chat UI",
       "tui": "TUI"
+    },
+    "layout": {
+      "cards": "Cards",
+      "kanban": "Kanban",
+      "list": "List",
+      "grid": "Grid"
     }
   }
 }
