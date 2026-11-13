@@ -29,16 +29,13 @@ reinstall: Android refuses an update signed by a different key.
    public Expo debug certificate is what came out.
 4. Publishes the APK and its `.sha256` beside it — the deck's update check reads exactly those.
 
-## Workflow change waiting on permission
+## Workflow change
 
-The delivery credentials for this branch cannot push under `.github/workflows/`, so the two edits
-below are handed over as `pending-workflow-changes.patch` beside this file:
+The cloud worker's credentials cannot push under `.github/workflows/`, so the owner applied the two
+edits by hand; they are in `.github/workflows/mobile-android-release.yml` now:
 
 - the signing step fails the job when the key material is missing (no debug fallback), and
 - the tag prefix, the release title and the guarded marketing-site job.
-
-`git apply mobile/src/deck/pending-workflow-changes.patch` from the repository root applies them
-cleanly to this branch.
 
 ## What the owner does
 

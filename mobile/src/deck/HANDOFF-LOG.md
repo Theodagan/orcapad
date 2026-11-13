@@ -33,8 +33,8 @@ Baseline before any change: `npx vitest run` in `mobile/` — 687 files, 4620 pa
 
 ## Step 4 — Release pipeline
 
-- T15 — blocked (the delivery credentials cannot push `.github/workflows/`) — workflow step rewritten and verified locally (YAML parses) but stripped from the pushed history; the patch is in `docs/plans/deck-build/implementation-report.md`. `mobile/src/deck/RELEASING.md` written and pushed.
-- T16 — blocked (same cause) — tag prefix + site-job guard stripped from the pushed history (patch in the report). The parts outside the workflow — `mobile/scripts/prepare-android-release.mjs` and its test — are committed; `npx vitest run src/mobile-release` 4 passed.
+- T15 — done (owner applied the workflow change; the worker's credentials could not push `.github/workflows/`) — `.github/workflows/mobile-android-release.yml` now fails a release run that lacks the fork's key instead of shipping the public debug key. `mobile/src/deck/RELEASING.md` written.
+- T16 — done — tag prefix `orcapad-android-v`, the release-mirror input and the previous-tag lookup follow it, and the site bump job is guarded to `stablyai/orca` where its token exists. `mobile/scripts/prepare-android-release.mjs` and its test were already committed; `npx vitest run src/mobile-release` 4 passed.
 
 ## Step 5 — Controller contract
 

@@ -80,14 +80,13 @@ assertions, English labels beside keys, and missing catalog entries. All four fi
 `instanceof` narrowing replaced every cast, `chord-table`/`destinations`/`deck-history` carry
 catalog keys only, and the English now lives in `locales/en.json` and `en-runtime-required.json`.
 
-## Blocked — the release workflow
+## Release workflow
 
-T15 and T16 cannot be pushed by this worker: the GitHub App has no `workflows` permission, so
-`.github/workflows/mobile-android-release.yml` is rejected. The verified change is handed back as
-`mobile/src/deck/pending-workflow-changes.patch` (`git apply` applies it cleanly to this branch): the
-signing step fails without the fork key (no debug fallback) and the tag prefix, release title and
-site-job guard move to the fork. `mobile/src/deck/RELEASING.md` is the runbook. The parts outside
-the workflow — `prepare-android-release.mjs` and its test — are committed.
+T15 and T16 could not be pushed by the worker: the GitHub App has no `workflows` permission, so
+`.github/workflows/mobile-android-release.yml` was rejected. The owner applied the verified change
+directly: the signing step fails without the fork key (no debug fallback) and the tag prefix,
+release title and site-job guard move to the fork. `mobile/src/deck/RELEASING.md` is the runbook. The
+parts outside the workflow — `prepare-android-release.mjs` and its test — are committed.
 
 ## Not done
 
