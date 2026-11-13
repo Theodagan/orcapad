@@ -223,7 +223,20 @@ Branch `implement/deck-build`, cut from the checkout's HEAD (`main` @ `0cd251dba
   `DOT_STATE_FOR_STATUS` puts an unknown status on the neutral mark (DECK-R42) and is pinned by
   test. **Partial:** the maquette (`Pocketdeck/explorations/maquette-v3/collections.js`) is not
   readable from the worker, so the side-by-side the card asks for is in `COVERAGE.md` as pending.
-- T49–T54, T55–T69, T63, T64, T72–T83, T85–T99, T71, T101–T103 — not started: the run reached the
+- T67 — done — `npx vitest run src/deck/keys` (3 passed), `pnpm typecheck`, `check:changed` 15/15. —
+  `keys/deck-text-field.tsx` is the deck's one field (`showSoftInputOnFocus={false}`, theme values
+  only); `keys/ime-guard.test.ts` walks `src/deck` and fails on any other module importing
+  `TextInput`, with a raw-import probe proving it fails. The composer (T58) and split keys (T65)
+  still have to be written on top of it.
+- T72 — done — `npx vitest run src/deck/wheels` (5 passed). — `wheels/latency-readout.tsx`: a rolling
+  window of stick-sample-to-frame gaps with nearest-rank p50/p95, off unless the dev setting turns it
+  on. Nothing mounts it yet — it goes on the deck shell when the wheels land (T74–T76).
+- T63 — done (D5 recorded) — reading of the code, no host contacted. — `approvals/inbox-source.md`:
+  prompts are derived per session with no subscription of their own, so the inbox lists from the
+  host-wide agent-status feed and shows the exact request from that session's prompt controller;
+  per-session subscriptions for every open session are rejected on cost. Names what T64 must build,
+  including that `home/use-mobile-home-data.ts` is closed to the deck (it imports the web shell).
+- T49–T54, T55–T69, T64, T74–T83, T85–T99, T71, T101–T103 — not started: the run reached the
   end of step 7 and stopped rather than start step 8 with no budget to finish it. **First next
   task: T49** (`sessions/use-deck-sessions.ts`) — `worktree/worktree-list-snapshot.ts`,
   `transport/connection/use-all-host-clients.ts` and the session-tabs stream are the sources it
