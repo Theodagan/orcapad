@@ -5,35 +5,35 @@ in this repository (`Theodagan/orcapad`, a public fork of `stablyai/orca`). This
 brief: work through it top to bottom in one run. The owner tests on the device afterwards and sends
 follow-up runs to refine; aim for **most of the job done and everything compiling**, not perfection.
 
-## Run 2 — start here
+## Run 4 — start here
 
-Run 1 is on branch `implement/deck-build` (42 commits): steps 1–5 done, step 6 half done, step 7
-started. **Continue on that same branch** (merge `origin/main` into it first) and keep its
-`mobile/src/deck/HANDOFF-LOG.md` going.
+Runs 1–3 are merged on `main`. Steps 1–6 are complete and step 7 is two thirds done: the deck has
+its seam, theme, host gate, update channel and installer, controller contract, hints, focus, panels,
+context resolver, collections and six routes. **Branch from `origin/main`** (the old
+`implement/deck-build` branch is fully merged; do not reopen it) and append a `## Run 4` section to
+`mobile/src/deck/HANDOFF-LOG.md`.
 
-1. **Make `pnpm check:changed` green before anything else.** Run 1 left four failures:
-   - _format_ — `mobile/src/settings/mobile-settings-menu-items.ts`.
-   - _changed-code quality_ — 33 type assertions (`as …`): mostly `deck/controller/chord-table.ts` and
-     `deck/navigation/destinations.ts`, also `DeckHostRefusal`, `lenient-host-data.ts`,
-     `mobile-settings-menu-items.ts` and several tests. Replace them with annotations, `satisfies`
-     or type guards; a cast that is truly unavoidable gets the `SAFETY:` comment the error message
-     shows.
-   - _mobile localization coverage_ — English labels sit beside keys in `chord-table.ts` (and
-     `destinations.ts`): keep the keys, drop the English literals.
-   - _mobile localization_ — every `deck.*` key and `settings.menuItems.interface` is missing from
-     `mobile/src/i18n/locales/en.json`: add them.
-     Commit as `deck: make check:changed green`, push, then continue.
-2. **Mislabelled in run 1:** T21 and T23 were logged "done" but are not implemented. Do them.
-3. **Resume at T40** (step 7) and go to the end. Tasks struck through below are done.
-4. When the run ends, open the PR (`implement/deck-build` → `main`, title `deck: build 1`) with the
-   description _How to run this_ asks for, written into the PR itself — not into `docs/`, which git
-   ignores (run 1's report and PR body were lost there).
+1. **First, make `pnpm check:tests-typecheck` green in `mobile/`.** It is red on `main` and CI runs
+   it (`.github/workflows/mobile.yml`): 64 errors in 23 files, all under `mobile/src/gamepad/**`.
+   They come from the pad tests sitting on newer upstream types: missing `jump-message`/`run-action`
+   intents, renamed option fields, RN Testing Library render types. Fix the tests to the current
+   APIs. **Do not add entries to `mobile/tests-typecheck-baseline.txt`**; it is a shrink-only ratchet
+   and adding entries is what it forbids. This is the only work outside the deck's folders this run
+   needs; log it in `UPSTREAM-TOUCHES.md`.
+2. **Then finish step 7** (T43, T44, T47, T48), and continue through steps 8, 9 and 10 in order.
+   Those are the destinations on live data, the session loop and the approvals inbox: the point at
+   which the app is usable end to end. Tasks struck through below are already done.
+3. **If step 10 is finished and you still have budget, continue into step 11 (wheels).** Do not start
+   step 12 or later.
+4. **When you stop, push the branch** `implement/deck-run4`. There is no API credential on the
+   worker, so do not try to open the pull request: update `mobile/src/deck/PULL-REQUEST.md` instead
+   and say in your final message that the branch is ready.
 
 ## How to run this
 
-- Branch: `implement/deck-build` (see _Run 2_). One commit per step (`deck(CFnn): <title>`), one PR
-  against `Theodagan/orcapad` `main` titled `deck: build 1`. Open it as a draft early and push as
-  you go, so partial progress is never lost.
+- Branch: `implement/deck-run4`, cut from `origin/main` (see _Run 4_). One commit per step
+  (`deck(CFnn): <title>`). Push as you go, so partial progress is never lost; the owner opens the
+  pull request.
 - Follow the steps in order: each builds on the previous ones. If a step is blocked, do what you can,
   note it, and continue with the next step that doesn't depend on it.
 - Keep `main` releasable: every commit typechecks; never leave the app unbootable.
@@ -49,7 +49,8 @@ started. **Continue on that same branch** (merge `origin/main` into it first) an
     expected values are hardcoded, and it sits at the one layer that owns the behaviour. Worth
     writing here: the deck boundary test (T8), the design guard (T106), the controller contract
     invariants (T27–T32), the update state machine and digest check (T19, T20), lenient host-data
-    parsing (T12), request-bound decision confirmation (T61), wheel gesture and gain maths (T74, T75).
+    parsing (T12), request-bound decision confirmation (T61), wheel gesture and gain maths (T74, T75),
+    the no-IME guard (T67).
     Not worth writing: render-only, copy, style, registry-count or mock-echo tests.
   - **Before every push: `pnpm check:changed` must pass** (never `--no-verify`). Run 1 skipped it and
     left four failing checks; a push with a red `check:changed` is not progress. Typecheck `pnpm tc`; tests
@@ -66,7 +67,14 @@ started. **Continue on that same branch** (merge `origin/main` into it first) an
   - No type assertions except `as const` (or a `SAFETY:` comment).
 - **Scope:** new code goes in `mobile/src/deck/` and `mobile/app/deck/`. No Orca module imports from
   them. Any edit outside them is appended to `mobile/src/deck/UPSTREAM-TOUCHES.md`
-  (`path — reason — task`). Desktop code (`src/main`, relay, RPC protocol) is out of scope.
+  (`path — reason — task`). Desktop code (`src/main`, relay, RPC protocol) is out of scope, with one
+  exception decided by the owner: **T54 and T53's host tiles need the desk's existing
+  `workspacePorts.scan` / `workspacePorts.scanHost` / `stats.summary` methods exposed to the phone**,
+  so adding those three names to `MOBILE_RPC_METHOD_ROUTES` in
+  `src/main/runtime/rpc/server/runtime-rpc-mobile-method-routing.ts` is allowed. They are already
+  registered, read-only and permission-checked elsewhere; add no other method and change no handler.
+  If `rpc-caller-scope.ts` still refuses them for the phone's permission, leave Ports and the host
+  tiles disabled with that reason and record it: do not widen the permission.
 - **Reuse before reimplementing:** the deck composes Orca's existing data hooks and components (see
   _Look and feel_). Write a new component only for something Orca has no equivalent for, and say why
   in `mobile/src/deck/REUSE.md`.
@@ -199,8 +207,8 @@ also a risk (§11).
 
 ### Step 4 — Fork release pipeline (workflow and script edits only) (`CF09`)
 
-- ~~T15 — Require the fork's release signing key in CI~~ workflow edits are in `mobile/src/deck/pending-workflow-changes.patch`; the owner applies them (your token cannot push `.github/workflows/`). Nothing left for you.
-- ~~T16 — Publish releases to the fork under its own tag prefix~~ same as T15; the `prepare-android-release.mjs` part is done.
+- ~~T15 — Require the fork's release signing key in CI~~ done in run 1 (keep it working).
+- ~~T16 — Publish releases to the fork under its own tag prefix~~ done in run 1 (keep it working).
 
 ### Step 5 — Deck controller contract (`CF04`)
 
@@ -224,28 +232,16 @@ also a risk (§11).
 
 - ~~T18 — APK installer~~ done in run 1 (keep it working).
 - ~~T20 — Update state store~~ done in run 1 (keep it working).
-- **T21 — Unknown-sources guidance**
-  - Files: `mobile/src/deck/updates/install-permission-explainer.tsx` (create, + render test)
-  - Do: Before the first install, explain Android's "install unknown apps" permission and open that setting via `IntentLauncher` (`MANAGE_UNKNOWN_APP_SOURCES` with package URI).
-  - Accept: render test shows the explainer once (persisted flag) and its button calls the intent.
-- **T23 — Deck update UI**
-  - Files: `mobile/src/deck/updates/DeckUpdatePanel.tsx` (create), `mobile/src/deck/updates/DeckUpdateNotice.tsx` (create), render tests
-  - Do: Reuse `home/AppUpdateCard` and `settings/settings-app-update-section` presentation where they fit, fed by the deck store. Panel: installed/latest versions, Check, Update, progress, errors as they are. Notice: non-blocking toast on launch when a version is available. Reachable by pad and touch (DECK-R47, R49). Placed in Settings in T92.
-  - Accept: render tests for each store state; pad focus reaches every control.
+- ~~T21 — Unknown-sources guidance~~ done in run 1 (keep it working).
+- ~~T23 — Deck update UI~~ done in run 1 (keep it working).
 
 ### Step 7 — Navigation shell (`CF05`)
 
 - ~~T38 — Destinations registry~~ done in run 1 (keep it working).
 - ~~T39 — Deck routes per destination~~ done in run 1 (keep it working).
-- **T40 — Context resolver**
-  - Files: `mobile/src/deck/context/deck-context.ts` (create, + test)
-  - Do: UXA-R23: current host / project / workspace / session / request from the route + stores; session actions only on session screens (DECK-R4).
-  - Accept: table test over route shapes returns the right context and session-action visibility.
+- ~~T40 — Context resolver~~ done in run 1 (keep it working).
 - ~~T41 — Navigation history and Y + B~~ done in run 1 (keep it working).
-- **T42 — Panel columns system**
-  - Files: `mobile/src/deck/panels/PanelColumns.tsx` (create), `mobile/src/deck/panels/panel-registry.ts` (create), tests
-  - Do: DECK-R3/PANEL-1/PNL-2: left and right columns split width, never overlay; right panels per screen from a registry that returns disabled reasons.
-  - Accept: render test at landscape and portrait widths: content width shrinks, no overlap; disabled panel shows reason.
+- ~~T42 — Panel columns system~~ done in run 1 (keep it working).
 - **T43 — Left panels: Quick menu and All open**
   - Files: `mobile/src/deck/panels/left/QuickMenu.tsx`, `AllOpen.tsx` (create, + tests)
   - Do: PANEL-1 content from destinations and open items.
@@ -254,14 +250,8 @@ also a risk (§11).
   - Files: `mobile/src/deck/chrome/DeckHeader.tsx` (create, + test)
   - Do: Chat UI / TUI switch with `MobileSegmentedControl`. NAV-13, IH-4, SD-5: one header row with breadcrumb, item tabs when several, Chat UI / TUI switch.
   - Accept: render tests for host, project, workspace and session contexts.
-- **T45 — Shared grouping**
-  - Files: `mobile/src/deck/collections/grouping.ts` (create, + test)
-  - Do: SES-6, GROUP-1: one grouping used by every list.
-  - Accept: test: same input → same groups for list and panel consumers.
-- **T46 — Collection model**
-  - Files: `mobile/src/deck/collections/collection-model.ts` (create, + test)
-  - Do: COL-*: items, selection, layout kind; status buckets from agent status data (`components/WorktreeAgentSummary.tsx` source hooks, `session/mobile-terminal-tab-agent.ts`) parsed via T12.
-  - Accept: test maps fixture host data (test-only) to buckets including an unknown status → neutral.
+- ~~T45 — Shared grouping~~ done in run 1 (keep it working).
+- ~~T46 — Collection model~~ done in run 1 (keep it working).
 - **T47 — Carousel shell**
   - Files: `mobile/src/deck/collections/CarouselShell.tsx` (create, + test)
   - Do: SD-6, SD-11: one shell, layout tabs, L1/R1 item moves, swipe parity (COL-6).
