@@ -1,5 +1,4 @@
-import type { SurfaceBinding } from './surface-binding'
-import { focusTargetFor, type IntentHandlerEntry } from './surface-binding'
+import { focusTargetFor, type IntentHandlerEntry, type SurfaceBinding } from './surface-binding'
 
 /**
  * Controller edges for the existing pairing screens. Both of them are a confirm and a back over

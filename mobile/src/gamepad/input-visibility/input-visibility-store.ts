@@ -13,6 +13,9 @@
 
 export type InputVisibilityMode = 'auto' | 'shown' | 'hidden'
 
+/** A mounted strip's own handle: the store only tells reporters apart, never reads them. */
+export type ContentReporter = Record<string, never>
+
 export type InputVisibilityStore = {
   readonly subscribe: (listener: () => void) => () => void
   /** Referentially a boolean, so `useSyncExternalStore` can read it directly. */
@@ -23,7 +26,7 @@ export type InputVisibilityStore = {
    * Each strip tells the store whether it holds anything, which is what opens it unasked. Keyed by
    * reporter, so one strip emptying or unmounting cannot clear another's draft.
    */
-  readonly reportContent: (reporter: object, hasContent: boolean) => void
+  readonly reportContent: (reporter: ContentReporter, hasContent: boolean) => void
   /** True from a request for the keyboard until it is let go: the field in the strip should take focus. */
   readonly typing: () => boolean
   readonly beginTyping: () => void
@@ -35,7 +38,7 @@ export type InputVisibilityStore = {
 export function createInputVisibilityStore(): InputVisibilityStore {
   const listeners = new Set<() => void>()
   let mode: InputVisibilityMode = 'auto'
-  const reporters = new Set<object>()
+  const reporters = new Set<ContentReporter>()
   let typing = false
 
   const hasContent = (): boolean => reporters.size > 0
