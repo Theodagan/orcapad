@@ -1,9 +1,15 @@
-import { createElement, type ReactNode } from 'react'
+import { createElement, type ReactElement, type ReactNode } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { describe, expect, it, vi } from 'vitest'
 import { ControllerProvider, useController } from '../controller-provider'
 import type { ControllerIntent } from '../controller-input/controller-intent'
-import { createWheelRegistry } from '../wheel/wheel-registry'
+import {
+  createWheelRegistry,
+  isRunnableAction,
+  type WheelActionBinding,
+  type WheelActionBindingId,
+  type WheelRegistry
+} from '../wheel/wheel-registry'
 import { DO_ACTION_IDS } from './wheel-action-ids'
 import {
   useAgentControllerBinding,
@@ -49,19 +55,13 @@ function mount(overrides: Overrides = {}) {
     return null
   }
 
-  let renderer: ReactTestRenderer | null = null
-  act(() => {
-    renderer = create(
-      createElement(
-        ControllerProvider,
-        { registerWheelAction: registry.register },
-        createElement(Agent)
-      )
+  const renderer = mountOnce(
+    createElement(
+      ControllerProvider,
+      { registerWheelAction: registry.register },
+      createElement(Agent)
     )
-  })
-  if (renderer === null) {
-    throw new Error('renderer did not mount')
-  }
+  )
 
   return {
     renderer,
@@ -84,7 +84,7 @@ describe('agent controller binding', () => {
     it('stops the focused turn through the view’s own callback, from the wheel', () => {
       const agent = mount()
 
-      agent.registry.lookup(DO_ACTION_IDS.stop)?.run()
+      runnableAction(agent.registry, DO_ACTION_IDS.stop).run()
 
       expect(agent.onStop).toHaveBeenCalledTimes(1)
     })
@@ -192,3 +192,25 @@ describe('agent controller binding', () => {
     expect(agent.registry.lookup(DO_ACTION_IDS.stop)).toBeNull()
   })
 })
+
+/** `act` hands nothing back, so the created tree is carried out of it rather than narrowed. */
+function mountOnce(element: ReactElement): ReactTestRenderer {
+  const created: ReactTestRenderer[] = []
+  act(() => {
+    created.push(create(element))
+  })
+  const mounted = created[0]
+  if (mounted === undefined) {
+    throw new Error('renderer did not mount')
+  }
+  return mounted
+}
+
+/** A wheel action the registry really holds: a menu binding has no `run`, so it is not one. */
+function runnableAction(registry: WheelRegistry, id: WheelActionBindingId): WheelActionBinding {
+  const binding = registry.lookup(id)
+  if (binding === null || !isRunnableAction(binding)) {
+    throw new Error(`no runnable wheel action: ${id}`)
+  }
+  return binding
+}

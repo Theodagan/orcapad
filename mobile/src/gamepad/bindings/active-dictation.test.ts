@@ -46,7 +46,12 @@ describe('dictation activity from the existing status', () => {
 describe('active dictation registry', () => {
   it('holds the mounted session and lets it go', () => {
     const registry = createActiveDictationRegistry()
-    const dictation = { activity: 'idle' as const, toggle: vi.fn() }
+    const dictation = {
+      activity: 'idle' as const,
+      toggle: vi.fn(),
+      canStart: true,
+      onUnavailable: vi.fn()
+    }
 
     const retract = registry.register(dictation)
     expect(registry.current()).toBe(dictation)
@@ -57,8 +62,18 @@ describe('active dictation registry', () => {
 
   it('does not let a stale cleanup drop the entry that replaced it', () => {
     const registry = createActiveDictationRegistry()
-    const first = { activity: 'idle' as const, toggle: vi.fn() }
-    const second = { activity: 'recording' as const, toggle: vi.fn() }
+    const first = {
+      activity: 'idle' as const,
+      toggle: vi.fn(),
+      canStart: true,
+      onUnavailable: vi.fn()
+    }
+    const second = {
+      activity: 'recording' as const,
+      toggle: vi.fn(),
+      canStart: false,
+      onUnavailable: vi.fn()
+    }
 
     const retractFirst = registry.register(first)
     registry.register(second)

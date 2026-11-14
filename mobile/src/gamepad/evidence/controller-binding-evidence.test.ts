@@ -6,14 +6,16 @@ import { readString } from './wheel-product-default-gate'
 import {
   BOUND_SURFACES,
   validateControllerBindingEvidence,
-  type ControllerBindingEvidence
+  type BoundSurface,
+  type ControllerBindingEvidence,
+  type SurfaceObservation
 } from './controller-binding-evidence'
 
 const evidenceRoot = fileURLToPath(
   new URL('../../../../docs/evidence/surface-bindings/', import.meta.url)
 )
 
-function observed(surface: (typeof BOUND_SURFACES)[number]) {
+function observed(surface: BoundSurface): SurfaceObservation {
   return {
     surface,
     controller: 'Reached the action with the pad.',
@@ -24,8 +26,8 @@ function observed(surface: (typeof BOUND_SURFACES)[number]) {
 
 /** Replaces one surface's observation in place, leaving the other seven intact. */
 function withSurface(
-  surface: (typeof BOUND_SURFACES)[number],
-  overrides: Partial<ReturnType<typeof observed>>
+  surface: BoundSurface,
+  overrides: Partial<SurfaceObservation>
 ): ControllerBindingEvidence {
   return {
     ...complete,

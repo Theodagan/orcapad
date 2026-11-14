@@ -64,7 +64,7 @@ function mount() {
     }
   }
 
-  function Shell({ children }: { readonly children: ReactNode }): ReactNode {
+  function Shell({ children }: { readonly children?: ReactNode }): ReactNode {
     const wheel = useWheelController({ presets: { 1: preset }, registry, deadZone: 0.15 })
     return createElement(
       ControllerProvider,
@@ -82,8 +82,7 @@ function mount() {
     useAgentControllerBinding({
       sessionId: 'wt-1',
       canStop: false,
-      scrollTo: vi.fn(),
-      onDetachFromTail: vi.fn(),
+      scrollBy: vi.fn(),
       permission: { options: [{ send: '1' }, { send: 'n' }] },
       onRespondPermission,
       onCancelPrompt

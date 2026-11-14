@@ -175,3 +175,82 @@ T43, T44, T47–T54, T55–T69, T63, T64, T72, T74–T83, T85–T91, T92–T99, 
 task: T44 (`deck/chrome/DeckHeader.tsx`) and T47/T48/T49** — the shell still draws only a View and the
 six destinations still render `DeckDestinationScreen`, so the next run starts by giving Sessions its
 real route and the shared carousel, then the header that holds them.
+
+## Run 4 — step 7 finished, and the pad test gate
+
+Branch `implement/deck-build`, cut from the checkout's HEAD (`main` @ `0cd251dba3`). Plan:
+`docs/plans/deck-build/plan.md` (git-ignored like the rest of `docs/`, so it is not in the branch).
+
+### Run 4 item 1 — the mobile tests-typecheck gate
+
+- **Pad tests** — done — `cd mobile && pnpm typecheck:tests` (0 errors in the RN test program, was 64);
+  `npx vitest run src/gamepad --maxWorkers=2` (71 files, 676 passed, 4 skipped);
+  `pnpm exec oxlint` and `oxfmt --check` on the 23 changed files. — Fixed at the call sites: scroll
+  intents carry `begins`, wheel lookups narrow through `isRunnableAction`, terminal bindings pass
+  `editingText`, the agent binding scrolls by delta (`scrollBy`), renderer type comparisons read the
+  host tag, and a tree leaves `act()` through an array instead of being narrowed to `null`. One
+  production type moved with the tests: `unapprovedProductDefaults` takes `readonly unknown[]`,
+  because the decisions it reads come from JSON on disk. `mobile/tests-typecheck-baseline.txt` is
+  untouched (still empty).
+- **Not green in this sandbox** — `pnpm check:tests-typecheck` still exits 1, on its second program:
+  `mobile/tsconfig.test.mobile-declarations.json failed (exit null)`. That is not this run's work:
+  the same command fails identically on a clean tree (`git stash` probe), while running the same tsc
+  invocation by hand succeeds. Reported, not claimed green.
+
+### Step 7 — navigation shell
+
+- T43 — done — `pnpm typecheck`, `pnpm typecheck:tests`, `oxlint`, `oxfmt`, `check:changed` 15/15. —
+  `panels/left/QuickMenu.tsx` lists every destination from the one registry in registry order, each
+  row a `FocusableOrca` (`panels` zone) so A and a tap open the same route; `panels/left/AllOpen.tsx`
+  lists the open items a caller supplies and says how the panel fills when there are none
+  (DECK-R38). `PanelColumns` gained a `renderPanel` prop: a panel with content draws it, a panel
+  without one keeps its title and disabled reason. `DeckDestinationScreen` mounts the header and the
+  columns on every destination route. **Partial in one respect:** the deck still has no store of
+  open workspaces/sessions, so `AllOpen` draws its empty state until step 8's screens pass items.
+- T44 — done — `npx vitest run src/deck/chrome` (5 passed), `pnpm typecheck`, `oxlint`. —
+  `chrome/DeckHeader.tsx` is one row: breadcrumb, item tabs when a window holds several, Chat UI /
+  TUI switch on a session route (`MobileSegmentedControl`, wrapped in a `FocusableOrca` that flips
+  it, so the pad has a target and the finger has the segments). The trail is a pure module
+  (`chrome/deck-breadcrumbs.ts`) with the tests the card asked for: host, project, workspace,
+  session and an unknown route. A crumb exists only for an id the resolver found in the route.
+- T47 — done — `npx vitest run src/deck/collections` (12 passed). — `collections/CarouselShell.tsx`
+  holds the layout tabs and the current layout; the quiet L1/R1 move and a horizontal swipe call
+  `collections/carousel-selection.ts`, so COL-6 parity is structural and pinned by test (ends hold
+  rather than wrap, a short drag is not a swipe).
+- T48 — done (maquette comparison pending) — `npx vitest run src/deck/collections` (12 passed),
+  `pnpm typecheck`. — `collections/layouts/{Cards,Kanban,List,Grid}Layout.tsx` over a shared
+  `CollectionCell` that draws Orca's `AgentStateDot`, the title and the bucket;
+  `DOT_STATE_FOR_STATUS` puts an unknown status on the neutral mark (DECK-R42) and is pinned by
+  test. **Partial:** the maquette (`Pocketdeck/explorations/maquette-v3/collections.js`) is not
+  readable from the worker, so the side-by-side the card asks for is in `COVERAGE.md` as pending.
+- T67 — done — `npx vitest run src/deck/keys` (3 passed), `pnpm typecheck`, `check:changed` 15/15. —
+  `keys/deck-text-field.tsx` is the deck's one field (`showSoftInputOnFocus={false}`, theme values
+  only); `keys/ime-guard.test.ts` walks `src/deck` and fails on any other module importing
+  `TextInput`, with a raw-import probe proving it fails. The composer (T58) and split keys (T65)
+  still have to be written on top of it.
+- T72 — done — `npx vitest run src/deck/wheels` (5 passed). — `wheels/latency-readout.tsx`: a rolling
+  window of stick-sample-to-frame gaps with nearest-rank p50/p95, off unless the dev setting turns it
+  on. Nothing mounts it yet — it goes on the deck shell when the wheels land (T74–T76).
+- T63 — done (D5 recorded) — reading of the code, no host contacted. — `approvals/inbox-source.md`:
+  prompts are derived per session with no subscription of their own, so the inbox lists from the
+  host-wide agent-status feed and shows the exact request from that session's prompt controller;
+  per-session subscriptions for every open session are rejected on cost. Names what T64 must build,
+  including that `home/use-mobile-home-data.ts` is closed to the deck (it imports the web shell).
+- T49–T54, T55–T69, T64, T74–T83, T85–T99, T71, T101–T103 — not started: the run reached the
+  end of step 7 and stopped rather than start step 8 with no budget to finish it. **First next
+  task: T49** (`sessions/use-deck-sessions.ts`) — `worktree/worktree-list-snapshot.ts`,
+  `transport/connection/use-all-host-clients.ts` and the session-tabs stream are the sources it
+  names; the Sessions route still renders `DeckDestinationScreen`.
+
+### Verification this run actually ran
+
+- `cd mobile && pnpm check:tests-typecheck` — **fails**, on the phone/host declaration program
+  (environmental, reproduces on a clean tree).
+- `cd mobile && pnpm typecheck` — clean after every card.
+- `cd mobile && pnpm typecheck:tests` — 0 errors in the RN test program; baseline file empty.
+- `cd mobile && npx vitest run src/gamepad --maxWorkers=2` — 71 files, 676 passed, 4 skipped.
+- `cd mobile && npx vitest run src/deck` — see the per-card lines above (collection, chrome and the
+  rest of `src/deck`).
+- `ORCA_CODE_QUALITY_BASE=origin/main pnpm check:changed` — 15/15 green on the final commit. One
+  earlier push carried two findings (an unused `eslint-disable`, two inline fallbacks that passed
+  their key instead of the catalog's English); both were fixed in the follow-up commit.

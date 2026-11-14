@@ -103,7 +103,7 @@ describe('ActionHintBar', () => {
   }
 
   function texts(): string[] {
-    return (renderer?.root.findAll((node) => node.type === 'Text') ?? []).map((node) =>
+    return (renderer?.root.findAll((node) => String(node.type) === 'Text') ?? []).map((node) =>
       node.children.join('')
     )
   }

@@ -1,3 +1,4 @@
+import type { AgentDotState } from '../../worktree/agent-row-display'
 import { lenientEnum, lenientRecord, lenientText } from '../host/lenient-host-data'
 
 /**
@@ -89,4 +90,16 @@ export function setCollectionLayout(
   layout: CollectionLayoutKind
 ): CollectionModel {
   return { ...model, layout }
+}
+
+/**
+ * The dot Orca already draws for each bucket (IH-10). A status this build has never seen lands on
+ * the same neutral mark as `unknown`, so a newer host's new state never blanks a row (DECK-R42).
+ */
+export const DOT_STATE_FOR_STATUS: Readonly<Record<CollectionStatus, AgentDotState>> = {
+  'needs-you': 'permission',
+  running: 'working',
+  idle: 'idle',
+  done: 'done',
+  unknown: 'unconfirmed'
 }

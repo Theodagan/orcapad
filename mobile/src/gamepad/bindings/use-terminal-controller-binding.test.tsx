@@ -3,7 +3,13 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { describe, expect, it, vi } from 'vitest'
 import { ControllerProvider, useController } from '../controller-provider'
 import type { ControllerIntent } from '../controller-input/controller-intent'
-import { createWheelRegistry } from '../wheel/wheel-registry'
+import {
+  createWheelRegistry,
+  isRunnableAction,
+  type WheelActionBinding,
+  type WheelActionBindingId,
+  type WheelRegistry
+} from '../wheel/wheel-registry'
 import {
   TERMINAL_LINES_PER_SECOND_AT_FULL_PRESSURE,
   useTerminalControllerBinding,
@@ -225,7 +231,7 @@ describe('terminal controller binding', () => {
     it('sends a control key through the pane’s own key path', () => {
       const pane = mount()
 
-      pane.registry.lookup('terminal.escape')?.run()
+      runnableAction(pane.registry, 'terminal.escape').run()
 
       expect(pane.sendKey).toHaveBeenCalledWith(ESC)
     })
@@ -234,7 +240,7 @@ describe('terminal controller binding', () => {
     it('stops an agent in the terminal with the key every agent CLI interrupts on', () => {
       const pane = mount()
 
-      pane.registry.lookup('do.stop')?.run()
+      runnableAction(pane.registry, 'do.stop').run()
 
       expect(pane.sendKey).toHaveBeenCalledWith(ESC)
       expect(pane.registry.lookup('do.stop')?.availability).toBe('available')
@@ -255,3 +261,12 @@ describe('terminal controller binding', () => {
     })
   })
 })
+
+/** A wheel action the registry really holds: a menu binding has no `run`, so it is not one. */
+function runnableAction(registry: WheelRegistry, id: WheelActionBindingId): WheelActionBinding {
+  const binding = registry.lookup(id)
+  if (binding === null || !isRunnableAction(binding)) {
+    throw new Error(`no runnable wheel action: ${id}`)
+  }
+  return binding
+}

@@ -39,6 +39,12 @@ function Agent(): ReactNode {
   return null
 }
 
+/** The renderer hands a host ref the element behind it, whose props are untyped there. */
+function testIdOf(element: { readonly props: unknown }): unknown {
+  const props = element.props
+  return typeof props === 'object' && props !== null && 'testID' in props ? props.testID : undefined
+}
+
 describe('a zone item', () => {
   let renderer: ReactTestRenderer | null = null
   afterEach(() => {
@@ -58,21 +64,19 @@ describe('a zone item', () => {
       return null
     }
     const item = (id: string, order: number, props: { disabled?: boolean } = {}) =>
-      createElement(
-        ZoneItem,
-        {
-          key: id,
-          zone: 'header',
-          id,
-          order,
-          disabled: props.disabled,
-          onActivate: () => pressed.push(id)
-        },
-        ({ focused, focusRef }) => {
+      createElement(ZoneItem, {
+        key: id,
+        zone: 'header',
+        id,
+        order,
+        disabled: props.disabled,
+        onActivate: () => pressed.push(id),
+        // eslint-disable-next-line react/no-children-prop -- the render prop is a prop here; JSX is not available in these createElement tests.
+        children: ({ focused, focusRef }) => {
           seen[id] = focused
           return createElement('View', { testID: id, ref: focusRef })
         }
-      )
+      })
 
     const tree = (withItems: boolean) =>
       createElement(
@@ -91,7 +95,7 @@ describe('a zone item', () => {
     act(() => {
       // The renderer answers a host ref with this: the item's id stands in for its native view.
       renderer = create(tree(true), {
-        createNodeMock: (element) => ({ id: element.props.testID })
+        createNodeMock: (element) => ({ id: testIdOf(element) })
       })
     })
     const press = (kind: 'switch-zone' | 'confirm' | 'back'): void => {

@@ -30,11 +30,15 @@ draws the focus ring, so a touch user's screen is unchanged (`focus/focusable-or
 
 ## Written by the deck, and why
 
-| Deck component                  | Why Orca has no equivalent                                                                                                   |
-| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `wheels/DeckWheel.tsx`          | Orca's wheel is a preset overlay driven by React state; the deck's is a Reanimated ring under a fixed selector (DECK-R18)    |
-| `panels/PanelColumns.tsx`       | Orca's wide layout is a sidebar plus detail; the deck's panels are columns that split the width and never overlay (DECK-R3)  |
-| `keys/SplitKeys.tsx`            | Orca has no pad keyboard: halves in the side-panel slots with two cursors (KEY-2…4, IH-14)                                   |
-| `hints/DeckHintStrip.tsx`       | Orca's `ActionHintBar` is a fixed strip; the deck's swaps to the Y layer and drops hints that would overflow (PAD-13, VIS-6) |
-| `collections/CarouselShell.tsx` | Orca's lists scroll; the deck's items move under L1/R1 with layout tabs (SD-6, SD-11)                                        |
-| `approvals/DecisionConfirm.tsx` | Orca confirms an action; the deck binds a confirmation to one request id (SAFE-1, DECK-R25)                                  |
+| Deck component                  | Why Orca has no equivalent                                                                                                                                  |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `wheels/DeckWheel.tsx`          | Orca's wheel is a preset overlay driven by React state; the deck's is a Reanimated ring under a fixed selector (DECK-R18)                                   |
+| `panels/PanelColumns.tsx`       | Orca's wide layout is a sidebar plus detail; the deck's panels are columns that split the width and never overlay (DECK-R3)                                 |
+| `keys/SplitKeys.tsx`            | Orca has no pad keyboard: halves in the side-panel slots with two cursors (KEY-2…4, IH-14)                                                                  |
+| `hints/DeckHintStrip.tsx`       | Orca's `ActionHintBar` is a fixed strip; the deck's swaps to the Y layer and drops hints that would overflow (PAD-13, VIS-6)                                |
+| `collections/CarouselShell.tsx` | Orca's lists scroll; the deck's items move under L1/R1 with layout tabs (SD-6, SD-11)                                                                       |
+| `approvals/DecisionConfirm.tsx` | Orca confirms an action; the deck binds a confirmation to one request id (SAFE-1, DECK-R25)                                                                 |
+| `panels/left/QuickMenu.tsx`     | Orca's sidebar is an icon rail that switches one screen; the deck's left panel lists every destination as a text row that the pad can land on (PANEL-1)     |
+| `panels/left/AllOpen.tsx`       | Nothing in Orca lists "what this device has open" as one column; the deck keeps it beside the destinations (PANEL-1)                                        |
+| `chrome/DeckHeader.tsx`         | Orca has no header row that carries a breadcrumb, item tabs and the Chat UI / TUI switch together (NAV-13, IH-4, SD-5)                                      |
+| `collections/layouts/*.tsx`     | Orca's agent rows are one arrangement; the deck needs four over one collection model, sharing a `CollectionCell` that reuses `AgentStateDot` (SES-0, IH-10) |

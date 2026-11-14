@@ -3,7 +3,11 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ControllerReader } from '../controller-input/controller-reader'
 import { createControllerIntentResolver } from '../controller-input/controller-resolver'
-import { neutralSample, type ControllerSample } from '../controller-input/controller-sample'
+import {
+  neutralSample,
+  type ControllerButton,
+  type ControllerSample
+} from '../controller-input/controller-sample'
 import { ControllerProvider } from '../controller-provider'
 import { useControllerFocus } from '../focus/use-controller-focus'
 import { useNativeFocusFallbackBinding } from './use-native-focus-fallback-binding'
@@ -79,7 +83,7 @@ describe('useNativeFocusFallbackBinding', () => {
     act(() => publish({ ...neutralSample(20, true), axes: new Map([[axis, 1]]) }))
   }
 
-  function press(children: ReactNode[], buttons: [string, number][]) {
+  function press(children: ReactNode[], buttons: [ControllerButton, number][]) {
     const { reader, publish } = fakeReader()
     act(() => {
       renderer = create(

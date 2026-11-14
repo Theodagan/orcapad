@@ -6,7 +6,13 @@ import { FOCUS_PRIORITY, type FocusZone } from './focus-zones'
 
 const confirm: ControllerIntent = { kind: 'confirm' }
 const back: ControllerIntent = { kind: 'back' }
-const scroll: ControllerIntent = { kind: 'scroll', direction: 'down', velocity: 1, elapsedMs: 16 }
+const scroll: ControllerIntent = {
+  kind: 'scroll',
+  direction: 'down',
+  velocity: 1,
+  elapsedMs: 16,
+  begins: true
+}
 const tab: ControllerIntent = { kind: 'cycle-tab', direction: 'next' }
 const switchZone: ControllerIntent = { kind: 'switch-zone', direction: 'up' }
 

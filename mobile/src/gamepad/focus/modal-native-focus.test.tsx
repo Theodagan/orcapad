@@ -61,7 +61,9 @@ describe('a sheet taking the pad when it opens', () => {
     const sheet = mount(true, true)
 
     expect(sheet.requestNativeFocus).not.toHaveBeenCalled()
-    act(() => vi.advanceTimersByTime(200))
+    act(() => {
+      vi.advanceTimersByTime(200)
+    })
 
     expect(sheet.requestNativeFocus).toHaveBeenCalledTimes(1)
     // Into the sheet, not onto its container.
@@ -71,19 +73,25 @@ describe('a sheet taking the pad when it opens', () => {
   it('does nothing without a pad attached', () => {
     const sheet = mount(true, false)
 
-    act(() => vi.advanceTimersByTime(500))
+    act(() => {
+      vi.advanceTimersByTime(500)
+    })
 
     expect(sheet.requestNativeFocus).not.toHaveBeenCalled()
   })
 
   it('does nothing for a sheet that is not showing, and never after it has closed', () => {
     const sheet = mount(false, true)
-    act(() => vi.advanceTimersByTime(500))
+    act(() => {
+      vi.advanceTimersByTime(500)
+    })
     expect(sheet.requestNativeFocus).not.toHaveBeenCalled()
 
     sheet.rerender(true)
     sheet.rerender(false)
-    act(() => vi.advanceTimersByTime(500))
+    act(() => {
+      vi.advanceTimersByTime(500)
+    })
     expect(sheet.requestNativeFocus).not.toHaveBeenCalled()
   })
 })

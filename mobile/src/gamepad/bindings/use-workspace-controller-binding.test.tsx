@@ -1,4 +1,4 @@
-import { createElement, type ReactNode } from 'react'
+import { createElement, type ReactElement, type ReactNode } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { describe, expect, it, vi } from 'vitest'
 import { ControllerProvider, useController } from '../controller-provider'
@@ -73,13 +73,9 @@ function mount(initialRows: Sections = sections) {
     return null
   }
 
-  let renderer: ReactTestRenderer | null = null
-  act(() => {
-    renderer = create(createElement(ControllerProvider, { reader }, createElement(Workspaces)))
-  })
-  if (renderer === null) {
-    throw new Error('renderer did not mount')
-  }
+  const renderer = mountOnce(
+    createElement(ControllerProvider, { reader }, createElement(Workspaces))
+  )
 
   return {
     renderer,
@@ -298,3 +294,16 @@ describe('workspace controller binding', () => {
     })
   })
 })
+
+/** `act` hands nothing back, so the created tree is carried out of it rather than narrowed. */
+function mountOnce(element: ReactElement): ReactTestRenderer {
+  const created: ReactTestRenderer[] = []
+  act(() => {
+    created.push(create(element))
+  })
+  const mounted = created[0]
+  if (mounted === undefined) {
+    throw new Error('renderer did not mount')
+  }
+  return mounted
+}

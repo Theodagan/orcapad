@@ -1,4 +1,4 @@
-import { createElement, type ReactNode } from 'react'
+import { createElement, type ReactElement, type ReactNode } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { describe, expect, it, vi } from 'vitest'
 import { ControllerProvider, useController } from '../controller-provider'
@@ -32,13 +32,7 @@ function mount(rows: readonly Tab[] = tabs, activeTabId: string | null = 'termin
     return null
   }
 
-  let renderer: ReactTestRenderer | null = null
-  act(() => {
-    renderer = create(createElement(ControllerProvider, {}, createElement(Session)))
-  })
-  if (renderer === null) {
-    throw new Error('renderer did not mount')
-  }
+  const renderer = mountOnce(createElement(ControllerProvider, {}, createElement(Session)))
 
   return {
     renderer,
@@ -124,3 +118,16 @@ describe('session controller binding', () => {
     expect(session.onSwitchTab).not.toHaveBeenCalled()
   })
 })
+
+/** `act` hands nothing back, so the created tree is carried out of it rather than narrowed. */
+function mountOnce(element: ReactElement): ReactTestRenderer {
+  const created: ReactTestRenderer[] = []
+  act(() => {
+    created.push(create(element))
+  })
+  const mounted = created[0]
+  if (mounted === undefined) {
+    throw new Error('renderer did not mount')
+  }
+  return mounted
+}

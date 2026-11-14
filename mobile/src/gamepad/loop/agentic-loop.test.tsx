@@ -58,6 +58,8 @@ const PROBE_BY_KIND: {
   'cycle-tab': { kind: 'cycle-tab', direction: 'next' },
   'cycle-workspace': { kind: 'cycle-workspace', direction: 'next' },
   'move-selection': { kind: 'move-selection', direction: 'down' },
+  'jump-message': { kind: 'jump-message', direction: 'previous' },
+  'run-action': { kind: 'run-action', actionId: 'test.act' },
   'move-horizontal': { kind: 'move-horizontal', direction: 'right' },
   'wheel-motion': { kind: 'wheel-motion', wheel: 1, x: 0, y: -1 }
 }
@@ -165,6 +167,7 @@ function terminalCapability(): SurfaceCapability {
     useTerminalControllerBinding({
       handle: 'h1',
       enabled: true,
+      editingText: false,
       scrollLines: vi.fn(),
       sendKey: vi.fn(),
       actions: []
@@ -183,7 +186,6 @@ function filesCapability(): SurfaceCapability {
       onToggleDirectory: vi.fn(),
       onPreviewFile: vi.fn(),
       onRetryDirectory: vi.fn(),
-      onCollapseAll: vi.fn(),
       onBack: vi.fn(),
       scrollBy: vi.fn()
     })

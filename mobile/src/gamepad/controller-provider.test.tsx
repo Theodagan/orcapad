@@ -3,6 +3,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ControllerIntent } from './controller-input/controller-intent'
 import type { ControllerReader } from './controller-input/controller-reader'
+import type { ResolveContext } from './controller-input/controller-resolver'
 import { neutralSample, type ControllerSample } from './controller-input/controller-sample'
 import { createActiveDictationRegistry } from './bindings/active-dictation'
 import { ControllerProvider, useController } from './controller-provider'
@@ -160,7 +161,7 @@ describe('ControllerProvider', () => {
 
     // box-none: the layer itself takes no touch, but an open wheel inside it can claim them.
     const layers = renderer?.root.findAll(
-      (node) => node.type === 'View' && node.props.pointerEvents === 'box-none'
+      (node) => String(node.type) === 'View' && node.props.pointerEvents === 'box-none'
     )
     expect(layers).toHaveLength(1)
     expect(layers?.[0].findAllByType(WheelContent)).toHaveLength(1)
@@ -179,7 +180,9 @@ describe('ControllerProvider', () => {
 
   it('tells the resolver whether a wheel owns the pad, sample by sample', () => {
     const { reader, publish } = fakeReader()
-    const resolve = vi.fn(() => [])
+    const resolve = vi.fn(
+      (_sample: ControllerSample, _context: ResolveContext): readonly ControllerIntent[] => []
+    )
     let captured = false
 
     act(() => {
@@ -210,7 +213,11 @@ describe('ControllerProvider', () => {
       renderer = create(
         createElement(
           ControllerProvider,
-          { reader, resolve: () => [{ kind: 'confirm' }], intercept: () => true },
+          {
+            reader,
+            resolve: (): readonly ControllerIntent[] => [{ kind: 'confirm' }],
+            intercept: () => true
+          },
           createElement(Surface, { target })
         )
       )
@@ -240,7 +247,11 @@ describe('ControllerProvider', () => {
       renderer = create(
         createElement(
           ControllerProvider,
-          { reader, resolve: () => [{ kind: 'toggle-dictation' }], activeDictation: dictation },
+          {
+            reader,
+            resolve: (): readonly ControllerIntent[] => [{ kind: 'toggle-dictation' }],
+            activeDictation: dictation
+          },
           createElement(Surface, { target: surface })
         )
       )
@@ -269,7 +280,7 @@ describe('ControllerProvider', () => {
       renderer = create(
         createElement(ControllerProvider, {
           reader,
-          resolve: () => [{ kind: 'toggle-dictation' }],
+          resolve: (): readonly ControllerIntent[] => [{ kind: 'toggle-dictation' }],
           activeDictation: dictation
         })
       )
@@ -300,7 +311,9 @@ describe('ControllerProvider', () => {
             ControllerProvider,
             {
               reader,
-              resolve: () => [{ kind: 'run-action', actionId: 'do.stop' }],
+              resolve: (): readonly ControllerIntent[] => [
+                { kind: 'run-action', actionId: 'do.stop' }
+              ],
               lookupWheelAction: registry.lookup,
               onActionRefused
             },

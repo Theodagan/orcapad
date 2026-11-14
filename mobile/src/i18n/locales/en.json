@@ -4966,6 +4966,41 @@
     },
     "settings": {
       "title": "Settings"
+    },
+    "panel": {
+      "allOpen": {
+        "empty": "Nothing open yet. Open a workspace or a session to list it here."
+      }
+    },
+    "crumb": {
+      "host": "Host",
+      "project": "Project",
+      "workspace": "Workspace",
+      "session": "Session"
+    },
+    "view": {
+      "chat": "Chat UI",
+      "tui": "TUI"
+    },
+    "layout": {
+      "cards": "Cards",
+      "kanban": "Kanban",
+      "list": "List",
+      "grid": "Grid"
+    },
+    "status": {
+      "needs-you": "Needs you",
+      "running": "Running",
+      "idle": "Idle",
+      "done": "Done",
+      "unknown": "Unknown"
+    },
+    "wheels": {
+      "latency": {
+        "title": "Stick to frame",
+        "none": "No turns measured yet",
+        "line": "p50 {{p50}} ms · p95 {{p95}} ms"
+      }
     }
   }
 }

@@ -106,21 +106,23 @@ describe('the controller runtime’s policy', () => {
   })
 
   it('does not replay a held button as a press when a device event arrives', () => {
-    let onDevices: ((payload: { controllers: unknown[] }) => void) | null = null
+    const captured: { onDevices: ((payload: { controllers: unknown[] }) => void) | null } = {
+      onDevices: null
+    }
     nativeModule.current = nativeWith({
       addListener: (_event: string, listener: (payload: { controllers: unknown[] }) => void) => {
-        onDevices = listener
+        captured.onDevices = listener
         return { remove: () => {} }
       }
     })
     const runtime = createControllerRuntime()
     expect(runtime.resolve(pressed('a'))).toEqual([{ kind: 'confirm' }])
 
-    onDevices?.({ controllers: [] })
+    captured.onDevices?.({ controllers: [] })
     expect(runtime.resolve(pressed('a'))).toEqual([])
 
     // A real policy change still rebuilds, seeded with the held button.
-    onDevices?.({ controllers: [device({ 'left-x': 0.3 })] })
+    captured.onDevices?.({ controllers: [device({ 'left-x': 0.3 })] })
     expect(runtime.resolve(pressed('a'))).toEqual([])
   })
 })

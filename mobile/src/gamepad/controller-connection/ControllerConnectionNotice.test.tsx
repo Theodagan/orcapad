@@ -1,4 +1,4 @@
-import { createElement, type ReactNode } from 'react'
+import { createElement, type ReactElement } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ControllerReader } from '../controller-input/controller-reader'
@@ -30,7 +30,7 @@ function fakeReader(): { reader: ControllerReader; publish: Listener } {
 }
 
 function noticeCount(renderer: ReactTestRenderer | null): number {
-  return renderer?.root.findAll((node) => node.type === 'Text').length ?? 0
+  return renderer?.root.findAll((node) => String(node.type) === 'Text').length ?? 0
 }
 
 describe('ControllerConnectionNotice', () => {
@@ -41,7 +41,7 @@ describe('ControllerConnectionNotice', () => {
     renderer = null
   })
 
-  function mount(reader: ControllerReader): ReactNode {
+  function mount(reader: ControllerReader): ReactElement {
     return createElement(ControllerProvider, { reader }, createElement(ControllerConnectionNotice))
   }
 
@@ -91,7 +91,7 @@ describe('ControllerConnectionNotice', () => {
     })
 
     const blocking = renderer?.root.findAll(
-      (node) => node.type === 'View' && node.props.pointerEvents !== 'none'
+      (node) => String(node.type) === 'View' && node.props.pointerEvents !== 'none'
     )
     // The provider's own root View is the only one, and it is not part of the notice.
     expect(blocking?.some((node) => node.props.style?.position === 'absolute')).toBe(false)
