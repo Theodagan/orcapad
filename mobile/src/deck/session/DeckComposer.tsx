@@ -6,6 +6,7 @@ import { useMobileNativeChatDraft } from '../../session/native-chat/composer/mob
 import { FocusableOrca } from '../focus/focusable-orca'
 import { DeckTextField } from '../keys/deck-text-field'
 import { useDeckTheme } from '../theme/deck-theme'
+import { AgentPanel } from './AgentPanel'
 
 export function DeckComposer({
   controller
@@ -43,6 +44,7 @@ export function DeckComposer({
     <View
       style={{ padding: theme.space.sm, gap: theme.space.xs, backgroundColor: theme.color.panel }}
     >
+      <AgentPanel options={controller.nativeChatSessionOptions} />
       <DeckTextField
         value={draft}
         onChangeText={controller.setChatComposerText}
