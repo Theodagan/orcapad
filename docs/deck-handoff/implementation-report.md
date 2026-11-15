@@ -44,7 +44,7 @@ The root dependency postinstall cannot validate Electron's native rebuild in thi
 - `cd mobile && pnpm test src/deck/deck-boundary.test.ts src/deck/collections --maxWorkers=2` — 3 files, 17 tests passed.
 - Scoped `oxlint` over T49 TS/TSX — 0 warnings/errors.
 - T50 `cd mobile && pnpm typecheck` — exit 0; boundary/design tests — 10 passed; scoped `oxlint` — 0 warnings/errors.
-- `ORCA_CODE_QUALITY_BASE=origin/main pnpm check:changed` — first attempt found four new localization fallback mismatches; corrected in T49 before any push. Final rerun pending.
+- `ORCA_CODE_QUALITY_BASE=origin/main pnpm check:changed` — first attempt found four new localization fallback mismatches; corrected in T49 before any push. Localization and 13 other checks pass on rerun; root unit-test process is SIGKILLed with exit 137 before listing tests. One-worker and isolated-file retries fail the same way.
 
 ## Pull request
 

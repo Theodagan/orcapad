@@ -12,3 +12,5 @@
 - **Not done / follow-ups**: T49 onward; owner device checks; no step 12 or later work.
 - **T49**: live cross-host Sessions collection implemented; typecheck, deck boundary and collection tests (17), and scoped lint pass.
 - **T50**: Projects uses per-host repo catalogs and Orca workspace sections/rows; mobile typecheck, 10 boundary/design tests and scoped lint pass.
+- **T51**: Workspace route and live agent/browser/file item tabs implemented on Orca's session controller; typecheck, 15 focused tests and scoped lint pass.
+- **Gaps and issues update**: root Vitest is SIGKILLed (137) before test listing with one or two workers and with isolated files. All other changed-file checks pass. A larger-worker request hit the one-machine pool limit, so the branch will be bundled before replacing the worker.
