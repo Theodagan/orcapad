@@ -11,3 +11,4 @@
 - **Verification**: baseline `cd mobile && pnpm typecheck` — exit 0. Further per-card commands are recorded in `mobile/src/deck/HANDOFF-LOG.md` and `docs/deck-handoff/implementation-report.md`.
 - **Not done / follow-ups**: T49 onward; owner device checks; no step 12 or later work.
 - **T49**: live cross-host Sessions collection implemented; typecheck, deck boundary and collection tests (17), and scoped lint pass.
+- **T50**: Projects uses per-host repo catalogs and Orca workspace sections/rows; mobile typecheck, 10 boundary/design tests and scoped lint pass.

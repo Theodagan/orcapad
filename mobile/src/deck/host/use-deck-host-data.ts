@@ -11,7 +11,7 @@ import {
   sortHostsByLastConnected
 } from '../../transport/hosts/host-catalog-selection'
 import { loadHostCatalog } from '../../transport/hosts/host-store'
-import type { HostCatalogEntry } from '../../transport/hosts/host-profile'
+import type { HostCatalogEntry, HostProfile } from '../../transport/hosts/host-profile'
 import type { RpcClient } from '../../transport/rpc/rpc-client-contract'
 import {
   homeWorktreeCountsQuery,
@@ -27,7 +27,7 @@ export type DeckHostData = {
   readonly error: string | null
   readonly hostCatalog: readonly HostCatalogEntry[]
   readonly hostCatalogLoaded: boolean
-  readonly hosts: AgentListInput['hosts']
+  readonly hosts: readonly HostProfile[]
   readonly hostStates: AgentListInput['hostStates']
   readonly loading: boolean
   readonly worktreeInfo: Readonly<Record<string, HostWorktreeInfo>>
