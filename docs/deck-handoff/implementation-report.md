@@ -26,8 +26,8 @@
 | T61  | Decision confirmation                  | done    | `d88baa80` | production/test typecheck; DecisionConfirm test; scoped `oxlint`                                                               | exit 0; 2 passed; 0 warnings/errors  |
 | T62  | Deny with feedback                     | done    | `86f93134` | production/test typecheck; approvals tests; scoped `oxlint`                                                                    | exit 0; 4 passed; 0 warnings/errors  |
 | T65  | Split keys keyboard                    | done    | `66023aae` | production/test typecheck; keys tests; scoped `oxlint`                                                                         | exit 0; 5 passed; 0 warnings/errors  |
-| T68  | Dictation notch                        | done    | T68 commit | `cd mobile && pnpm typecheck`; scoped `oxlint`                                                                                 | exit 0; 0 warnings/errors            |
-| T69  | Notifications panel, toasts, Needs you | not-run | —          | —                                                                                                                              | —                                    |
+| T68  | Dictation notch                        | done    | `c2da5142` | `cd mobile && pnpm typecheck`; scoped `oxlint`                                                                                 | exit 0; 0 warnings/errors            |
+| T69  | Notifications panel, toasts, Needs you | done    | T69 commit | typecheck; boundary/design tests; scoped `oxlint`                                                                              | exit 0; 10 passed; 0 warnings/errors |
 | T64  | Approvals inbox                        | not-run | —          | —                                                                                                                              | —                                    |
 
 ## Deviations

@@ -375,6 +375,10 @@
       "recording": "Listening…",
       "processing": "Transcribing…",
       "stop": "Stop"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "empty": "No agent notifications or requests need attention."
     }
   },
   "dictation": {

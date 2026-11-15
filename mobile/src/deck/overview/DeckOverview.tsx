@@ -20,6 +20,7 @@ import { FocusableOrca } from '../focus/focusable-orca'
 import { useDeckHostData, type DeckHostData } from '../host/use-deck-host-data'
 import { useDeckTheme } from '../theme/deck-theme'
 import { useDeviceStatus } from './use-device-status'
+import { NotificationsPanel } from '../notifications/NotificationsPanel'
 
 const STATUS_ORDER: readonly AgentStatusGroup[] = ['needs-you', 'working', 'idle', 'done']
 
@@ -186,6 +187,7 @@ export function DeckOverview(): ReactNode {
       ) : (
         data.hosts.map((host) => <DeckHostOverview key={host.id} data={data} hostId={host.id} />)
       )}
+      <NotificationsPanel data={data} />
     </ScrollView>
   )
 }

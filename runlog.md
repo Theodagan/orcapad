@@ -31,3 +31,4 @@
 - **T62**: Plan-only deny/refine feedback with T61 confirmation implemented; production/test typechecks, 4 approval tests and scoped lint pass.
 - **T65**: Split landscape/portrait keys and dual cursors implemented; production/test typechecks, 5 key tests and scoped lint pass. Deviation: pure orientation tests replace render-only tests per AGENTS.md.
 - **T68**: Dictation notch inserts recognized text only and exposes touch start/stop; typecheck and scoped lint pass.
+- **T69**: Notifications, toasts and Needs-you session links implemented; typecheck, 10 focused tests and scoped lint pass.
