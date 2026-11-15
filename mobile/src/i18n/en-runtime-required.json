@@ -329,6 +329,14 @@
         "title": "No session items",
         "body": "Start an agent in this workspace to open its session here."
       }
+    },
+    "transcript": {
+      "error": "Couldn’t load chat",
+      "loading": "Loading chat…",
+      "empty": {
+        "title": "No messages yet",
+        "body": "Send a prompt below to start this session."
+      }
     }
   },
   "dictation": {
