@@ -29,3 +29,4 @@
 - **T60 fix**: corrected plan-subject narrowing in the unpushed T60 commit using Orca's branded-subject guard.
 - **T61**: Request-bound ConfirmModal decisions implemented; production/test typechecks, 2 guard tests and scoped lint pass.
 - **T62**: Plan-only deny/refine feedback with T61 confirmation implemented; production/test typechecks, 4 approval tests and scoped lint pass.
+- **T65**: Split landscape/portrait keys and dual cursors implemented; production/test typechecks, 5 key tests and scoped lint pass. Deviation: pure orientation tests replace render-only tests per AGENTS.md.

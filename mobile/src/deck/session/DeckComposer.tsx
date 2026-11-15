@@ -7,6 +7,8 @@ import { FocusableOrca } from '../focus/focusable-orca'
 import { DeckTextField } from '../keys/deck-text-field'
 import { useDeckTheme } from '../theme/deck-theme'
 import { AgentPanel } from './AgentPanel'
+import { SplitKeys } from '../keys/SplitKeys'
+import { useDeckSettings } from '../settings/deck-settings-store'
 
 export function DeckComposer({
   controller
@@ -16,6 +18,7 @@ export function DeckComposer({
   const t = useMobileTranslation()
   const theme = useDeckTheme()
   const draft = useMobileNativeChatDraft(controller.chatDraftKey)
+  const settings = useDeckSettings()
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const send = async (): Promise<void> => {
@@ -54,6 +57,9 @@ export function DeckComposer({
         editable={!sending}
         multiline
       />
+      {settings.splitKeys ? (
+        <SplitKeys value={draft} onChangeText={controller.setChatComposerText} />
+      ) : null}
       {error ? (
         <Text style={{ color: theme.color.risk, fontSize: theme.text.meta }}>{error}</Text>
       ) : null}

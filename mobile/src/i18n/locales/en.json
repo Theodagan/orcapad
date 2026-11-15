@@ -5101,6 +5101,10 @@
     "denyFeedback": {
       "placeholder": "Tell the agent what to change",
       "action": "Deny with feedback"
+    },
+    "keys": {
+      "backspace": "Backspace",
+      "space": "Space"
     }
   }
 }

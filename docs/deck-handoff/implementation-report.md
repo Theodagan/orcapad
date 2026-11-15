@@ -24,15 +24,15 @@
 | T59  | Mode/model Agent panel                 | done    | `68504135` | `cd mobile && pnpm typecheck`; scoped `oxlint`                                                                                 | exit 0; 0 warnings/errors            |
 | T60  | Inline prompt strip and hero band      | done    | `c8bf5d49` | `cd mobile && pnpm typecheck`; scoped `oxlint`                                                                                 | exit 0; 0 warnings/errors            |
 | T61  | Decision confirmation                  | done    | `d88baa80` | production/test typecheck; DecisionConfirm test; scoped `oxlint`                                                               | exit 0; 2 passed; 0 warnings/errors  |
-| T62  | Deny with feedback                     | done    | T62 commit | production/test typecheck; approvals tests; scoped `oxlint`                                                                    | exit 0; 4 passed; 0 warnings/errors  |
-| T65  | Split keys keyboard                    | not-run | —          | —                                                                                                                              | —                                    |
+| T62  | Deny with feedback                     | done    | `86f93134` | production/test typecheck; approvals tests; scoped `oxlint`                                                                    | exit 0; 4 passed; 0 warnings/errors  |
+| T65  | Split keys keyboard                    | done    | T65 commit | production/test typecheck; keys tests; scoped `oxlint`                                                                         | exit 0; 5 passed; 0 warnings/errors  |
 | T68  | Dictation notch                        | not-run | —          | —                                                                                                                              | —                                    |
 | T69  | Notifications panel, toasts, Needs you | not-run | —          | —                                                                                                                              | —                                    |
 | T64  | Approvals inbox                        | not-run | —          | —                                                                                                                              | —                                    |
 
 ## Deviations
 
-None yet. Device acceptance remains with the owner as the brief directs. Tests follow `AGENTS.md` and the brief's worthwhile-test list rather than render-only `+ test` wording.
+T65 uses pure orientation/cursor tests instead of render-only orientation tests, as required by AGENTS.md. Device acceptance remains with the owner as the brief directs. Tests follow `AGENTS.md` and the brief's worthwhile-test list rather than render-only `+ test` wording.
 
 ## Blockers
 
