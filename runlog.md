@@ -26,3 +26,5 @@
 - **T58**: Native-draft composer and send outcome implemented below the transcript; typecheck, 3 no-IME guard tests and scoped lint pass.
 - **T59**: Live mode/model indicator and Orca option drawers integrated; typecheck and scoped lint pass.
 - **T60**: Exact inline permission/question/ask hero and prompt details implemented without a trigger-only decision path; typecheck and scoped lint pass.
+- **T60 fix**: corrected plan-subject narrowing in the unpushed T60 commit using Orca's branded-subject guard.
+- **T61**: Request-bound ConfirmModal decisions implemented; production/test typechecks, 2 guard tests and scoped lint pass.

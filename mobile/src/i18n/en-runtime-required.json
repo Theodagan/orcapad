@@ -352,6 +352,14 @@
     },
     "prompt": {
       "needsYou": "Needs you"
+    },
+    "decision": {
+      "title": "Confirm decision",
+      "request": "Request",
+      "operation": "Operation",
+      "effect": "Effect",
+      "requestId": "Request ID",
+      "unbound": "This request has no stable identity, so decisions are disabled."
     }
   },
   "dictation": {
