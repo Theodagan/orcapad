@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
-import { useWindowDimensions } from 'react-native'
+import { useWindowDimensions, View } from 'react-native'
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router'
 import { MobileStateView } from '../../components/MobileStateView'
 import { useMobileTranslation } from '../../i18n/use-mobile-translation'
@@ -7,6 +7,7 @@ import { getMobileSessionTabTitle } from '../../terminal/session/mobile-terminal
 import { useMobileSessionController } from '../../session/use-mobile-session-controller'
 import { DeckTranscript } from './DeckTranscript'
 import { DeckTerminal } from './DeckTerminal'
+import { DeckComposer } from './DeckComposer'
 import { DeckShell } from '../DeckShell'
 import { DeckHeader, type DeckSessionView } from '../chrome/DeckHeader'
 import { deckRouteFromRouter, resolveDeckContext } from '../context/deck-context'
@@ -128,7 +129,12 @@ export function DeckSession(): ReactNode {
             )}
           />
         ) : view === 'chat' ? (
-          <DeckTranscript controller={controller.nativeChatController} />
+          <View style={{ flex: 1 }}>
+            <View style={{ flex: 1 }}>
+              <DeckTranscript controller={controller.nativeChatController} />
+            </View>
+            <DeckComposer controller={controller.nativeChatController} />
+          </View>
         ) : (
           <DeckTerminal controller={controller} />
         )}

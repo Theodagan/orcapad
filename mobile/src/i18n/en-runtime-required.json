@@ -343,6 +343,12 @@
         "title": "No terminal attached",
         "body": "Open an agent or terminal item in this workspace."
       }
+    },
+    "composer": {
+      "placeholder": "Message this agent",
+      "send": "Send",
+      "sending": "Sending…",
+      "unconfirmed": "The message was not accepted. Check chat before retrying."
     }
   },
   "dictation": {
