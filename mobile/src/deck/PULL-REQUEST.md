@@ -5,9 +5,91 @@
 > report there. Paste it into the PR when opening it; there is no API credential on the worker that
 > could open the PR itself.
 >
-> **Run 4 (`implement/deck-build`)** is the current run: compare
-> <https://github.com/Theodagan/orcapad/compare/main...implement/deck-build>. The run 1–3 sections
-> below are kept as history.
+> **Run 5 (`implement/deck-run5`)** is the current run: compare
+> <https://github.com/Theodagan/orcapad/compare/main...implement/deck-run5>. Earlier sections are history.
+
+## Run 5 — steps 8–10, live destinations and the session loop
+
+Branch `implement/deck-run5`, cut from `origin/main` @ `1190f0716f2b`. T49–T62, T65, T68, T69 and
+T64 are implemented in plan order, one commit per card. T63 and T67 were already on `main`. Step 11
+(wheels) and every later step are **not started**.
+
+### Steps, as delivered
+
+| Step                  | Cards                  | State                                                         |
+| --------------------- | ---------------------- | ------------------------------------------------------------- |
+| 8 — live destinations | T49–T54                | done, owner device check pending                              |
+| 9 — session loop      | T55–T62, T65, T68, T69 | done, owner device check pending                              |
+| 10 — approvals        | T64                    | done, owner device check pending; one binding deviation below |
+| 11+                   | T74 onward             | not started                                                   |
+
+- **Sessions / Projects / Workspaces:** paired-host agent status and catalog reads feed the four
+  collection layouts; Projects includes repo-only sections and folder workspaces; workspace item
+  tabs preserve Orca's active landing spot. Create workspace reuses Orca's complete modal and keeps
+  execution-host routing.
+- **Overview / Ports:** live agents by status, tool calls, Needs you, account usage, device network
+  and battery. Host CPU/RAM/bandwidth stays explicitly unavailable because no metric shape is
+  declared. Ports lists live scans; only the owner-approved `scan`, `scanHost` and `stats.summary`
+  mobile route names were added. Opening ports remains T86.
+- **Session:** native streaming transcript (Markdown/tool/reasoning/notice rows), real terminal
+  pane, native-draft composer, host-supported mode/model options, split keys with independent
+  cursors, recognized-text-only dictation, notifications and toasts.
+- **Approvals:** exact inline request content; options require a confirmation naming request,
+  operation, effect and request id. Stale ids and trigger-only decisions are rejected by the owning
+  tests. Plan reviews can include refinement feedback; ordinary approvals do not offer it.
+
+### Gaps and deviations
+
+- No device or desktop was available to the worker. All visual, pairing, streaming, terminal,
+  dictation and two-host behavior below is the owner's device checklist, not a claim it ran.
+- **T64:** the host-wide agent-status row has no prompt id. The inbox hands off host/workspace/pane
+  identity, then the per-session prompt controller supplies the real request id to T61. No id is
+  fabricated from the row.
+- T65 uses pure orientation and hardcoded cursor tests instead of render-only orientation tests;
+  this follows `AGENTS.md`. No render-only/copy/mock-echo tests were added elsewhere.
+- Step 11 wheels are untouched, so T72's readout remains unmounted and Orca's deck wheel retirement
+  is not part of this run.
+
+### Files touched outside `mobile/src/deck/` and `mobile/app/deck/`
+
+- `mobile/src/i18n/locales/en.json` and `mobile/src/i18n/en-runtime-required.json` — deck strings.
+- `mobile/package.json` / `mobile/pnpm-lock.yaml` — SDK-pinned `expo-battery` for Overview.
+- `src/main/runtime/rpc/server/runtime-rpc-mobile-method-routing.ts` — exactly the three read-only
+  route names the brief approved; no handlers or permissions changed.
+- `runlog.md` and `docs/deck-handoff/implementation-report.md` — execution evidence.
+- Every entry is also in `UPSTREAM-TOUCHES.md`.
+
+### Verification
+
+Per-card commands are in `HANDOFF-LOG.md` and `docs/deck-handoff/implementation-report.md`.
+`pnpm check:changed` passed 15/15 before T49–T52 and 16/16 before T53. Final Run 5 gate results are
+recorded below before the branch is marked ready.
+
+### What the owner should try on the device
+
+1. **Pair and Sessions:** pair a desktop with agents in each state. Open Deck → Sessions; switch
+   Cards/Kanban/List/Grid, verify status buckets and open a session. Repeat with a second desktop.
+2. **Projects and creation:** compare repo and folder-workspace rows with desktop. Open a workspace,
+   select agent/browser/file items, leave and return to confirm the last item. Create a worktree and
+   a folder workspace; each should open in the deck, including a remote execution host if available.
+3. **Overview:** change an agent's state and run a tool; verify its bucket, latest tool text and
+   Needs-you count. Check account usage, network and battery. Host metrics should say why they are
+   unavailable. Trigger a notification and follow its row back to the session.
+4. **Ports:** start a development server; its listener should appear within the five-second scan
+   interval. Stop the server and verify the row disappears. Opening is intentionally not present.
+5. **Chat:** open a live Claude Code session, stream Markdown/tool/reasoning rows and scroll with
+   L2/R2. Send a prompt with the no-IME composer. Type with both split-key halves in landscape and
+   portrait; change mode/model and confirm it applies to the next turn.
+6. **TUI:** switch to TUI, send keys, scroll and verify no Android IME opens. Switch back without
+   losing the session's selected item.
+7. **Dictation:** hold Start or tap Dictate, speak, stop, and confirm only recognized text enters
+   the composer. Test the no-speech and interruption errors too.
+8. **Approvals:** raise permission requests in two sessions. Both should appear under their hosts;
+   open each and verify the exact request. Selecting an option must only open the confirmation;
+   confirm and check the effect. A plan review should offer refinement feedback, an ordinary
+   approval should not.
+9. **Orca interface:** switch Settings → Interface → Orca and confirm the ordinary screens still
+   boot, then switch back to Deck.
 
 ## Run 4 — step 7 finished
 

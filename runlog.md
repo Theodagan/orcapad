@@ -34,3 +34,4 @@
 - **T69**: Notifications, toasts and Needs-you session links implemented; typecheck, 10 focused tests and scoped lint pass.
 - **T64**: D5 approvals inbox implemented across hosts with per-session T61 decisions; typecheck, 9 approval/boundary tests and scoped lint pass. Deviation: no prompt ID exists in the host-wide row, so binding occurs when the per-session prompt opens.
 - **Stopping point**: steps 8–10 complete; step 11 not started so final verification and handoff can be completed.
+- **Verification update**: full mobile production/test typechecks and lint pass (3492 files); deck suite 30 files/133 tests pass; upstream check 360/360. Removed the outdated pre-T54 Ports-disabled assertion and split notification cleanup into one component per client; changed-code quality now passes with zero findings.

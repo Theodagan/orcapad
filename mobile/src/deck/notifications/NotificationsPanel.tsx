@@ -8,15 +8,25 @@ import { FocusableOrca } from '../focus/focusable-orca'
 import type { DeckHostData } from '../host/use-deck-host-data'
 import { useDeckTheme } from '../theme/deck-theme'
 import { useDeckNotifications } from './use-deck-notifications'
+import { NotificationSubscription } from './NotificationSubscription'
 
 export function NotificationsPanel({ data }: { data: DeckHostData }): ReactNode {
   const t = useMobileTranslation()
   const theme = useDeckTheme()
   const router = useRouter()
-  const { notifications, toastMessage } = useDeckNotifications(data)
+  const { notifications, toastMessage, dismiss, present } = useDeckNotifications()
   const needsYou = useMemo(() => selectAgentsNeedingYou(data.agentList), [data.agentList])
   return (
     <View style={{ padding: theme.space.md, gap: theme.space.sm }}>
+      {data.allClients.map(({ hostId, client }) => (
+        <NotificationSubscription
+          key={hostId}
+          hostId={hostId}
+          client={client}
+          onPresent={present}
+          onDismiss={dismiss}
+        />
+      ))}
       <Text style={{ color: theme.color.text1, fontSize: theme.text.title }}>
         {t('deck.notifications.title', 'Notifications')}
       </Text>
