@@ -9,7 +9,7 @@
 - **Gaps and issues**: `pnpm install --frozen-lockfile` installed JavaScript dependencies but its root postinstall failed because Electron cannot load the container's missing `libgtk-3.so.0`. Baseline `cd mobile && pnpm typecheck` passes. No steering files exist under `docs/steering/`; root `AGENTS.md` and the deck brief are the constraints.
 - **Feedback received**: none.
 - **Verification**: baseline `cd mobile && pnpm typecheck` — exit 0. Further per-card commands are recorded in `mobile/src/deck/HANDOFF-LOG.md` and `docs/deck-handoff/implementation-report.md`.
-- **Not done / follow-ups**: T49 onward; owner device checks; no step 12 or later work.
+- **Not done / follow-ups**: owner device checks; no step 11 or later work. Final push past T53 is blocked by the pre-existing root browser-extension test failure documented in the implementation report.
 - **T49**: live cross-host Sessions collection implemented; typecheck, deck boundary and collection tests (17), and scoped lint pass.
 - **T50**: Projects uses per-host repo catalogs and Orca workspace sections/rows; mobile typecheck, 10 boundary/design tests and scoped lint pass.
 - **T51**: Workspace route and live agent/browser/file item tabs implemented on Orca's session controller; typecheck, 15 focused tests and scoped lint pass.
@@ -35,3 +35,5 @@
 - **T64**: D5 approvals inbox implemented across hosts with per-session T61 decisions; typecheck, 9 approval/boundary tests and scoped lint pass. Deviation: no prompt ID exists in the host-wide row, so binding occurs when the per-session prompt opens.
 - **Stopping point**: steps 8–10 complete; step 11 not started so final verification and handoff can be completed.
 - **Verification update**: full mobile production/test typechecks and lint pass (3492 files); deck suite 30 files/133 tests pass; upstream check 360/360. Removed the outdated pre-T54 Ports-disabled assertion and split notification cleanup into one component per client; changed-code quality now passes with zero findings.
+
+- **Final blocker**: final `check:changed` passes 27/28 stages. The sole failing root test is `browser-extension-native-host-process.test.ts` (`EPIPE`, process-exit assertion); its isolated command fails identically on clean `origin/main` and on Run 5. No red push was made. T54 onward and the handoff remain committed locally.

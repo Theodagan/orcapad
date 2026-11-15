@@ -5,7 +5,7 @@
 - **Base**: `origin/main` at `1190f0716f2bf0856634de19944eadffa65510f6`.
 - **Implementation remote**: `origin` (`Theodagan/orcapad`).
 - **Started**: 2026-11-15T20:36Z.
-- **Finished**: in progress.
+- **Finished**: 2026-11-15T21:42Z, verification-blocked before final push.
 
 ## Tasks
 
@@ -38,6 +38,8 @@ T64 carries session identity from the host-wide feed, then binds the real prompt
 
 ## Blockers
 
+Final `ORCA_CODE_QUALITY_BASE=origin/main pnpm check:changed --maxWorkers=2` passes 27/28 stages. Its root unit stage fails in `src/main/browser/extensions/native-messaging/browser-extension-native-host-process.test.ts` ("kills helpers when their host exits after the channel closes") with `EPIPE` and `expected true to be false`. The isolated test fails identically on clean `origin/main` and on this branch (5 passed, 1 failed in both), so this is pre-existing. Desktop browser-extension code is outside Run 5 scope; no red push was made past T53.
+
 The root dependency postinstall cannot validate Electron's native rebuild in this container because `libgtk-3.so.0` is absent. A subsequent `pnpm install --frozen-lockfile --ignore-scripts` completed; mobile typecheck, tests, lint and changed-file checks remain runnable. On the 16 GiB replacement worker, dependencies installed with `--ignore-scripts`; Bun postinstall and native Node runtime setup then completed separately. No task is blocked by this at present.
 
 ## Checks run
@@ -54,7 +56,7 @@ The root dependency postinstall cannot validate Electron's native rebuild in thi
 
 ## Pull request
 
-None requested. `mobile/src/deck/PULL-REQUEST.md` will be updated for the owner.
+None requested. `mobile/src/deck/PULL-REQUEST.md` is updated for the owner, including the red-gate blocker.
 
 ## Finding IDs
 

@@ -62,8 +62,11 @@ T64 are implemented in plan order, one commit per card. T63 and T67 were already
 ### Verification
 
 Per-card commands are in `HANDOFF-LOG.md` and `docs/deck-handoff/implementation-report.md`.
-`pnpm check:changed` passed 15/15 before T49–T52 and 16/16 before T53. Final Run 5 gate results are
-recorded below before the branch is marked ready.
+`pnpm check:changed` passed 15/15 before T49–T52 and 16/16 before T53. The final Run 5 gate
+passes 27/28 stages, but remains **red** in root unit tests: `browser-extension-native-host-process.test.ts`
+("kills helpers when their host exits after the channel closes") fails with `EPIPE` and a process-exit
+assertion. The identical isolated command fails on clean `origin/main` and on this branch. The remaining
+commits are therefore **not pushed**, as the brief requires; this branch is not yet ready to merge.
 
 ### What the owner should try on the device
 
