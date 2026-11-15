@@ -27,12 +27,14 @@
 | T62  | Deny with feedback                     | done    | `86f93134` | production/test typecheck; approvals tests; scoped `oxlint`                                                                    | exit 0; 4 passed; 0 warnings/errors  |
 | T65  | Split keys keyboard                    | done    | `66023aae` | production/test typecheck; keys tests; scoped `oxlint`                                                                         | exit 0; 5 passed; 0 warnings/errors  |
 | T68  | Dictation notch                        | done    | `c2da5142` | `cd mobile && pnpm typecheck`; scoped `oxlint`                                                                                 | exit 0; 0 warnings/errors            |
-| T69  | Notifications panel, toasts, Needs you | done    | T69 commit | typecheck; boundary/design tests; scoped `oxlint`                                                                              | exit 0; 10 passed; 0 warnings/errors |
-| T64  | Approvals inbox                        | not-run | —          | —                                                                                                                              | —                                    |
+| T69  | Notifications panel, toasts, Needs you | done    | `582246f1` | typecheck; boundary/design tests; scoped `oxlint`                                                                              | exit 0; 10 passed; 0 warnings/errors |
+| T64  | Approvals inbox                        | done    | T64 commit | typecheck; approval/boundary tests; scoped `oxlint`                                                                            | exit 0; 9 passed; 0 warnings/errors  |
 
 ## Deviations
 
-T65 uses pure orientation/cursor tests instead of render-only orientation tests, as required by AGENTS.md. Device acceptance remains with the owner as the brief directs. Tests follow `AGENTS.md` and the brief's worthwhile-test list rather than render-only `+ test` wording.
+T65 uses pure orientation/cursor tests instead of render-only orientation tests, as required by AGENTS.md.
+
+T64 carries session identity from the host-wide feed, then binds the real prompt id when its per-session controller opens; the feed has no prompt id to hand off. Device acceptance remains with the owner as the brief directs. Tests follow `AGENTS.md` and the brief's worthwhile-test list rather than render-only `+ test` wording.
 
 ## Blockers
 

@@ -32,3 +32,5 @@
 - **T65**: Split landscape/portrait keys and dual cursors implemented; production/test typechecks, 5 key tests and scoped lint pass. Deviation: pure orientation tests replace render-only tests per AGENTS.md.
 - **T68**: Dictation notch inserts recognized text only and exposes touch start/stop; typecheck and scoped lint pass.
 - **T69**: Notifications, toasts and Needs-you session links implemented; typecheck, 10 focused tests and scoped lint pass.
+- **T64**: D5 approvals inbox implemented across hosts with per-session T61 decisions; typecheck, 9 approval/boundary tests and scoped lint pass. Deviation: no prompt ID exists in the host-wide row, so binding occurs when the per-session prompt opens.
+- **Stopping point**: steps 8–10 complete; step 11 not started so final verification and handoff can be completed.

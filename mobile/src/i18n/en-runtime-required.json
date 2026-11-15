@@ -379,6 +379,16 @@
     "notifications": {
       "title": "Notifications",
       "empty": "No agent notifications or requests need attention."
+    },
+    "approvals": {
+      "error": "Couldn’t load approvals",
+      "loading": "Loading approvals…",
+      "empty": {
+        "title": "No approvals need you",
+        "body": "Permission requests and questions from live agents will appear here."
+      },
+      "documentation": "Request documentation",
+      "documentationReason": "Unavailable: Orca provides no documentation fields for prompts."
     }
   },
   "dictation": {
