@@ -5,34 +5,29 @@ in this repository (`Theodagan/orcapad`, a public fork of `stablyai/orca`). This
 brief: work through it top to bottom in one run. The owner tests on the device afterwards and sends
 follow-up runs to refine; aim for **most of the job done and everything compiling**, not perfection.
 
-## Run 4 — start here
+## Run 5 — start here
 
-Runs 1–3 are merged on `main`. Steps 1–6 are complete and step 7 is two thirds done: the deck has
-its seam, theme, host gate, update channel and installer, controller contract, hints, focus, panels,
-context resolver, collections and six routes. **Branch from `origin/main`** (the old
-`implement/deck-build` branch is fully merged; do not reopen it) and append a `## Run 4` section to
-`mobile/src/deck/HANDOFF-LOG.md`.
+Run 4 is merged (PR #5). The shell is complete: header with breadcrumbs, left panels, carousel and
+the four session layouts, plus the no-IME field (T67), the dev-only wheel latency readout (T72) and
+the approvals-source note (T63, `mobile/src/deck/approvals/inbox-source.md` — read it before T64).
+The six destination routes still render `DeckDestinationScreen`.
 
-1. **First, make `pnpm check:tests-typecheck` green in `mobile/`.** It is red on `main` and CI runs
-   it (`.github/workflows/mobile.yml`): 64 errors in 23 files, all under `mobile/src/gamepad/**`.
-   They come from the pad tests sitting on newer upstream types: missing `jump-message`/`run-action`
-   intents, renamed option fields, RN Testing Library render types. Fix the tests to the current
-   APIs. **Do not add entries to `mobile/tests-typecheck-baseline.txt`**; it is a shrink-only ratchet
-   and adding entries is what it forbids. This is the only work outside the deck's folders this run
-   needs; log it in `UPSTREAM-TOUCHES.md`.
-2. **Then finish step 7** (T43, T44, T47, T48), and continue through steps 8, 9 and 10 in order.
-   Those are the destinations on live data, the session loop and the approvals inbox: the point at
-   which the app is usable end to end. Tasks struck through below are already done.
-3. **If step 10 is finished and you still have budget, continue into step 11 (wheels).** Do not start
-   step 12 or later.
-4. **When you stop, push the branch** `implement/deck-run4`. There is no API credential on the
-   worker, so do not try to open the pull request: update `mobile/src/deck/PULL-REQUEST.md` instead
-   and say in your final message that the branch is ready.
+1. **Branch from `origin/main` as `implement/deck-run5`.** The old branches are deleted; do not
+   reopen one. Append a `## Run 5` section to `mobile/src/deck/HANDOFF-LOG.md`.
+2. **Start at T49** and go through steps 8, 9 and 10 in order. That is the destinations on live
+   data, the session loop and the approvals inbox — after which the app is usable end to end
+   (pair, pick a project, open a session, chat, approve, dictate). Tasks struck through below are
+   already done.
+3. **If step 10 is finished and you still have budget, continue into step 11 (wheels)** — T72 is
+   done, so the wheels proper start at T74. Do not start step 12 or later.
+4. **When you stop, push the branch.** There is no API credential on the worker, so do not try to
+   open the pull request: update `mobile/src/deck/PULL-REQUEST.md` instead and say in your final
+   message that the branch is ready.
 
 ## How to run this
 
-- Branch: `implement/deck-run4`, cut from `origin/main` (see _Run 4_). One commit per step
-  (`deck(CFnn): <title>`). Push as you go, so partial progress is never lost; the owner opens the
+- Branch: `implement/deck-run5`, cut from `origin/main` (see _Run 5_). One commit per card
+  (`T<n>: <title>`). Push as you go, so partial progress is never lost; the owner opens the
   pull request.
 - Follow the steps in order: each builds on the previous ones. If a step is blocked, do what you can,
   note it, and continue with the next step that doesn't depend on it.
@@ -97,6 +92,12 @@ context resolver, collections and six routes. **Branch from `origin/main`** (the
   `ZoneItem`, wheel geometry, hint bar) and the native module `mobile/modules/orca-gamepad/`.
   `ControllerShell` wraps the root layout. The per-screen hooks in `mobile/src/gamepad/bindings/`
   (X modifier) have no consumers: reshape what the deck needs into `mobile/src/deck/`.
+- The deck itself (runs 1–4): `mobile/src/deck/` carries the theme, the host capability gate and
+  lenient host-data parsing, the controller contract with its Y chord table, the hint strip and
+  Help, the focus language, panel columns and the left panels, collections with the carousel and
+  four session layouts, the breadcrumb header, the no-IME text field, the context resolver, and the
+  whole update channel (fork source, download with byte digest, installer, store, panel, explainer).
+  `mobile/app/deck/` mounts the shell; every destination route still renders `DeckDestinationScreen`.
 - App identity: `com.theodagan.orcapad`, name Orcapad. Remote push is unavailable to this app (it
   needs the official Firebase project); never re-add `google-services.json`.
 
@@ -182,84 +183,72 @@ also a risk (§11).
 
 ### Step 1 — Seam and shell skeleton (`CF01`)
 
-- ~~T4 — Start the touched-file ledger~~ done in run 1 (keep it working).
-- ~~T3 — Add the upstream merge check script~~ done in run 1 (keep it working).
-- ~~T5 — Add the interface preference~~ done in run 1 (keep it working).
-- ~~T6 — Mount the deck route group~~ done in run 1 (keep it working).
-- ~~T7 — Route the app entry by the interface preference~~ done in run 1 (keep it working).
-- ~~T8 — Add the deck boundary test~~ done in run 1 (keep it working).
-- ~~T9 — Create and verify the coverage ledger~~ done in run 1 (keep it working).
-- ~~T11 — Feature gate hook~~ done in run 1 (keep it working).
-- ~~T12 — Lenient host-data parsing and engine parser audit~~ done in run 1 (keep it working).
+- ~~T4 — Start the touched-file ledger~~ done (keep it working).
+- ~~T3 — Add the upstream merge check script~~ done (keep it working).
+- ~~T5 — Add the interface preference~~ done (keep it working).
+- ~~T6 — Mount the deck route group~~ done (keep it working).
+- ~~T7 — Route the app entry by the interface preference~~ done (keep it working).
+- ~~T8 — Add the deck boundary test~~ done (keep it working).
+- ~~T9 — Create and verify the coverage ledger~~ done (keep it working).
+- ~~T11 — Feature gate hook~~ done (keep it working).
+- ~~T12 — Lenient host-data parsing and engine parser audit~~ done (keep it working).
 
 ### Step 2 — Orca design system for the deck, host refusal screen (`CF02`)
 
-- ~~T10 — Build the deck theme on Orca's design system~~ done in run 1 (keep it working).
-- ~~T104 — Component reuse inventory~~ done in run 1 (keep it working).
-- ~~T106 — Deck design guard~~ done in run 1 (keep it working).
-- ~~T13 — Host refusal screen~~ done in run 1 (keep it working).
+- ~~T10 — Build the deck theme on Orca's design system~~ done (keep it working).
+- ~~T104 — Component reuse inventory~~ done (keep it working).
+- ~~T106 — Deck design guard~~ done (keep it working).
+- ~~T13 — Host refusal screen~~ done (keep it working).
 
 ### Step 3 — Fork update source and download (`CF03`)
 
-- ~~T17 — Fork release update source~~ done in run 1 (keep it working).
-- ~~T19 — Download and verify the update~~ done in run 1 (keep it working).
-- ~~T22 — Point Orca's update runtime at the fork source~~ done in run 1 (keep it working).
+- ~~T17 — Fork release update source~~ done (keep it working).
+- ~~T19 — Download and verify the update~~ done (keep it working).
+- ~~T22 — Point Orca's update runtime at the fork source~~ done (keep it working).
 
 ### Step 4 — Fork release pipeline (workflow and script edits only) (`CF09`)
 
-- ~~T15 — Require the fork's release signing key in CI~~ done in run 1 (keep it working).
-- ~~T16 — Publish releases to the fork under its own tag prefix~~ done in run 1 (keep it working).
+- ~~T15 — Require the fork's release signing key in CI~~ done (keep it working).
+- ~~T16 — Publish releases to the fork under its own tag prefix~~ done (keep it working).
 
 ### Step 5 — Deck controller contract (`CF04`)
 
-- ~~T66 — Split keys setting~~ done in run 1 (keep it working).
-- ~~T25 — Deck chord table~~ done in run 1 (keep it working).
-- ~~T26 — Deck binding layer over the existing input runtime~~ done in run 1 (keep it working).
-- ~~T27 — Contract: A / X / B, and B never switches destination~~ done in run 1 (keep it working).
-- ~~T28 — Contract: L1/R1 and Y + L1/R1 tap / long-press~~ done in run 1 (keep it working).
-- ~~T29 — Contract: L2/R2 analog scroll everywhere~~ done in run 1 (keep it working).
-- ~~T30 — Contract: Y is a modifier only~~ done in run 1 (keep it working).
-- ~~T31 — Contract: arrows bound to the focused pane, one focus, stable restore~~ done in run 1 (keep it working).
-- ~~T32 — Contract: Start, hold-Start dictation, L3/R3~~ done in run 1 (keep it working).
-- ~~T33 — Hint strip with Y layer~~ done in run 1 (keep it working).
-- ~~T34 — Hints on elements~~ done in run 1 (keep it working).
-- ~~T35 — Help diagram from live bindings~~ done in run 1 (keep it working).
-- ~~T36 — Focus tick~~ done in run 1 (keep it working).
-- ~~T37 — Touch alternative registry~~ done in run 1 (keep it working).
-- ~~T105 — Pad-focus wrappers for Orca components~~ done in run 1 (keep it working).
+- ~~T66 — Split keys setting~~ done (keep it working).
+- ~~T25 — Deck chord table~~ done (keep it working).
+- ~~T26 — Deck binding layer over the existing input runtime~~ done (keep it working).
+- ~~T27 — Contract: A / X / B, and B never switches destination~~ done (keep it working).
+- ~~T28 — Contract: L1/R1 and Y + L1/R1 tap / long-press~~ done (keep it working).
+- ~~T29 — Contract: L2/R2 analog scroll everywhere~~ done (keep it working).
+- ~~T30 — Contract: Y is a modifier only~~ done (keep it working).
+- ~~T31 — Contract: arrows bound to the focused pane, one focus, stable restore~~ done (keep it working).
+- ~~T32 — Contract: Start, hold-Start dictation, L3/R3~~ done (keep it working).
+- ~~T33 — Hint strip with Y layer~~ done (keep it working).
+- ~~T34 — Hints on elements~~ done (keep it working).
+- ~~T35 — Help diagram from live bindings~~ done (keep it working).
+- ~~T36 — Focus tick~~ done (keep it working).
+- ~~T37 — Touch alternative registry~~ done (keep it working).
+- ~~T105 — Pad-focus wrappers for Orca components~~ done (keep it working).
 
 ### Step 6 — APK installer, update flow and UI (`CF08`)
 
-- ~~T18 — APK installer~~ done in run 1 (keep it working).
-- ~~T20 — Update state store~~ done in run 1 (keep it working).
-- ~~T21 — Unknown-sources guidance~~ done in run 1 (keep it working).
-- ~~T23 — Deck update UI~~ done in run 1 (keep it working).
+- ~~T18 — APK installer~~ done (keep it working).
+- ~~T20 — Update state store~~ done (keep it working).
+- ~~T21 — Unknown-sources guidance~~ done (keep it working).
+- ~~T23 — Deck update UI~~ done (keep it working).
 
 ### Step 7 — Navigation shell (`CF05`)
 
-- ~~T38 — Destinations registry~~ done in run 1 (keep it working).
-- ~~T39 — Deck routes per destination~~ done in run 1 (keep it working).
-- ~~T40 — Context resolver~~ done in run 1 (keep it working).
-- ~~T41 — Navigation history and Y + B~~ done in run 1 (keep it working).
-- ~~T42 — Panel columns system~~ done in run 1 (keep it working).
-- **T43 — Left panels: Quick menu and All open**
-  - Files: `mobile/src/deck/panels/left/QuickMenu.tsx`, `AllOpen.tsx` (create, + tests)
-  - Do: PANEL-1 content from destinations and open items.
-  - Accept: render tests; pad selection opens the target.
-- **T44 — Breadcrumb header**
-  - Files: `mobile/src/deck/chrome/DeckHeader.tsx` (create, + test)
-  - Do: Chat UI / TUI switch with `MobileSegmentedControl`. NAV-13, IH-4, SD-5: one header row with breadcrumb, item tabs when several, Chat UI / TUI switch.
-  - Accept: render tests for host, project, workspace and session contexts.
-- ~~T45 — Shared grouping~~ done in run 1 (keep it working).
-- ~~T46 — Collection model~~ done in run 1 (keep it working).
-- **T47 — Carousel shell**
-  - Files: `mobile/src/deck/collections/CarouselShell.tsx` (create, + test)
-  - Do: SD-6, SD-11: one shell, layout tabs, L1/R1 item moves, swipe parity (COL-6).
-  - Accept: render test: L1/R1 and swipe move selection identically.
-- **T48 — Sessions layouts: Cards, Kanban, List, Grid**
-  - Files: `mobile/src/deck/collections/layouts/CardsLayout.tsx`, `KanbanLayout.tsx`, `ListLayout.tsx`, `GridLayout.tsx` (create, + tests)
-  - Do: SES-0, IH-10 per maquette `collections.js`; items built from `WorktreeAgentRow`, `AgentStateDot`, `StatusDot`, `MobileAgentIcon`, `AgentSpinner`; layout tabs with `MobileSegmentedControl`.
-  - Accept: render test per layout; maquette side-by-side noted in `COVERAGE.md`.
+- ~~T38 — Destinations registry~~ done (keep it working).
+- ~~T39 — Deck routes per destination~~ done (keep it working).
+- ~~T40 — Context resolver~~ done (keep it working).
+- ~~T41 — Navigation history and Y + B~~ done (keep it working).
+- ~~T42 — Panel columns system~~ done (keep it working).
+- ~~T43 — Left panels: Quick menu and All open~~ done (keep it working).
+- ~~T44 — Breadcrumb header~~ done (keep it working).
+- ~~T45 — Shared grouping~~ done (keep it working).
+- ~~T46 — Collection model~~ done (keep it working).
+- ~~T47 — Carousel shell~~ done (keep it working).
+- ~~T48 — Sessions layouts: Cards, Kanban, List, Grid~~ done (keep it working).
 
 ### Step 8 — Destinations on live data (`CF06`)
 
@@ -326,10 +315,7 @@ also a risk (§11).
   - Files: `mobile/src/deck/keys/SplitKeys.tsx`, `split-keys-layout.ts` (create, + tests)
   - Do: KEY-2/3/4/10, IH-14: halves in side-panel slots (landscape), bottom keys (portrait), dual cursors per maquette `keyboard.js`; landscape slot geometry from `layout/side-rail-strip.ts` (`getSideRailStrip`, keyboard occlusion).
   - Accept: render tests for both orientations; pad types into a field on device. → the device part is the owner's later test; you prove the behaviour in code (and against `pnpm mock-server` where it serves the data).
-- **T67 — No Android IME on deck fields**
-  - Files: `mobile/src/deck/keys/deck-text-field.tsx` (create), `mobile/src/deck/keys/ime-guard.test.ts` (create)
-  - Do: One deck text field wrapper with `showSoftInputOnFocus={false}`; test scans `src/deck/**` for raw `TextInput`.
-  - Accept: guard test fails on a raw `TextInput` probe.
+- ~~T67 — No Android IME on deck fields~~ done (keep it working).
 - **T68 — Dictation notch**
   - Files: `mobile/src/deck/dictation/DictationNotch.tsx` (create, + test)
   - Do: MIC-1…4 on `hooks/use-mobile-dictation.ts`; inserts only recognised text (SAFE-4).
@@ -341,10 +327,7 @@ also a risk (§11).
 
 ### Step 10 — Approvals inbox (`CF10`)
 
-- **T63 — Choose the app-wide pending prompts source**
-  - Files: `mobile/src/deck/approvals/inbox-source.md` (create)
-  - Do: From the code (subscriptions in `transport/`, native-chat prompt hooks, mock server): can existing subscriptions list pending prompts across sessions, or is a per-session subscription needed? Pick the cheapest correct source and record it as D5.
-  - Accept: the note names the source, its cost and why; T64 builds on it.
+- ~~T63 — Choose the app-wide pending prompts source~~ done (keep it working).
 - **T64 — Approvals inbox**
   - Files: `mobile/app/deck/(dest)/approvals.tsx` (edit), `mobile/src/deck/approvals/use-deck-approvals.ts` (create, + test)
   - Do: SAFE-5 from T63's source; decisions reuse T61; documentation fields Orca lacks shown as H.
@@ -352,10 +335,7 @@ also a risk (§11).
 
 ### Step 11 — Wheels (`CF11`)
 
-- **T72 — Dev-only wheel latency readout**
-  - Files: `mobile/src/deck/wheels/latency-readout.tsx` (create, + test)
-  - Do: No device spike. A dev-setting overlay that shows stick-sample-to-frame latency (p50/p95) while wheels turn, so the owner can judge it during local testing. Samples arrive as JS events from `OrcaGamepadModule.kt`.
-  - Accept: test feeds timestamped samples and frames and gets the right percentiles; the overlay is off by default.
+- ~~T72 — Dev-only wheel latency readout~~ done (keep it working).
 - **T74 — Wheel engine on Reanimated**
   - Files: `mobile/src/deck/wheels/wheel-engine.ts` (create, + test)
   - Do: DECK-R18: click-wheel ring under a fixed selector, rate curve and S-curve gain, 1/8-turn distance guard, no snap, loop above six entries. Reuse `gamepad/wheel/wheel-geometry.ts` math.
