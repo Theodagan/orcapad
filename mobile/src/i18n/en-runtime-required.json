@@ -322,6 +322,13 @@
         "title": "No paired desktops",
         "body": "Pair a desktop in Orca to scan its workspaces."
       }
+    },
+    "session": {
+      "loading": "Loading session…",
+      "empty": {
+        "title": "No session items",
+        "body": "Start an agent in this workspace to open its session here."
+      }
     }
   },
   "dictation": {

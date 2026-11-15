@@ -19,3 +19,4 @@
 - **Push**: T49–T52 pushed after `ORCA_CODE_QUALITY_BASE=origin/main pnpm check:changed --maxWorkers=2` passed 15/15 (unit tests 110.7s).
 - **T53**: Overview live agents/tool calls/Needs you/account usage and device network/battery implemented; typecheck, 10 focused tests and scoped lint pass. SDK-pinned `expo-battery` logged as an upstream touch.
 - **T54**: Ports live scan list and the three owner-approved mobile route names implemented; typecheck, 10 focused tests, 261 upstream checks and scoped lint pass.
+- **T55**: Session frame, item restoration and Chat UI/TUI switch implemented; typecheck, 15 focused tests and scoped lint pass.
