@@ -14,6 +14,7 @@ import { FocusableOrca } from '../focus/focusable-orca'
 import { useDeckHostData, type DeckHostData } from '../host/use-deck-host-data'
 import { useDeckTheme } from '../theme/deck-theme'
 import { useDeckProjects } from './use-deck-projects'
+import { DeckCreateWorkspace } from './DeckCreateWorkspace'
 
 const CARD_DETAILS = getWorktreeCardDetails(INITIAL_MOBILE_VIEW.worktreeCardProperties, {
   compactWorktreeCards: false,
@@ -49,6 +50,7 @@ function DeckHostProjects({ data, hostId }: { data: DeckHostData; hostId: string
       >
         {host?.name ?? hostId}
       </Text>
+      <DeckCreateWorkspace hostId={hostId} order={0} />
       {projects.error ? (
         <Text style={{ color: theme.color.risk, padding: theme.space.md }}>{projects.error}</Text>
       ) : null}

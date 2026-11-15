@@ -14,3 +14,5 @@
 - **T50**: Projects uses per-host repo catalogs and Orca workspace sections/rows; mobile typecheck, 10 boundary/design tests and scoped lint pass.
 - **T51**: Workspace route and live agent/browser/file item tabs implemented on Orca's session controller; typecheck, 15 focused tests and scoped lint pass.
 - **Gaps and issues update**: root Vitest is SIGKILLed (137) before test listing with one or two workers and with isolated files. All other changed-file checks pass. A larger-worker request hit the one-machine pool limit, so the branch will be bundled before replacing the worker.
+- **Worker restore**: branch bundle restored exactly through T51 on a 16 GiB worker; no commits lost. Bun's package postinstall and the native Node runtime were completed locally after the intentional `--ignore-scripts` install.
+- **T52**: Create workspace reuses Orca's full modal/controller and preserves execution-host routing; typecheck, 10 focused tests and scoped lint pass.

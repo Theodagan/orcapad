@@ -36,7 +36,7 @@ None yet. Device acceptance remains with the owner as the brief directs. Tests f
 
 ## Blockers
 
-The root dependency postinstall cannot validate Electron's native rebuild in this container because `libgtk-3.so.0` is absent. A subsequent `pnpm install --frozen-lockfile --ignore-scripts` completed; mobile typecheck, tests, lint and changed-file checks remain runnable. No task is blocked by this at present.
+The root dependency postinstall cannot validate Electron's native rebuild in this container because `libgtk-3.so.0` is absent. A subsequent `pnpm install --frozen-lockfile --ignore-scripts` completed; mobile typecheck, tests, lint and changed-file checks remain runnable. On the 16 GiB replacement worker, dependencies installed with `--ignore-scripts`; Bun postinstall and native Node runtime setup then completed separately. No task is blocked by this at present.
 
 ## Checks run
 

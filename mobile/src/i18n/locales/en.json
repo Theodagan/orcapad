@@ -5017,7 +5017,8 @@
         "title": "No paired desktops",
         "body": "Pair a desktop in Orca to see its projects here."
       },
-      "hostEmpty": "No projects reported by this desktop."
+      "hostEmpty": "No projects reported by this desktop.",
+      "create": "Create workspace"
     },
     "workspace": {
       "loading": "Loading workspace…",
