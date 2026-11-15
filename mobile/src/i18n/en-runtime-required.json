@@ -368,6 +368,13 @@
     "keys": {
       "backspace": "Backspace",
       "space": "Space"
+    },
+    "dictation": {
+      "idle": "Dictate",
+      "starting": "Starting microphone…",
+      "recording": "Listening…",
+      "processing": "Transcribing…",
+      "stop": "Stop"
     }
   },
   "dictation": {

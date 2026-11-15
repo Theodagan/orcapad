@@ -1,19 +1,23 @@
 import { useState, type ReactNode } from 'react'
 import { Text, View } from 'react-native'
 import { useMobileTranslation } from '../../i18n/use-mobile-translation'
+import type { RpcClient } from '../../transport/rpc/rpc-client-contract'
 import type { MobileNativeChatController } from '../../session/native-chat/mobile-native-chat-controller-contract'
 import { useMobileNativeChatDraft } from '../../session/native-chat/composer/mobile-native-chat-draft-store'
 import { FocusableOrca } from '../focus/focusable-orca'
 import { DeckTextField } from '../keys/deck-text-field'
 import { useDeckTheme } from '../theme/deck-theme'
 import { AgentPanel } from './AgentPanel'
+import { DictationNotch } from '../dictation/DictationNotch'
 import { SplitKeys } from '../keys/SplitKeys'
 import { useDeckSettings } from '../settings/deck-settings-store'
 
 export function DeckComposer({
-  controller
+  controller,
+  client
 }: {
   controller: MobileNativeChatController
+  client: RpcClient | null
 }): ReactNode {
   const t = useMobileTranslation()
   const theme = useDeckTheme()
@@ -47,6 +51,15 @@ export function DeckComposer({
     <View
       style={{ padding: theme.space.sm, gap: theme.space.xs, backgroundColor: theme.color.panel }}
     >
+      <DictationNotch
+        client={client}
+        enabled={!sending}
+        onText={(text) =>
+          controller.setChatComposerText(
+            (current) => `${current}${current && !current.endsWith(' ') ? ' ' : ''}${text}`
+          )
+        }
+      />
       <AgentPanel options={controller.nativeChatSessionOptions} />
       <DeckTextField
         value={draft}

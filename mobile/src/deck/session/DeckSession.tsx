@@ -135,7 +135,7 @@ export function DeckSession(): ReactNode {
               <DeckTranscript controller={controller.nativeChatController} />
             </View>
             <PromptStrip controller={controller.nativeChatController} />
-            <DeckComposer controller={controller.nativeChatController} />
+            <DeckComposer controller={controller.nativeChatController} client={controller.client} />
           </View>
         ) : (
           <DeckTerminal controller={controller} />
