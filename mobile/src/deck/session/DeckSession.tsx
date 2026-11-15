@@ -8,6 +8,7 @@ import { useMobileSessionController } from '../../session/use-mobile-session-con
 import { DeckTranscript } from './DeckTranscript'
 import { DeckTerminal } from './DeckTerminal'
 import { DeckComposer } from './DeckComposer'
+import { PromptStrip } from '../approvals/PromptStrip'
 import { DeckShell } from '../DeckShell'
 import { DeckHeader, type DeckSessionView } from '../chrome/DeckHeader'
 import { deckRouteFromRouter, resolveDeckContext } from '../context/deck-context'
@@ -133,6 +134,7 @@ export function DeckSession(): ReactNode {
             <View style={{ flex: 1 }}>
               <DeckTranscript controller={controller.nativeChatController} />
             </View>
+            <PromptStrip controller={controller.nativeChatController} />
             <DeckComposer controller={controller.nativeChatController} />
           </View>
         ) : (

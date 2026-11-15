@@ -25,3 +25,4 @@
 - **Commit hygiene**: corrected the unpushed T56/T57 boundary with a two-stop rebase; each resulting commit independently typechecks and lints.
 - **T58**: Native-draft composer and send outcome implemented below the transcript; typecheck, 3 no-IME guard tests and scoped lint pass.
 - **T59**: Live mode/model indicator and Orca option drawers integrated; typecheck and scoped lint pass.
+- **T60**: Exact inline permission/question/ask hero and prompt details implemented without a trigger-only decision path; typecheck and scoped lint pass.

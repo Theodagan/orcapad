@@ -349,6 +349,9 @@
       "send": "Send",
       "sending": "Sending…",
       "unconfirmed": "The message was not accepted. Check chat before retrying."
+    },
+    "prompt": {
+      "needsYou": "Needs you"
     }
   },
   "dictation": {
