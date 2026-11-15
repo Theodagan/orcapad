@@ -12,11 +12,13 @@ import {
   type DecisionOption
 } from './decision-confirmation'
 import { DecisionConfirm } from './DecisionConfirm'
+import { DenyWithFeedback } from './DenyWithFeedback'
 
 export function PromptStrip({ controller }: { controller: MobileNativeChatController }): ReactNode {
   const t = useMobileTranslation()
   const theme = useDeckTheme()
   const [confirmation, setConfirmation] = useState<DecisionConfirmation | null>(null)
+  const [pendingFeedback, setPendingFeedback] = useState<string | null>(null)
   const permission = controller.nativeChatPermission
   const question = controller.nativeChatQuestion
   const ask = controller.nativeChatAsk
@@ -78,13 +80,32 @@ export function PromptStrip({ controller }: { controller: MobileNativeChatContro
           </Text>
         </FocusableOrca>
       ))}
+      <DenyWithFeedback
+        prompt={permission}
+        onSubmit={(feedback) => {
+          const option = permission?.options.find((candidate) =>
+            /deny|reject|refine/i.test(candidate.label)
+          )
+          if (permission && requestId && option) {
+            setPendingFeedback(feedback)
+            setConfirmation({ requestId, request: permission, option })
+          }
+        }}
+      />
       <DecisionConfirm
         confirmation={confirmation}
         currentRequestId={requestId}
         onCancel={() => setConfirmation(null)}
         onConfirm={() => {
           if (confirmation && requestId && canConfirmDecision(confirmation, requestId, 'confirm')) {
-            void controller.handleNativeChatRespondPermission(confirmation.option.send)
+            void controller
+              .handleNativeChatRespondPermission(confirmation.option.send)
+              .then((accepted) => {
+                if (accepted && pendingFeedback) {
+                  void controller.handleNativeChatSend(pendingFeedback)
+                  setPendingFeedback(null)
+                }
+              })
           }
         }}
       />
