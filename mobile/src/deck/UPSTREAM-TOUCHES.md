@@ -34,3 +34,4 @@ mobile/src/gamepad/evidence/wheel-product-default-gate.ts — `unapprovedProduct
 mobile/src/i18n/locales/en.json, mobile/src/i18n/en-runtime-required.json — localized deck destination, session, workspace, approval and dictation strings — T49–T69
 runlog.md, docs/deck-handoff/implementation-report.md — Run 5 execution evidence required by the automation contract — T49–T64
 mobile/package.json, mobile/pnpm-lock.yaml — SDK-pinned `expo-battery` for Overview's device battery tile — T53
+src/main/runtime/rpc/server/runtime-rpc-mobile-method-routing.ts — expose the owner-approved read-only `workspacePorts.scan`, `workspacePorts.scanHost` and `stats.summary` routes to mobile — T54

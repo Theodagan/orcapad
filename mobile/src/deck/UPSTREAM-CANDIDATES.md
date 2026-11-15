@@ -4,24 +4,13 @@ Gaps this fork cannot close without changing the desktop host or adding a declar
 names the evidence in this checkout, what it blocks, and what upstream would have to add. Ordered by
 how much of the delivery it unblocks.
 
-1. **A mobile route for `workspacePorts.*`** — blocks Ports (PRJ-4, T54) and the port rows of
-   All open and the workspace item list.
-   - Methods exist: `workspacePorts.scan`, `scanHost`, `probePage`, `kill`, `killHost`
-     (`src/main/runtime/rpc/methods/workspace-ports/workspace-ports.ts`), permission `workspace`.
-   - They are registered (`ALL_RPC_METHODS`) but absent from the phone's route table
-     (`EXECUTION_HOST_METHODS` / `MOBILE_RPC_METHOD_ROUTES` in
-     `src/main/runtime/rpc/server/runtime-rpc-mobile-method-routing.ts`), and
-     `rpc-caller-scope.ts` refuses any method missing from it with
-     `Method '<name>' is not available to mobile clients`.
-   - Phones already hold the `workspace` permission tier, so the missing piece is the route entries,
-     not a new capability. `scanHost`/`killHost` also need the host-declaration policy checked per
-     execution host before the deck may claim per-host coverage.
-2. **A mobile route for `stats.summary`** — blocks host CPU/RAM in Overview (OVR-1).
-   - `stats.summary` exists (`src/main/runtime/rpc/methods/host-management/stats.ts`), permission
-     `workspace`, likewise not in the mobile route table.
-   - The reply is `runtime.getStatsSummary() ?? {}` with no published shape, so even with a route the
-     deck would need declared CPU/RAM fields before drawing them. Battery and network are read from
-     the device, not the host, and are already available.
+1. **Mobile routes for `workspacePorts.probePage/kill/killHost`** — blocks opening and stopping ports (T86), not the list (T54).
+   - `scan` and `scanHost` are now mobile-routed in the fork. The other methods remain registered workspace methods without phone routes.
+   - `rpc-caller-scope.ts` refuses a method missing from the route table with `Method '<name>' is not available to mobile clients`.
+   - Opening/stopping also needs the execution-host declaration policy checked before the deck claims per-host coverage.
+2. **Declared host CPU/RAM/bandwidth fields** — blocks host metrics in Overview (OVR-1).
+   - `stats.summary` is now mobile-routed in the fork, but its reply is `runtime.getStatsSummary() ?? {}` with no published metric shape.
+   - The deck needs declared fields before drawing values. Battery and network are read from the device and are available.
 3. **A declared Revert for an agent message** (MSG-3, T89). The delivery shows Revert disabled with
    its reason; nothing in the native-chat surface declares a revertible message.
 4. **A host-provided deny-feedback suggestion** (SAFE-2, T62). Prompt payloads carry no suggestion

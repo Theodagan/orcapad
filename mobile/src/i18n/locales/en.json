@@ -5047,6 +5047,18 @@
         "title": "No paired desktops",
         "body": "Pair a desktop in Orca to see live agents here."
       }
+    },
+    "ports": {
+      "error": "Couldn’t scan ports",
+      "loading": "Scanning ports…",
+      "empty": {
+        "title": "No listening ports",
+        "body": "Start a development server in a workspace to see it here."
+      },
+      "noHosts": {
+        "title": "No paired desktops",
+        "body": "Pair a desktop in Orca to scan its workspaces."
+      }
     }
   }
 }

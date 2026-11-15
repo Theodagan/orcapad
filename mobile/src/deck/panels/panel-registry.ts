@@ -25,11 +25,7 @@ const RIGHT_PANELS: Readonly<Record<DeckScreenKind, readonly DeckPanel[]>> = {
   sessions: [],
   projects: [],
   approvals: [],
-  // PRJ-4: the host has workspacePorts.* but no mobile route for it (COVERAGE.md), so the panel
-  // opens with that reason rather than an empty list that looks like "no ports".
-  ports: [
-    { id: 'ports', side: 'right', titleKey: 'deck.panel.ports', disabledReason: 'not-declared' }
-  ],
+  ports: [],
   settings: [],
   workspace: [{ id: 'items', side: 'right', titleKey: 'deck.panel.items', disabledReason: null }],
   session: [
