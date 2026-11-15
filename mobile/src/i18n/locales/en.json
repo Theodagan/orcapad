@@ -5001,6 +5001,14 @@
         "none": "No turns measured yet",
         "line": "p50 {{p50}} ms · p95 {{p95}} ms"
       }
+    },
+    "sessions": {
+      "error": "Couldn’t load sessions",
+      "loading": "Loading sessions…",
+      "empty": {
+        "title": "No live sessions",
+        "body": "Start an agent on a paired desktop to see it here."
+      }
     }
   }
 }

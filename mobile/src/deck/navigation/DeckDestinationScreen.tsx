@@ -23,11 +23,13 @@ const NO_CRUMB_NAMES = { host: null, project: null, workspace: null, session: nu
  */
 export function DeckDestinationScreen({
   destination,
-  openItems = NO_OPEN_ITEMS
+  openItems = NO_OPEN_ITEMS,
+  children
 }: {
   destination: DeckDestinationId
   /** What the deck has open; the screens that open workspaces and sessions supply it. */
   openItems?: readonly DeckOpenItem[]
+  children?: ReactNode
 }): ReactNode {
   const t = useMobileTranslation()
   const router = useRouter()
@@ -51,13 +53,15 @@ export function DeckDestinationScreen({
     <DeckShell>
       <DeckHeader context={context} names={NO_CRUMB_NAMES} />
       <PanelColumns screen={destination} windowWidth={width} renderPanel={renderPanel}>
-        <MobileStateView
-          title={t(labelKey, labelKey)}
-          message={t(
-            'deck.empty.body',
-            'Nothing here yet. Pair a desktop or start an agent to fill it.'
-          )}
-        />
+        {children ?? (
+          <MobileStateView
+            title={t(labelKey, labelKey)}
+            message={t(
+              'deck.empty.body',
+              'Nothing here yet. Pair a desktop or start an agent to fill it.'
+            )}
+          />
+        )}
       </PanelColumns>
     </DeckShell>
   )

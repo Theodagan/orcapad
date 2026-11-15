@@ -254,3 +254,7 @@ Branch `implement/deck-build`, cut from the checkout's HEAD (`main` @ `0cd251dba
 - `ORCA_CODE_QUALITY_BASE=origin/main pnpm check:changed` — 15/15 green on the final commit. One
   earlier push carried two findings (an unused `eslint-disable`, two inline fallbacks that passed
   their key instead of the catalog's English); both were fixed in the follow-up commit.
+
+## Run 5
+
+- T49 — done, owner check pending — `cd mobile && pnpm typecheck` exit 0; `pnpm test src/deck/deck-boundary.test.ts src/deck/collections --maxWorkers=2` (17 passed); scoped `oxlint` exit 0. — Sessions reads paired hosts through `useAllHostClients` (via Orca's home connection hook), the worktree catalog snapshot query and host agent-status rows; the destination uses the existing carousel and four layouts, and opens `/deck/s/...` with host, workspace and pane identity. No render-only test added under AGENTS.md.
