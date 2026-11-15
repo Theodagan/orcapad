@@ -21,3 +21,4 @@
 - **T54**: Ports live scan list and the three owner-approved mobile route names implemented; typecheck, 10 focused tests, 261 upstream checks and scoped lint pass.
 - **T55**: Session frame, item restoration and Chat UI/TUI switch implemented; typecheck, 15 focused tests and scoped lint pass.
 - **T56**: Native streaming transcript and L2/R2 scroll registration implemented; typecheck, 26 focused tests and scoped lint pass.
+- **T57**: Live TerminalPaneView TUI with native input and no soft-keyboard lift implemented; typecheck and scoped lint pass.

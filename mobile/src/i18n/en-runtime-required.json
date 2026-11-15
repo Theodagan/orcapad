@@ -337,6 +337,12 @@
         "title": "No messages yet",
         "body": "Send a prompt below to start this session."
       }
+    },
+    "terminal": {
+      "empty": {
+        "title": "No terminal attached",
+        "body": "Open an agent or terminal item in this workspace."
+      }
     }
   },
   "dictation": {

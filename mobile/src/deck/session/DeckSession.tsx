@@ -6,6 +6,7 @@ import { useMobileTranslation } from '../../i18n/use-mobile-translation'
 import { getMobileSessionTabTitle } from '../../terminal/session/mobile-terminal-tab-agent'
 import { useMobileSessionController } from '../../session/use-mobile-session-controller'
 import { DeckTranscript } from './DeckTranscript'
+import { DeckTerminal } from './DeckTerminal'
 import { DeckShell } from '../DeckShell'
 import { DeckHeader, type DeckSessionView } from '../chrome/DeckHeader'
 import { deckRouteFromRouter, resolveDeckContext } from '../context/deck-context'
@@ -129,10 +130,7 @@ export function DeckSession(): ReactNode {
         ) : view === 'chat' ? (
           <DeckTranscript controller={controller.nativeChatController} />
         ) : (
-          <MobileStateView
-            title={getMobileSessionTabTitle(active)}
-            message={controller.worktreeName}
-          />
+          <DeckTerminal controller={controller} />
         )}
       </PanelColumns>
     </DeckShell>
