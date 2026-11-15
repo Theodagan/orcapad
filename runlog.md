@@ -16,3 +16,5 @@
 - **Gaps and issues update**: root Vitest is SIGKILLed (137) before test listing with one or two workers and with isolated files. All other changed-file checks pass. A larger-worker request hit the one-machine pool limit, so the branch will be bundled before replacing the worker.
 - **Worker restore**: branch bundle restored exactly through T51 on a 16 GiB worker; no commits lost. Bun's package postinstall and the native Node runtime were completed locally after the intentional `--ignore-scripts` install.
 - **T52**: Create workspace reuses Orca's full modal/controller and preserves execution-host routing; typecheck, 10 focused tests and scoped lint pass.
+- **Push**: T49–T52 pushed after `ORCA_CODE_QUALITY_BASE=origin/main pnpm check:changed --maxWorkers=2` passed 15/15 (unit tests 110.7s).
+- **T53**: Overview live agents/tool calls/Needs you/account usage and device network/battery implemented; typecheck, 10 focused tests and scoped lint pass. SDK-pinned `expo-battery` logged as an upstream touch.

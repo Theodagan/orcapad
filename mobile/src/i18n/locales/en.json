@@ -5027,6 +5027,26 @@
         "body": "Start an agent or open a browser tab or file on the paired desktop."
       },
       "openSession": "Open session"
+    },
+    "overview": {
+      "error": "Couldn’t load overview",
+      "loading": "Loading overview…",
+      "device": "This device",
+      "network": "Network",
+      "battery": "Battery",
+      "offline": "Offline",
+      "unknown": "Unknown",
+      "needsYou": "Needs you",
+      "accountUsage": "Account usage",
+      "noUsage": "No account usage reported.",
+      "hostMetrics": "Host CPU / RAM / bandwidth",
+      "hostMetricsReason": "Unavailable: the desktop does not publish these metrics to mobile.",
+      "noAgents": "No live agents reported by this desktop.",
+      "latestTools": "Latest tool calls",
+      "empty": {
+        "title": "No paired desktops",
+        "body": "Pair a desktop in Orca to see live agents here."
+      }
     }
   }
 }
