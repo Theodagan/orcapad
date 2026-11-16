@@ -9,6 +9,7 @@ export type DeckOpenItem = {
   readonly id: string
   /** The catalog key; the English lives in the catalogs. */
   readonly titleKey: string
+  readonly title?: string
   readonly route: string
 }
 
@@ -55,7 +56,7 @@ export function AllOpen({
               paddingVertical: theme.space.xs
             }}
           >
-            {t(item.titleKey, item.titleKey)}
+            {item.title ?? t(item.titleKey, item.titleKey)}
           </Text>
         </FocusableOrca>
       ))}

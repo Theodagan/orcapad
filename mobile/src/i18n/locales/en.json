@@ -5001,6 +5001,131 @@
         "none": "No turns measured yet",
         "line": "p50 {{p50}} ms · p95 {{p95}} ms"
       }
+    },
+    "sessions": {
+      "error": "Couldn’t load sessions",
+      "loading": "Loading sessions…",
+      "empty": {
+        "title": "No live sessions",
+        "body": "Start an agent on a paired desktop to see it here."
+      }
+    },
+    "projects": {
+      "error": "Couldn’t load projects",
+      "loading": "Loading projects…",
+      "empty": {
+        "title": "No paired desktops",
+        "body": "Pair a desktop in Orca to see its projects here."
+      },
+      "hostEmpty": "No projects reported by this desktop.",
+      "create": "Create workspace"
+    },
+    "workspace": {
+      "loading": "Loading workspace…",
+      "empty": {
+        "title": "No workspace items",
+        "body": "Start an agent or open a browser tab or file on the paired desktop."
+      },
+      "openSession": "Open session"
+    },
+    "overview": {
+      "error": "Couldn’t load overview",
+      "loading": "Loading overview…",
+      "device": "This device",
+      "network": "Network",
+      "battery": "Battery",
+      "offline": "Offline",
+      "unknown": "Unknown",
+      "needsYou": "Needs you",
+      "accountUsage": "Account usage",
+      "noUsage": "No account usage reported.",
+      "hostMetrics": "Host CPU / RAM / bandwidth",
+      "hostMetricsReason": "Unavailable: the desktop does not publish these metrics to mobile.",
+      "noAgents": "No live agents reported by this desktop.",
+      "latestTools": "Latest tool calls",
+      "empty": {
+        "title": "No paired desktops",
+        "body": "Pair a desktop in Orca to see live agents here."
+      }
+    },
+    "ports": {
+      "error": "Couldn’t scan ports",
+      "loading": "Scanning ports…",
+      "empty": {
+        "title": "No listening ports",
+        "body": "Start a development server in a workspace to see it here."
+      },
+      "noHosts": {
+        "title": "No paired desktops",
+        "body": "Pair a desktop in Orca to scan its workspaces."
+      }
+    },
+    "session": {
+      "loading": "Loading session…",
+      "empty": {
+        "title": "No session items",
+        "body": "Start an agent in this workspace to open its session here."
+      }
+    },
+    "transcript": {
+      "error": "Couldn’t load chat",
+      "loading": "Loading chat…",
+      "empty": {
+        "title": "No messages yet",
+        "body": "Send a prompt below to start this session."
+      }
+    },
+    "terminal": {
+      "empty": {
+        "title": "No terminal attached",
+        "body": "Open an agent or terminal item in this workspace."
+      }
+    },
+    "composer": {
+      "placeholder": "Message this agent",
+      "send": "Send",
+      "sending": "Sending…",
+      "unconfirmed": "The message was not accepted. Check chat before retrying."
+    },
+    "prompt": {
+      "needsYou": "Needs you"
+    },
+    "decision": {
+      "title": "Confirm decision",
+      "request": "Request",
+      "operation": "Operation",
+      "effect": "Effect",
+      "requestId": "Request ID",
+      "unbound": "This request has no stable identity, so decisions are disabled."
+    },
+    "denyFeedback": {
+      "placeholder": "Tell the agent what to change",
+      "action": "Deny with feedback"
+    },
+    "keys": {
+      "backspace": "Backspace",
+      "space": "Space"
+    },
+    "dictation": {
+      "idle": "Dictate",
+      "starting": "Starting microphone…",
+      "recording": "Listening…",
+      "processing": "Transcribing…",
+      "stop": "Stop"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "empty": "No agent notifications or requests need attention."
+    },
+    "approvals": {
+      "error": "Couldn’t load approvals",
+      "loading": "Loading approvals…",
+      "empty": {
+        "title": "No approvals need you",
+        "body": "Permission requests and questions from live agents will appear here."
+      },
+      "documentation": "Request documentation",
+      "documentationReason": "Unavailable: Orca provides no documentation fields for prompts."
     }
   }
 }

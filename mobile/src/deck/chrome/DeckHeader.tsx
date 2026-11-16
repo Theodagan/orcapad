@@ -16,6 +16,8 @@ export type DeckHeaderItem = {
   readonly id: string
   /** The catalog key; the English lives in the catalogs. */
   readonly titleKey: string
+  /** Live host items use their own title rather than a catalog entry. */
+  readonly title?: string
 }
 
 export type DeckSessionView = 'chat' | 'tui'
@@ -105,7 +107,7 @@ export function DeckHeader({
                   fontSize: theme.text.body
                 }}
               >
-                {t(item.titleKey, item.titleKey)}
+                {item.title ?? t(item.titleKey, item.titleKey)}
               </Text>
             </FocusableOrca>
           ))}

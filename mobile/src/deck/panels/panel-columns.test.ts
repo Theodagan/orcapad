@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MAIN_MIN_WIDTH, PANEL_WIDTH, panelColumnsLayout } from './panel-columns'
-import { deckPanelsForScreen, panelsForSide } from './panel-registry'
+import { panelsForSide } from './panel-registry'
 
 describe('panel columns', () => {
   it('splits a landscape window into three columns that add up to it', () => {
@@ -52,13 +52,5 @@ describe('panel columns', () => {
       'forks'
     ])
     expect(panelsForSide('overview', 'right')).toEqual([])
-  })
-
-  it('says why a panel is unavailable instead of offering it', () => {
-    const ports = deckPanelsForScreen('ports').find((panel) => panel.id === 'ports')
-    expect(ports?.disabledReason).toBe('not-declared')
-    expect(deckPanelsForScreen('sessions').every((panel) => panel.disabledReason === null)).toBe(
-      true
-    )
   })
 })

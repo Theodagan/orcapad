@@ -1,0 +1,39 @@
+# Run log
+
+- **Goal**: Execute PocketDeck Run 5 from `docs/deck-handoff/DECK-BUILD.md`, starting at T49 and proceeding through steps 8, 9 and 10 in order, with one commit and push per task.
+- **Mode**: plan. The dispatch and DECK-BUILD cards are authoritative.
+- **Run settings**: new branch `implement/deck-run5` from `origin/main`; no pull request from the worker; update `mobile/src/deck/PULL-REQUEST.md` instead.
+- **Preflight**: repository `/workspace/orcapad`; initial status clean; initial branch `main`; initial HEAD and `origin/main` `1190f0716f2bf0856634de19944eadffa65510f6`; target branch absent locally and remotely; plan SHA-256 `fa4eca16c03f8236d0cc81d1658805a8d799c44040c75e4bde76998dc737f7bb`.
+- **Assumptions**: device verification belongs to the owner; mock/host-independent code checks are the worker evidence. Tests follow AGENTS.md and the brief's explicit worthwhile-test list rather than every card's `+ test` wording.
+- **Deviations from plan**: none yet.
+- **Gaps and issues**: `pnpm install --frozen-lockfile` installed JavaScript dependencies but its root postinstall failed because Electron cannot load the container's missing `libgtk-3.so.0`. Baseline `cd mobile && pnpm typecheck` passes. No steering files exist under `docs/steering/`; root `AGENTS.md` and the deck brief are the constraints.
+- **Feedback received**: none.
+- **Verification**: baseline `cd mobile && pnpm typecheck` — exit 0. Further per-card commands are recorded in `mobile/src/deck/HANDOFF-LOG.md` and `docs/deck-handoff/implementation-report.md`.
+- **Not done / follow-ups**: owner device checks; no step 11 or later work. Final push past T53 is blocked by the pre-existing root browser-extension test failure documented in the implementation report.
+- **T49**: live cross-host Sessions collection implemented; typecheck, deck boundary and collection tests (17), and scoped lint pass.
+- **T50**: Projects uses per-host repo catalogs and Orca workspace sections/rows; mobile typecheck, 10 boundary/design tests and scoped lint pass.
+- **T51**: Workspace route and live agent/browser/file item tabs implemented on Orca's session controller; typecheck, 15 focused tests and scoped lint pass.
+- **Gaps and issues update**: root Vitest is SIGKILLed (137) before test listing with one or two workers and with isolated files. All other changed-file checks pass. A larger-worker request hit the one-machine pool limit, so the branch will be bundled before replacing the worker.
+- **Worker restore**: branch bundle restored exactly through T51 on a 16 GiB worker; no commits lost. Bun's package postinstall and the native Node runtime were completed locally after the intentional `--ignore-scripts` install.
+- **T52**: Create workspace reuses Orca's full modal/controller and preserves execution-host routing; typecheck, 10 focused tests and scoped lint pass.
+- **Push**: T49–T52 pushed after `ORCA_CODE_QUALITY_BASE=origin/main pnpm check:changed --maxWorkers=2` passed 15/15 (unit tests 110.7s).
+- **T53**: Overview live agents/tool calls/Needs you/account usage and device network/battery implemented; typecheck, 10 focused tests and scoped lint pass. SDK-pinned `expo-battery` logged as an upstream touch.
+- **T54**: Ports live scan list and the three owner-approved mobile route names implemented; typecheck, 10 focused tests, 261 upstream checks and scoped lint pass.
+- **T55**: Session frame, item restoration and Chat UI/TUI switch implemented; typecheck, 15 focused tests and scoped lint pass.
+- **T56**: Native streaming transcript and L2/R2 scroll registration implemented; typecheck, 26 focused tests and scoped lint pass.
+- **T57**: Live TerminalPaneView TUI with native input and no soft-keyboard lift implemented; typecheck and scoped lint pass.
+- **Commit hygiene**: corrected the unpushed T56/T57 boundary with a two-stop rebase; each resulting commit independently typechecks and lints.
+- **T58**: Native-draft composer and send outcome implemented below the transcript; typecheck, 3 no-IME guard tests and scoped lint pass.
+- **T59**: Live mode/model indicator and Orca option drawers integrated; typecheck and scoped lint pass.
+- **T60**: Exact inline permission/question/ask hero and prompt details implemented without a trigger-only decision path; typecheck and scoped lint pass.
+- **T60 fix**: corrected plan-subject narrowing in the unpushed T60 commit using Orca's branded-subject guard.
+- **T61**: Request-bound ConfirmModal decisions implemented; production/test typechecks, 2 guard tests and scoped lint pass.
+- **T62**: Plan-only deny/refine feedback with T61 confirmation implemented; production/test typechecks, 4 approval tests and scoped lint pass.
+- **T65**: Split landscape/portrait keys and dual cursors implemented; production/test typechecks, 5 key tests and scoped lint pass. Deviation: pure orientation tests replace render-only tests per AGENTS.md.
+- **T68**: Dictation notch inserts recognized text only and exposes touch start/stop; typecheck and scoped lint pass.
+- **T69**: Notifications, toasts and Needs-you session links implemented; typecheck, 10 focused tests and scoped lint pass.
+- **T64**: D5 approvals inbox implemented across hosts with per-session T61 decisions; typecheck, 9 approval/boundary tests and scoped lint pass. Deviation: no prompt ID exists in the host-wide row, so binding occurs when the per-session prompt opens.
+- **Stopping point**: steps 8–10 complete; step 11 not started so final verification and handoff can be completed.
+- **Verification update**: full mobile production/test typechecks and lint pass (3492 files); deck suite 30 files/133 tests pass; upstream check 360/360. Removed the outdated pre-T54 Ports-disabled assertion and split notification cleanup into one component per client; changed-code quality now passes with zero findings.
+
+- **Final blocker**: final `check:changed` passes 27/28 stages. The sole failing root test is `browser-extension-native-host-process.test.ts` (`EPIPE`, process-exit assertion); its isolated command fails identically on clean `origin/main` and on Run 5. No red push was made. T54 onward and the handoff remain committed locally.

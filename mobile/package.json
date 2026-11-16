@@ -37,6 +37,7 @@
     "@xterm/xterm": "6.1.0-beta.336",
     "buffer": "^6.0.3",
     "expo": "^55.0.31",
+    "expo-battery": "~55.0.17",
     "expo-build-properties": "^55.0.18",
     "expo-camera": "^55.0.23",
     "expo-clipboard": "^55.0.17",
