@@ -32,6 +32,6 @@ mobile/src/gamepad/ControllerShell.tsx — on `/deck` routes the shell stops res
 mobile/src/gamepad/** *.test.ts(x) — the pad tests moved onto the current intent, binding and renderer types, which is what the red tests-typecheck gate was reporting (64 errors, 23 files); no baseline entry was added — run 4 item 1
 mobile/src/gamepad/evidence/wheel-product-default-gate.ts — `unapprovedProductDefaults` takes records read from disk, which are unknown until they validate, so its decision parameter is `readonly unknown[]` — run 4 item 1
 mobile/src/i18n/locales/en.json, mobile/src/i18n/en-runtime-required.json — localized deck destination, session, workspace, approval and dictation strings — T49–T69
-runlog.md, docs/deck-handoff/implementation-report.md — Run 5 execution evidence required by the automation contract — T49–T64
+docs/deck-handoff/runlog.md, docs/deck-handoff/implementation-report.md — Run 5 execution evidence required by the automation contract — T49–T64
 mobile/package.json, mobile/pnpm-lock.yaml — SDK-pinned `expo-battery` for Overview's device battery tile — T53
 src/main/runtime/rpc/server/runtime-rpc-mobile-method-routing.ts — expose the owner-approved read-only `workspacePorts.scan`, `workspacePorts.scanHost` and `stats.summary` routes to mobile — T54
